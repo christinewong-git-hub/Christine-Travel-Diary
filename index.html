@@ -77,55 +77,28 @@
       border-radius: 16px;
     }
 
-    /* Flight sky background + moving clouds */
+    /* Flight sky background: fantasy glass sky, no animation */
     .flight-sky {
       position: relative;
       overflow: hidden;
-    }
-    .cloud {
-      position: absolute;
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 999px;
-      filter: blur(0.5px);
-      animation: cloud-move 40s linear infinite;
-    }
-    .cloud::before,
-    .cloud::after {
-      content: '';
-      position: absolute;
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 999px;
-    }
-    .cloud::before {
-      width: 60%;
-      height: 80%;
-      top: -40%;
-      left: 10%;
-    }
-    .cloud::after {
-      width: 50%;
-      height: 70%;
-      top: -30%;
-      right: 5%;
-    }
-    @keyframes cloud-move {
-      0% { transform: translateX(-120%); }
-      100% { transform: translateX(120%); }
+      background: radial-gradient(circle at top, #c3e5ff 0, #6aa8ff 35%, #2f63c9 100%);
+      backdrop-filter: blur(12px);
     }
 
-    /* Weather theme backgrounds */
+    /* Weather fantasy glass backgrounds */
     .weather-card {
       position: relative;
       overflow: hidden;
+      backdrop-filter: blur(12px);
     }
     .weather-sunny {
-      background: radial-gradient(circle at top, #ffeaa7 0, #ffffff 45%, #dff6ff 100%);
+      background: radial-gradient(circle at top, #ffe6a7 0, #ffcfdf 40%, #f5f7ff 100%);
     }
     .weather-cloudy {
-      background: radial-gradient(circle at top, #dfe6e9 0, #ffffff 40%, #cfd9df 100%);
+      background: radial-gradient(circle at top, #d7e1ec 0, #f3f5ff 45%, #cfd9df 100%);
     }
     .weather-rainy {
-      background: radial-gradient(circle at top, #a5b1c2 0, #dfe6e9 40%, #8395a7 100%);
+      background: radial-gradient(circle at top, #9fb5d1 0, #c0d3e8 40%, #f0f4ff 100%);
     }
     .sun-icon {
       position: absolute;
@@ -135,25 +108,7 @@
       height: 64px;
       background: radial-gradient(circle at center, #ffeaa7 0, #fdcb6e 65%, #e17055 100%);
       border-radius: 999px;
-      box-shadow: 0 0 20px rgba(253, 203, 110, 0.6);
-      animation: sun-pulse 3s ease-in-out infinite;
-    }
-    @keyframes sun-pulse {
-      0%, 100% { transform: scale(1); opacity: 0.95; }
-      50% { transform: scale(1.05); opacity: 1; }
-    }
-    .rain-drop {
-      position: absolute;
-      width: 2px;
-      height: 16px;
-      background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(52, 152, 219, 0.7));
-      border-radius: 999px;
-      animation: rain-fall 1.2s linear infinite;
-    }
-    @keyframes rain-fall {
-      0% { transform: translateY(-10px); opacity: 0; }
-      50% { opacity: 1; }
-      100% { transform: translateY(30px); opacity: 0; }
+      box-shadow: 0 0 18px rgba(253, 203, 110, 0.7);
     }
   </style>
 </head>
@@ -212,13 +167,8 @@
     class="rounded-2xl border border-secondary/60 bg-white/95 backdrop-blur-sm p-4 flex flex-col gap-4"
   >
     <div class="flex flex-col md:flex-row gap-4">
-      <!-- Flight Card: sky + moving clouds -->
-      <div class="flex-1 rounded-2xl flight-sky bg-gradient-to-br from-sky-300 via-sky-400 to-sky-600 text-white p-4 shadow-md">
-        <!-- Moving clouds -->
-        <div class="cloud" style="top: 10%; left: -40%; width: 120px; height: 48px; animation-duration: 45s;"></div>
-        <div class="cloud" style="top: 45%; left: -60%; width: 160px; height: 60px; animation-duration: 55s; animation-delay: -10s;"></div>
-        <div class="cloud" style="top: 75%; left: -50%; width: 130px; height: 52px; animation-duration: 50s; animation-delay: -5s;"></div>
-
+      <!-- Flight Card: fantasy sky, no animation -->
+      <div class="flex-1 rounded-2xl flight-sky text-white p-4 shadow-md/80 shadow-sky-300/60 border border-white/30">
         <div class="relative flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
             <i class="ri-flight-takeoff-line text-xl"></i>
@@ -231,15 +181,15 @@
 
         <div class="relative grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
           <!-- Outbound -->
-          <div class="bg-white/10 rounded-xl p-3 space-y-1">
-            <div class="flex items-center gap-1 text-white/80 mb-1">
+          <div class="bg-white/15 rounded-xl p-3 space-y-1 border border-white/30">
+            <div class="flex items-center gap-1 text-white/85 mb-1">
               <i class="ri-arrow-right-up-line text-xs"></i>
               <span>去程</span>
             </div>
             <div class="flex items-baseline gap-2">
               <input
                 v-model="activeTrip.flights.outbound.no"
-                class="bg-transparent border-b border-white/50 text-xs font-semibold outline-none flex-1"
+                class="bg-transparent border-b border-white/60 text-xs font-semibold outline-none flex-1"
                 placeholder="Flight No (e.g. NH924)"
               />
               <input
@@ -251,20 +201,20 @@
             <div class="flex items-center gap-2 mt-1">
               <input
                 v-model="activeTrip.flights.outbound.from"
-                class="bg-white/10 rounded-lg px-2 py-1 text-[11px] outline-none w-20 text-center"
+                class="bg-white/15 rounded-lg px-2 py-1 text-[11px] outline-none w-20 text-center border border-white/30"
                 placeholder="HKG"
               />
               <i class="ri-arrow-right-line text-xs text-white/70"></i>
               <input
                 v-model="activeTrip.flights.outbound.to"
-                class="bg-white/10 rounded-lg px-2 py-1 text-[11px] outline-none w-20 text-center"
+                class="bg-white/15 rounded-lg px-2 py-1 text-[11px] outline-none w-20 text-center border border-white/30"
                 placeholder="HND"
               />
             </div>
             <div class="mt-2 flex justify-end">
               <button
                 @click="autoFillFlight('outbound')"
-                class="px-2 py-1 rounded-full bg-white/80 text-[10px] text-primary font-semibold hover:bg-white"
+                class="px-2 py-1 rounded-full bg-white/85 text-[10px] text-primary font-semibold hover:bg-white"
               >
                 自動填寫去程
               </button>
@@ -272,15 +222,15 @@
           </div>
 
           <!-- Inbound -->
-          <div class="bg-white/10 rounded-xl p-3 space-y-1">
-            <div class="flex items-center gap-1 text-white/80 mb-1">
+          <div class="bg-white/15 rounded-xl p-3 space-y-1 border border-white/30">
+            <div class="flex items-center gap-1 text-white/85 mb-1">
               <i class="ri-arrow-left-down-line text-xs"></i>
               <span>回程</span>
             </div>
             <div class="flex items-baseline gap-2">
               <input
                 v-model="activeTrip.flights.inbound.no"
-                class="bg-transparent border-b border-white/50 text-xs font-semibold outline-none flex-1"
+                class="bg-transparent border-b border-white/60 text-xs font-semibold outline-none flex-1"
                 placeholder="Flight No (e.g. NH923)"
               />
               <input
@@ -292,20 +242,20 @@
             <div class="flex items-center gap-2 mt-1">
               <input
                 v-model="activeTrip.flights.inbound.from"
-                class="bg-white/10 rounded-lg px-2 py-1 text-[11px] outline-none w-20 text-center"
+                class="bg-white/15 rounded-lg px-2 py-1 text-[11px] outline-none w-20 text-center border border-white/30"
                 placeholder="HND"
               />
               <i class="ri-arrow-right-line text-xs text-white/70"></i>
               <input
                 v-model="activeTrip.flights.inbound.to"
-                class="bg-white/10 rounded-lg px-2 py-1 text-[11px] outline-none w-20 text-center"
+                class="bg-white/15 rounded-lg px-2 py-1 text-[11px] outline-none w-20 text-center border border-white/30"
                 placeholder="HKG"
               />
             </div>
             <div class="mt-2 flex justify-end">
               <button
                 @click="autoFillFlight('inbound')"
-                class="px-2 py-1 rounded-full bg-white/80 text-[10px] text-primary font-semibold hover:bg-white"
+                class="px-2 py-1 rounded-full bg-white/85 text-[10px] text-primary font-semibold hover:bg-white"
               >
                 自動填寫回程
               </button>
@@ -314,24 +264,19 @@
         </div>
       </div>
 
-      <!-- Weather Card with fantasy backgrounds -->
+      <!-- Weather Card: fantasy glass, non-white -->
       <div
-        class="w-full md:w-64 rounded-2xl weather-card border border-secondary/50 p-4 flex flex-col justify-between"
+        class="w-full md:w-64 rounded-2xl weather-card border border-secondary/40 p-4 flex flex-col justify-between shadow-md/60"
         :class="{
           'weather-sunny': weatherTheme === 'sunny',
           'weather-cloudy': weatherTheme === 'cloudy',
           'weather-rainy': weatherTheme === 'rainy'
         }"
       >
-        <!-- Weather decoration -->
+        <!-- Optional decorative sun for sunny -->
         <div v-if="weatherTheme === 'sunny'" class="sun-icon"></div>
-        <div v-if="weatherTheme === 'rainy'">
-          <div class="rain-drop" style="top: 10px; left: 30px;"></div>
-          <div class="rain-drop" style="top: 18px; left: 55px; animation-delay: -0.4s;"></div>
-          <div class="rain-drop" style="top: 6px; left: 80px; animation-delay: -0.8s;"></div>
-        </div>
 
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between relative">
           <div class="flex flex-col gap-1">
             <span class="text-[11px] text-textSoft">Today · Weather</span>
             <div class="flex items-end gap-2">
@@ -345,7 +290,7 @@
           </div>
           <button
             @click="fetchWeather"
-            class="w-9 h-9 rounded-full bg-white/80 border border-secondary/50 flex items-center justify-center text-textSoft hover:text-textMain"
+            class="w-9 h-9 rounded-full bg-white/75 border border-secondary/50 flex items-center justify-center text-textSoft hover:text-textMain"
             title="更新天氣"
           >
             <i class="ri-refresh-line text-xs"></i>
@@ -1194,7 +1139,7 @@
 
 <script>
   // Aviationstack API key（請填完整 key）
-  const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; // Flight API[web:507][web:518][web:561]
+  const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; // flight_iata + flight_date[web:507][web:518][web:561]
 
   let leafletMap = null;
   let routePolyline = null;
@@ -1281,7 +1226,7 @@
       }
     },
     created() {
-      const stored = localStorage.getItem('christine_travel_diary_trips'); // localStorage 持久化[web:373]
+      const stored = localStorage.getItem('christine_travel_diary_trips'); // localStorage[web:373]
       if (stored) {
         try {
           this.trips = JSON.parse(stored);
@@ -1360,7 +1305,7 @@
     watch: {
       trips: {
         handler(val) {
-          localStorage.setItem('christine_travel_diary_trips', JSON.stringify(val)); // 每次改動保存[web:373]
+          localStorage.setItem('christine_travel_diary_trips', JSON.stringify(val)); // 持久化[web:373]
         },
         deep: true
       },
@@ -1463,7 +1408,7 @@
           );
         });
 
-        routePolyline = L.polyline(coords, { color: '#97CBFF', weight: 4 }).addTo(leafletMap); // route polyline[web:354][web:433]
+        routePolyline = L.polyline(coords, { color: '#97CBFF', weight: 4 }).addTo(leafletMap); // polyline[web:354][web:433]
         leafletMap.fitBounds(routePolyline.getBounds(), { padding: [20, 20] });
 
         let totalDistance = 0;
