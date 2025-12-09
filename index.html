@@ -131,7 +131,7 @@
         </span>
       </div>
 
-      <!-- Flights (可手動輸入) -->
+      <!-- Flights (editable) -->
       <div class="flex flex-wrap gap-2 mt-3 text-[11px]">
         <!-- OUTBOUND -->
         <div
@@ -1003,8 +1003,8 @@
           startDate: "2025-12-24",
           endDate: "2026-01-01",
           center: { lat: 35.6762, lng: 139.6503 },
-          // 1 HKD ≈ 18 JPY（示意值，可用實時匯率覆蓋）[web:199]
-          exchangeRate: 18,
+          // 1 HKD ≈ 20.04 JPY（示意，會被實時匯率覆蓋）[web:1]
+          exchangeRate: 20.04,
           travelMode: "TRANSIT",
           flights: {
             outbound: { no: "NH924", date: "2025-12-24", from: "HKG", to: "HND" },
@@ -1108,7 +1108,7 @@
         }
       },
 
-      // Live HKD → 當地貨幣（預設 JPY）的匯率 [web:201][web:227]
+      // Live HKD → 當地貨幣（預設 JPY）的匯率 [web:1]
       async fetchRate() {
         try {
           const target = this.activeTrip?.currency || 'JPY';
@@ -1334,7 +1334,7 @@
           startDate: this.newTripForm.startDate || '',
           endDate: this.newTripForm.endDate || '',
           center: { lat: this.newTripForm.lat || 35.6762, lng: this.newTripForm.lng || 139.6503 },
-          exchangeRate: 18,
+          exchangeRate: 20.04,
           travelMode: 'TRANSIT',
           flights: {
             outbound: { no: '-', date: this.newTripForm.startDate || '-', from: 'HKG', to: 'HND' },
