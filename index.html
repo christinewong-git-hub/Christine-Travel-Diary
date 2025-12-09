@@ -259,11 +259,71 @@
         尚未建立行程，點擊「新增」或使用下方「批次匯入地點」。
       </div>
 
+      <div v-for="(item, index) in activeTrip.itinerary" :key="'it-' + index">
+  <!-- Day 標題 -->
+  <div
+    v-if="shouldShowDayHeader(index)"
+    class="flex items-center gap-2 mt-2 mb-1 text-[11px] text-textSoft"
+  >
+    <div class="w-14 h-px bg-secondary/60"></div>
+    <span class="text-textMain font-semibold">
+      {{ getDayLabel(index) }}
+    </span>
+    <div class="flex-1 h-px bg-secondary/20"></div>
+  </div>
+
+  <!-- 原本的行程卡片 -->
+  <div
+    class="flex gap-3 items-start rounded-xl border border-secondary/40 bg-bgLight/60 px-3 py-2.5"
+  >
+    <div class="flex flex-col items-center mt-0.5">
       <div
-        v-for="(item, index) in activeTrip.itinerary"
-        :key="'it-' + index"
-        class="flex gap-3 items-start rounded-xl border border-secondary/40 bg-bgLight/60 px-3 py-2.5"
+        class="w-9 h-9 rounded-xl bg-primary text-white text-[11px] flex items-center justify-center font-medium shadow-sm"
       >
+        {{ item.time || '—' }}
+      </div>
+      <div
+        v-if="index < activeTrip.itinerary.length - 1"
+        class="flex-1 w-px bg-secondary/70 mt-1 mb-1"
+        style="min-height: 24px"
+      ></div>
+    </div>
+
+    <div class="flex-1 flex flex-col gap-1">
+      <input
+        v-model="item.activity"
+        class="text-xs font-semibold text-textMain bg-transparent outline-none"
+        placeholder="活動名稱"
+      />
+      <input
+        v-model="item.location"
+        class="text-[11px] text-textSoft bg-transparent outline-none"
+        placeholder="地點 / 地址（用於導航）"
+      />
+      <div v-if="item.distance || item.duration" class="text-[11px] text-textSoft 餌 flex gap-2">
+        <span v-if="item.distance">距離 {{ item.distance }}</span>
+        <span v-if="item.duration">· {{ item.duration }}</span>
+      </div>
+      <div class="flex items-center gap-2 mt-1">
+        <a
+          :href="getSingleDirectionLink(item, index)"
+          target="_blank"
+          class="text-[11px] px-2 py-1 rounded-full border border-secondary/70 text-textMain hover:bg-bgLight/80 flex items-center gap-1"
+        >
+          <i class="ri-map-pin-line text-xs text-primary"></i>
+          <span>Google Maps</span>
+        </a>
+        <button
+          @click="removeItineraryItem(index)"
+          class="ml-auto text-[11px] text-textSoft hover:text-red-500"
+        >
+          刪除
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
         <div class="flex flex-col items-center mt-0.5">
           <div
             class="w-9 h-9 rounded-xl bg-primary text-white text-[11px] flex items-center justify-center font-medium shadow-sm"
