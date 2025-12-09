@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Christine's Travel Plan - 韓系輕透</title>
+  <title>Christine's Travel Plan - 韓系輕透 (簡潔版)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -34,61 +34,41 @@
       color: #1f2937;
     }
     
-    /* 半透明玻璃卡片核心 */
-    .glass-card {
-      background: rgba(255, 255, 255, 0.7); /* 略為提高透明度以更輕透 */
-      backdrop-filter: blur(25px); /* 更強的模糊效果 */
-      -webkit-backdrop-filter: blur(25px);
-      border: 1px solid rgba(255, 255, 255, 0.85); /* 輕微邊框 */
-      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.08); /* 柔和陰影 */
-      border-radius: 24px;
-      transition: all 0.3s ease;
+    /* 簡潔白色背景卡片 (取代 glass-card) */
+    .clean-card {
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 24px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        transition: all 0.2s ease;
     }
 
     /* 卡片內輸入框的輕透背景 */
-    .glass-card input, .glass-card select, .glass-card textarea {
+    .clean-card input, .clean-card select, .clean-card textarea {
         background-color: rgba(255, 255, 255, 0.85);
         border: 1px solid rgba(220, 220, 220, 0.7);
     }
     
-    /* 航班卡片 */
-    .flight-sky {
+    /* 航班背景區域 - 保持視覺區分 */
+    .flight-area {
       background: linear-gradient(135deg, #A8C0FF 0%, #D2E9FF 50%, #DDDDFF 100%);
+      border-radius: 24px;
+      padding: 2rem;
       position: relative;
       overflow: hidden;
-      border: none;
-    }
-    .flight-sky::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.7) 0%, transparent 50%);
-      opacity: 0.8;
-      z-index: 1;
-    }
-    .flight-sky > * {
-        position: relative;
-        z-index: 2;
+      margin-bottom: 2rem; /* 保持與其他區塊間距 */
     }
 
     /* 天氣卡片主題色 - 柔和粉嫩 */
     .weather-card {
-      position: relative;
-      overflow: hidden;
       border-radius: 24px;
-      border: 1px solid rgba(255, 255, 255, 0.9);
-      box-shadow: 0 18px 40px rgba(170, 170, 210, 0.55);
-      backdrop-filter: blur(18px);
-      transition: all 0.3s ease;
+      padding: 1.5rem;
     }
     .weather-sunny { background: linear-gradient(135deg, #FFECF5 0%, #FFD9EC 40%, #FFC7D8 100%); }
     .weather-cloudy { background: linear-gradient(135deg, #DDDDFF 0%, #E6E6F2 40%, #A8C0FF 100%); }
     .weather-rainy { background: linear-gradient(135deg, #A8C0FF 0%, #C4E1FF 35%, #D8D8EB 100%); }
     
-    /* 膠囊導航列 */
+    /* 膠囊導航列 - 保持輕透感 */
     .capsule-tab {
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(20px);
@@ -100,7 +80,6 @@
     .active-trip-card {
       background: linear-gradient(135deg, #A8C0FF, #D2E9FF);
       color: #1f2937;
-      border: 1px solid rgba(255, 255, 255, 0.9);
     }
     
     /* 行程時間軸線 */
@@ -120,7 +99,6 @@
         transform: translate(-50%, -50%);
         top: 0;
         border: 2px solid white;
-        box-shadow: 0 0 5px rgba(0,0,0,0.1);
     }
     
     /* 固定的Header樣式調整 */
@@ -133,7 +111,7 @@
       backdrop-filter: blur(25px);
       background: rgba(255, 255, 255, 0.85);
       border-bottom: 1px solid rgba(255, 255, 255, 0.9);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); /* 輕微陰影 */
     }
   </style>
 </head>
@@ -149,33 +127,34 @@
 
     <main class="pt-20 pb-28 px-4 max-w-6xl mx-auto">
       
-      <section v-if="activeTab === 'info' && activeTrip" class="glass-card mx-auto max-w-3xl p-8 mb-8">
+      <section v-if="activeTab === 'info' && activeTrip" class="clean-card mx-auto max-w-3xl">
         <h1 class="text-3xl font-bold text-primary mb-6">{{ activeTrip.title }} ({{ activeTrip.destination }})</h1>
         
-        <div class="flight-sky glass-card p-8 mb-8 relative z-10">
-          <h2 class="text-2xl font-bold mb-6 flex items-center gap-3"><i class="ri-flight-takeoff-line text-slate-800"></i>航班詳情</h2>
+        <div class="flight-area relative z-10">
+          <h2 class="text-2xl font-bold mb-6 flex items-center gap-3 text-slate-800"><i class="ri-flight-takeoff-line text-slate-800"></i>航班詳情</h2>
+          
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="p-4 rounded-xl bg-white/60">
-              <h3 class="font-bold text-lg mb-2">去程</h3>
+            <div class="p-4 rounded-xl bg-white/50">
+              <h3 class="font-bold text-lg mb-4 text-slate-800">去程 (Outbound)</h3>
               <label class="text-sm font-medium">航班編號</label>
               <input v-model="activeTrip.flights.outbound.no" placeholder="e.g. NH924" class="w-full p-3 rounded-xl border mb-2 text-sm">
               <label class="text-sm font-medium">日期</label>
               <input v-model="activeTrip.flights.outbound.date" type="date" class="w-full p-3 rounded-xl border mb-4 text-sm">
               <div class="flex gap-2 mb-4">
-                <input v-model="activeTrip.flights.outbound.from" placeholder="From IATA" class="flex-1 p-3 rounded-xl border text-sm">
-                <input v-model="activeTrip.flights.outbound.to" placeholder="To IATA" class="flex-1 p-3 rounded-xl border text-sm">
+                <input v-model="activeTrip.flights.outbound.from" placeholder="出發地 IATA" class="flex-1 p-3 rounded-xl border text-sm">
+                <input v-model="activeTrip.flights.outbound.to" placeholder="目的地 IATA" class="flex-1 p-3 rounded-xl border text-sm">
               </div>
               <button @click="fetchFlight('outbound')" class="mt-2 w-full bg-primary text-white py-3 rounded-xl font-medium transition-all hover:bg-primary/80">自動填寫去程</button>
             </div>
-            <div class="p-4 rounded-xl bg-white/60">
-              <h3 class="font-bold text-lg mb-2">回程</h3>
+            <div class="p-4 rounded-xl bg-white/50">
+              <h3 class="font-bold text-lg mb-4 text-slate-800">回程 (Inbound)</h3>
               <label class="text-sm font-medium">航班編號</label>
               <input v-model="activeTrip.flights.inbound.no" placeholder="e.g. NH923" class="w-full p-3 rounded-xl border mb-2 text-sm">
               <label class="text-sm font-medium">日期</label>
               <input v-model="activeTrip.flights.inbound.date" type="date" class="w-full p-3 rounded-xl border mb-4 text-sm">
               <div class="flex gap-2 mb-4">
-                <input v-model="activeTrip.flights.inbound.from" placeholder="From IATA" class="flex-1 p-3 rounded-xl border text-sm">
-                <input v-model="activeTrip.flights.inbound.to" placeholder="To IATA" class="flex-1 p-3 rounded-xl border text-sm">
+                <input v-model="activeTrip.flights.inbound.from" placeholder="出發地 IATA" class="flex-1 p-3 rounded-xl border text-sm">
+                <input v-model="activeTrip.flights.inbound.to" placeholder="目的地 IATA" class="flex-1 p-3 rounded-xl border text-sm">
               </div>
               <button @click="fetchFlight('inbound')" class="mt-2 w-full bg-primary text-white py-3 rounded-xl font-medium transition-all hover:bg-primary/80">自動填寫回程</button>
             </div>
@@ -189,7 +168,7 @@
               <p class="text-lg capitalize mt-1">{{ weatherDesc }}</p>
               <button @click="fetchWeather" class="mt-3 bg-white/40 text-slate-800 text-sm px-4 py-1 rounded-xl transition-all hover:bg-white/70">更新</button>
             </div>
-            <div class="glass-card p-6 md:col-span-2 grid grid-cols-2 gap-4">
+            <div class="clean-card p-6 md:col-span-2 grid grid-cols-2 gap-4">
                 <div class="p-3 rounded-xl bg-pastelBlue/50 text-center">
                     <p class="text-4xl font-bold text-primary">{{ activeTrip.itinerary.length }}</p>
                     <p class="font-medium">總站數</p>
@@ -208,7 +187,7 @@
       </section>
 
       <section v-if="activeTab === 'itinerary-map' && activeTrip" class="max-w-4xl mx-auto">
-        <div class="glass-card p-8 mb-8">
+        <div class="clean-card">
           <h2 class="text-2xl font-bold mb-6 flex items-center gap-3"><i class="ri-road-map-line text-primary"></i>行程管理</h2>
           
           <div class="flex flex-wrap gap-3 mb-4">
@@ -231,7 +210,7 @@
                 <div class="itinerary-dot top-0"></div>
                 <div class="text-sm font-bold text-center mt-2">{{ item.time }}</div>
               </div>
-              <div class="flex-1 glass-card p-4 hover:shadow-xl">
+              <div class="flex-1 bg-white/90 p-4 rounded-xl">
                 <input v-model="item.activity" placeholder="活動名稱" class="w-full mb-2 p-2 rounded-lg border text-sm font-medium">
                 <input v-model="item.location" placeholder="地點/地址" class="w-full mb-2 p-2 rounded-lg border text-sm">
                 <input v-model="item.mapsUrl" placeholder="Google Maps URL (可選)" class="w-full mb-2 p-2 rounded-lg border text-xs">
@@ -247,18 +226,18 @@
             </div>
           </div>
         </div>
-        <div id="map" class="glass-card mx-auto max-w-4xl w-full"></div>
+        <div id="map" class="bg-white/90 mx-auto max-w-4xl w-full rounded-2xl"></div>
       </section>
 
       <section v-if="activeTab === 'budget' && activeTrip" class="max-w-2xl mx-auto">
-        <div class="glass-card p-8 mb-8">
+        <div class="clean-card">
           <h2 class="text-2xl font-bold mb-6 flex items-center gap-3"><i class="ri-money-dollar-circle-line text-primary"></i>匯率計算</h2>
           <p class="text-3xl font-bold mb-4">1,000 HKD ≈ {{ Math.round(1000 * activeTrip.exchangeRate).toLocaleString() }} {{ activeTrip.currency }}</p>
           <label class="text-sm font-medium">手動調整匯率 (1 HKD = ...)</label>
           <input v-model.number="activeTrip.exchangeRate" type="number" step="0.01" class="mt-2 w-full p-3 rounded-xl border text-center text-xl">
           <button @click="fetchExchangeRate" class="mt-4 w-full bg-primary text-white py-3 rounded-xl font-medium transition-all hover:bg-primary/80">更新匯率</button>
         </div>
-        <div class="glass-card p-8 mb-8">
+        <div class="clean-card">
           <h3 class="text-xl font-bold mb-4">記一筆</h3>
           <input v-model="newExpense.name" placeholder="項目名稱" class="w-full p-3 rounded-xl border mb-3 text-sm">
           <input v-model.number="newExpense.amount" type="number" placeholder="金額 (HKD)" class="w-full p-3 rounded-xl border mb-3 text-sm">
@@ -277,7 +256,7 @@
           </select>
           <button @click="addExpense" class="w-full bg-secondary text-slate-800 py-3 rounded-xl font-medium transition-all hover:bg-secondary/80">記一筆</button>
         </div>
-        <div class="glass-card p-6">
+        <div class="clean-card p-6">
           <div class="flex justify-between items-center mb-4 border-b pb-2">
             <h3 class="text-xl font-bold">支出列表 ({{ expenses.length }} 筆)</h3>
             <p class="text-lg font-medium">總額: **{{ totalExpensesHKD.toLocaleString() }} HKD**</p>
@@ -298,7 +277,7 @@
       </section>
 
       <section v-if="activeTab === 'shopping' && activeTrip" class="max-w-2xl mx-auto">
-        <div class="glass-card p-8 mb-8">
+        <div class="clean-card">
           <h2 class="text-2xl font-bold mb-6 flex items-center gap-3"><i class="ri-shopping-bag-line text-primary"></i>旅程購物清單</h2>
           <input v-model="newShoppingItem.name" placeholder="品項名稱" class="w-full p-3 rounded-xl border mb-3 text-sm">
           <input v-model="newShoppingItem.onlinePrice" placeholder="網上價錢" class="w-full p-3 rounded-xl border mb-3 text-sm">
@@ -307,9 +286,9 @@
           <img v-if="newShoppingItem.imageData" :src="newShoppingItem.imageData" class="w-24 h-24 object-cover rounded-xl mb-4">
           <button @click="addShoppingItem" class="w-full bg-pastelGreen text-slate-800 py-3 rounded-xl font-medium transition-all hover:bg-pastelGreen/80">新增購物項目</button>
         </div>
-        <div v-for="(item, idx) in activeTrip.shoppingItems" :key="idx" class="glass-card p-6 mb-4" :class="{ 'opacity-60': item.bought }">
+        <div v-for="(item, idx) in activeTrip.shoppingItems" :key="idx" class="clean-card p-6 mb-4" :class="{ 'opacity-60': item.bought }">
           <div class="flex items-start gap-4">
-            <img v-if="item.imageData" :src="item.imageData" class="w-24 h-24 object-cover rounded-xl flex-shrink-0 shadow-md">
+            <img v-if="item.imageData" :src="item.imageData" class="w-24 h-24 object-cover rounded-xl flex-shrink-0">
             <div class="flex-1">
               <h3 class="font-bold text-lg">{{ item.name }}</h3>
               <p class="text-sm">網上價: {{ item.onlinePrice || 'N/A' }}</p>
@@ -328,9 +307,9 @@
 
       <section v-if="activeTab === 'trips'" class="max-w-2xl mx-auto">
         <h2 class="text-3xl font-bold mb-8 text-center flex items-center justify-center gap-3"><i class="ri-suitcase-3-line text-4xl text-primary"></i>旅程管理</h2>
-        <button @click="showNewTripForm = true" class="w-full mb-6 bg-primary text-white py-4 rounded-2xl font-bold text-xl shadow-xl transition-all hover:bg-primary/80">+ 新增旅程</button>
+        <button @click="showNewTripForm = true" class="w-full mb-6 bg-primary text-white py-4 rounded-2xl font-bold text-xl transition-all hover:bg-primary/80">+ 新增旅程</button>
         
-        <div v-if="showNewTripForm || editingTrip" class="glass-card p-8 mb-8">
+        <div v-if="showNewTripForm || editingTrip" class="clean-card">
           <h3 class="text-2xl font-bold mb-6 text-primary">{{ editingTrip ? '編輯旅程' : '新增旅程' }}</h3>
           <input v-model="tempTrip.title" placeholder="標題" class="w-full p-4 rounded-xl border mb-4 text-lg">
           <input v-model="tempTrip.destination" placeholder="目的地" class="w-full p-4 rounded-xl border mb-4 text-lg">
@@ -355,7 +334,7 @@
         </div>
         
         <div v-for="trip in trips" :key="trip.id" @click="switchTrip(trip.id)"
-             :class="['glass-card p-6 mb-6 cursor-pointer hover:shadow-2xl transition-all', { 'active-trip-card shadow-2xl ring-4 ring-primary/50': activeTripId === trip.id }]"
+             :class="['clean-card p-6 mb-6 cursor-pointer hover:shadow-lg transition-all', { 'active-trip-card ring-2 ring-primary/50': activeTripId === trip.id }]"
              role="button">
           <div class="flex justify-between items-start">
             <div>
@@ -368,7 +347,7 @@
               <p class="text-sm">{{ trip.shoppingItems.length }} 購物</p>
             </div>
           </div>
-          <span v-if="activeTripId === trip.id" class="inline-block bg-secondary text-slate-800 px-4 py-1 rounded-full mt-3 font-medium text-sm shadow-md">ACTIVE</span>
+          <span v-if="activeTripId === trip.id" class="inline-block bg-secondary text-slate-800 px-4 py-1 rounded-full mt-3 font-medium text-sm">ACTIVE</span>
           <div class="flex gap-2 mt-4 pt-4 border-t border-slate-200/70">
             <button @click.stop="editTrip(trip)" class="flex-1 bg-pastelBlue text-slate-800 py-2 rounded-xl transition-all hover:bg-pastelBlue/80">編輯</button>
             <button @click.stop="deleteTrip(trip.id)" :disabled="trips.length <= 1" class="flex-1 bg-red-400 text-white py-2 rounded-xl disabled:opacity-50 transition-all" :class="{ 'hover:bg-red-500': trips.length > 1 }">
@@ -379,7 +358,7 @@
       </section>
     </main>
 
-    <nav class="fixed bottom-6 left-1/2 transform -translate-x-1/2 capsule-tab flex rounded-3xl p-2 shadow-2xl w-[min(90vw,500px)] z-40">
+    <nav class="fixed bottom-6 left-1/2 transform -translate-x-1/2 capsule-tab flex rounded-3xl p-2 shadow-xl w-[min(90vw,500px)] z-40">
       <button @click="activeTab = 'info'" :class="['flex-1 p-4 rounded-2xl flex flex-col items-center gap-1 font-medium transition-all', activeTab === 'info' ? 'bg-primary text-white shadow-lg' : 'text-textSoft hover:bg-slate-100/50']">
         <i class="ri-information-line text-xl"></i>
         <span class="text-xs">Trip Info</span>
@@ -424,7 +403,7 @@
         return {
           trips: [],
           activeTripId: null,
-          activeTab: 'info', // <-- 調整: 預設登陸頁面為 'info'
+          activeTab: 'info', // <-- 預設登陸頁面為 'info'
           AVIATIONSTACK_KEY: '5b729556e3ef80e18916fcecbcfd81ba',
           
           batchImportText: '',
