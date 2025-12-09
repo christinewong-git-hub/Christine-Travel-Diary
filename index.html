@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Christine's Travel Diary - 韓系輕透</title>
+  <title>Christine's Travel Plan - 韓系輕透</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -56,7 +56,7 @@
       background: linear-gradient(135deg, #A8C0FF 0%, #D2E9FF 50%, #DDDDFF 100%);
       position: relative;
       overflow: hidden;
-      border: none; /* 移除額外的玻璃邊框，使用背景色 */
+      border: none;
     }
     .flight-sky::before {
       content: '';
@@ -84,9 +84,9 @@
       backdrop-filter: blur(18px);
       transition: all 0.3s ease;
     }
-    .weather-sunny { background: linear-gradient(135deg, #FFECF5 0%, #FFD9EC 40%, #FFC7D8 100%); } /* 粉紅調 */
-    .weather-cloudy { background: linear-gradient(135deg, #DDDDFF 0%, #E6E6F2 40%, #A8C0FF 100%); } /* 淡紫藍調 */
-    .weather-rainy { background: linear-gradient(135deg, #A8C0FF 0%, #C4E1FF 35%, #D8D8EB 100%); } /* 淺藍灰調 */
+    .weather-sunny { background: linear-gradient(135deg, #FFECF5 0%, #FFD9EC 40%, #FFC7D8 100%); }
+    .weather-cloudy { background: linear-gradient(135deg, #DDDDFF 0%, #E6E6F2 40%, #A8C0FF 100%); }
+    .weather-rainy { background: linear-gradient(135deg, #A8C0FF 0%, #C4E1FF 35%, #D8D8EB 100%); }
     
     /* 膠囊導航列 */
     .capsule-tab {
@@ -98,7 +98,7 @@
     
     /* 活躍旅程卡片 */
     .active-trip-card {
-      background: linear-gradient(135deg, #A8C0FF, #D2E9FF); /* 使用 Primary/Pastel Blue 漸層 */
+      background: linear-gradient(135deg, #A8C0FF, #D2E9FF);
       color: #1f2937;
       border: 1px solid rgba(255, 255, 255, 0.9);
     }
@@ -106,14 +106,14 @@
     /* 行程時間軸線 */
     .itinerary-line {
         width: 4px;
-        background-color: #A8C0FF; /* Primary Color */
+        background-color: #A8C0FF;
         margin: 0 auto;
         position: relative;
     }
     .itinerary-dot {
         width: 12px;
         height: 12px;
-        background-color: #FFC7D8; /* Secondary Color */
+        background-color: #FFC7D8;
         border-radius: 50%;
         position: absolute;
         left: 50%;
@@ -122,26 +122,39 @@
         border: 2px solid white;
         box-shadow: 0 0 5px rgba(0,0,0,0.1);
     }
+    
+    /* 固定的Header樣式調整 */
+    .fixed-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      backdrop-filter: blur(25px);
+      background: rgba(255, 255, 255, 0.85);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.9);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
   </style>
 </head>
 <body>
   <div id="app">
-    <header class="fixed top-6 left-1/2 transform -translate-x-1/2 glass-card p-4 w-[min(90vw,500px)] flex items-center justify-between z-50 shadow-2xl">
+    <header class="fixed-header p-4 flex items-center justify-between">
       <i class="ri-plane-line text-3xl text-primary"></i>
-      <h1 class="text-xl font-bold text-slate-800">Christine's Travel Diary</h1>
+      <h1 class="text-xl font-bold text-slate-800">Christine's Travel Plan</h1>
       <button @click="activeTab = 'trips'" class="p-2 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary transition-all">
         <i class="ri-suitcase-3-line text-xl"></i>
       </button>
     </header>
 
-    <main class="pt-28 pb-28 px-6 max-w-6xl mx-auto">
+    <main class="pt-20 pb-28 px-4 max-w-6xl mx-auto">
       
       <section v-if="activeTab === 'info' && activeTrip" class="glass-card mx-auto max-w-3xl p-8 mb-8">
         <h1 class="text-3xl font-bold text-primary mb-6">{{ activeTrip.title }} ({{ activeTrip.destination }})</h1>
         
         <div class="flight-sky glass-card p-8 mb-8 relative z-10">
           <h2 class="text-2xl font-bold mb-6 flex items-center gap-3"><i class="ri-flight-takeoff-line text-slate-800"></i>航班詳情</h2>
-          <div class="grid md:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="p-4 rounded-xl bg-white/60">
               <h3 class="font-bold text-lg mb-2">去程</h3>
               <label class="text-sm font-medium">航班編號</label>
@@ -411,7 +424,7 @@
         return {
           trips: [],
           activeTripId: null,
-          activeTab: 'trips', // 預設從 Trips History 開始，方便切換旅程
+          activeTab: 'info', // <-- 調整: 預設登陸頁面為 'info'
           AVIATIONSTACK_KEY: '5b729556e3ef80e18916fcecbcfd81ba',
           
           batchImportText: '',
@@ -433,11 +446,10 @@
         },
         groupedItinerary() {
           if (!this.activeTrip?.itinerary) return [];
-          const daySize = 5; // 每五項行程為一天
-          return _.chunk(this.activeTrip.itinerary, daySize); // 使用修正後的 chunk
+          const daySize = 5;
+          return _.chunk(this.activeTrip.itinerary, daySize);
         },
         expenses() {
-            // 直接返回當前旅程的支出列表
             return this.activeTrip?.expenses || [];
         },
         totalExpensesHKD() {
@@ -458,7 +470,6 @@
           if (this.trips.length) {
             this.activeTripId = this.trips[0].id;
           }
-          // 初始載入時，如果 activeTab 是 itinerary-map (但預設是 trips)，則等待切換後再初始化地圖
           this.refreshActiveTrip();
         },
         addDefaultTrip() {
@@ -491,14 +502,13 @@
         },
         switchTrip(id) {
           this.activeTripId = id;
-          this.activeTab = 'info'; // 切換旅程後回到資訊頁
+          this.activeTab = 'info';
           this.refreshActiveTrip();
         },
         refreshActiveTrip() {
           if (!this.activeTrip) return;
           this.fetchExchangeRate();
           this.fetchWeather();
-          // 如果當前是地圖分頁，則確保地圖和路線更新
           if (this.activeTab === 'itinerary-map') {
             this.updateRoute();
           }
@@ -540,7 +550,6 @@
         async fetchExchangeRate() {
           if (!this.activeTrip?.currency) return;
           try {
-            // 使用歐洲央行數據源作為替代
             const res = await fetch(`https://api.exchangerate.host/latest?base=HKD&symbols=${this.activeTrip.currency}`);
             const data = await res.json();
             if (data.rates && data.rates[this.activeTrip.currency]) {
@@ -576,7 +585,6 @@
               remark: '批次匯入'
             });
             
-            // 簡易 +1 hour (需處理分鐘和進位，此處簡化)
             const [h, m] = currentTime.split(':').map(Number);
             const nextHour = (h + 1) % 24;
             currentTime = `${nextHour.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
@@ -594,7 +602,6 @@
           const item = this.activeTrip.itinerary[idx];
           let url = item.mapsUrl;
           if (!url) {
-            // 嘗試從上一個地點導航
             let origin = this.activeTrip.city;
             if (idx > 0) {
                  origin = this.activeTrip.itinerary[idx-1].location;
@@ -609,12 +616,11 @@
         // Map & Route
         async updateRoute() {
           if (!this.activeTrip?.itinerary.length) return;
-          await nextTick(); // 確保 DOM 準備好
+          await nextTick();
           await this.initMap();
           if (!this.map) return;
           
           this.map.eachLayer(layer => { 
-            // 移除舊的 Marker 和 Polyline
             if (layer instanceof L.Polyline || layer instanceof L.Marker) {
               this.map.removeLayer(layer);
             }
@@ -625,7 +631,7 @@
           
           for (let i = 0; i < this.activeTrip.itinerary.length; i++) {
             const item = this.activeTrip.itinerary[i];
-            const { lat, lng } = await this.geocode(item.location + ', ' + this.activeTrip.city); // 增加城市名提高準確度
+            const { lat, lng } = await this.geocode(item.location + ', ' + this.activeTrip.city);
             if (lat && lng) {
               coords.push([lat, lng]);
               L.marker([lat, lng]).addTo(this.map).bindPopup(`<b>${i+1}. ${item.activity}</b><br>${item.time}`);
@@ -639,16 +645,15 @@
           
           if (coords.length > 1) {
             L.polyline(coords, { color: this.getComputedStyle().getPropertyValue('--tw-colors-primary'), weight: 5, opacity: 0.8 }).addTo(this.map);
-            this.map.fitBounds(coords, { padding: [50, 50] }); // 適應邊界
+            this.map.fitBounds(coords, { padding: [50, 50] });
           } else if (coords.length === 1) {
              this.map.setView(coords[0], 13);
           }
           
-          this.activeTrip.routeSummary.distance = totalDist / 1000; // km
+          this.activeTrip.routeSummary.distance = totalDist / 1000;
           this.saveData();
         },
         initMap() {
-          // 只有當 map 元素存在且地圖未被初始化時才執行
           const el = document.getElementById('map');
           if (this.map) {
              this.map.remove();
@@ -663,7 +668,6 @@
         },
         async geocode(query) {
           try {
-            // 使用 Nominatim 進行地理編碼
             const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
             const data = await res.json();
             return data[0] ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : { lat: null, lng: null };
@@ -672,7 +676,7 @@
           }
         },
         haversine(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; // meters
+            const R = 6371e3;
             const φ1 = lat1 * Math.PI/180;
             const φ2 = lat2 * Math.PI/180;
             const Δφ = (lat2-lat1) * Math.PI/180;
@@ -681,7 +685,7 @@
                 Math.cos(φ1) * Math.cos(φ2) *
                 Math.sin(Δλ/2) * Math.sin(Δλ/2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c; // meters
+            return R * c;
         },
         // Expenses
         addExpense() {
@@ -767,7 +771,6 @@
           }
         },
         getComputedStyle() {
-            // 用於獲取 Tailwind 顏色變數
             return document.documentElement ? getComputedStyle(document.documentElement) : null;
         }
       },
@@ -779,7 +782,6 @@
           this.refreshActiveTrip();
         },
         activeTab(newTab, oldTab) {
-          // 在切換到地圖頁時初始化
           if (newTab === 'itinerary-map') {
             this.$nextTick(() => this.updateRoute());
           }
