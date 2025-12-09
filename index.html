@@ -54,78 +54,97 @@
   </script>
   <style>
     /* 整體粉嫩背景 */
-    body {
-      min-height: 100vh;
-      font-family: 'Noto Sans TC', system-ui, sans-serif;
-      color: #1a202c;
-      background:
-        radial-gradient(circle at top, #C4E1FF 0, #D2E9FF 28%, #DDDDFF 55%, #FFECF5 100%);
-    }
-    .app-shell {
-      max-width: 1024px;
-      margin: 0 auto;
-      min-height: 100vh;
-      padding: 16px;
-    }
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(151, 203, 255, 0.8);
+body {
+  min-height: 100vh;
+  font-family: 'Noto Sans TC', system-ui, sans-serif;
+  color: #1a202c;
+  background:
+    radial-gradient(circle at top, #C4E1FF 0, #D2E9FF 28%, #DDDDFF 55%, #FFECF5 100%);
+}
+.app-shell {
+  max-width: 1024px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding: 16px;
+  padding-bottom: 80px; /* 給底部膠囊 tab bar 留空位 */
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(151, 203, 255, 0.8);
+  border-radius: 999px;
+}
+#map {
+  min-height: 260px;
+  border-radius: 16px;
+}
+
+/* 通用玻璃卡片 */
+.glass-card {
+  background: linear-gradient(135deg, rgba(255, 247, 251, 0.82), rgba(220, 228, 255, 0.84));
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 40px rgba(170, 170, 210, 0.55);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+/* Flight sky：粉嫩天空背景 */
+.flight-sky {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at top, #C4E1FF 0, #D2E9FF 35%, #ECECFF 75%, #FFECF5 100%);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 18px 40px rgba(170, 170, 210, 0.6);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+/* Weather：粉嫩、半透明 */
+.weather-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 40px rgba(170, 170, 210, 0.55);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.weather-sunny {
+  background: linear-gradient(135deg, #FFECF5 0%, #FFD9EC 40%, #ECECFF 100%);
+}
+.weather-cloudy {
+  background: linear-gradient(135deg, #DDDDFF 0%, #E6E6F2 40%, #D8D8EB 100%);
+}
+.weather-rainy {
+  background: linear-gradient(135deg, #D8D8EB 0%, #E6E6F2 35%, #C4E1FF 100%);
+}
+.sun-icon {
+  position: absolute;
+  top: -18px;
+  right: -18px;
+  width: 64px;
+  height: 64px;
+  background: radial-gradient(circle at center, #ffeaa7 0, #fdcb6e 65%, #e17055 100%);
+  border-radius: 999px;
+  box-shadow: 0 0 18px rgba(253, 203, 110, 0.7);
+}
+      position: absolute;
+      top: -18px;
+      right: -18px;
+      width: 64px;
+      height: 64px;
+      background: radial-gradient(circle at center, #ffeaa7 0, #fdcb6e 65%, #e17055 100%);
       border-radius: 999px;
-    }
-    #map {
-      min-height: 280px;
-      border-radius: 16px;
-    }
-
-    /* 通用玻璃卡片 */
-    .glass-card {
-      background: linear-gradient(135deg, rgba(255, 247, 251, 0.82), rgba(220, 228, 255, 0.84));
-      border-radius: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.9);
-      box-shadow: 0 18px 40px rgba(170, 170, 210, 0.55);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-    }
-
-    /* Flight sky：粉嫩天空背景 + 玻璃感 */
-    .flight-sky {
-      position: relative;
-      overflow: hidden;
-      background: radial-gradient(circle at top, #C4E1FF 0, #D2E9FF 35%, #ECECFF 75%, #FFECF5 100%);
-      border-radius: 24px;
-      border: 1px solid rgba(255, 255, 255, 0.85);
-      box-shadow: 0 18px 40px rgba(170, 170, 210, 0.6);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-    }
-
-    /* Weather：粉嫩、半透明 */
-    .weather-card {
-      position: relative;
-      overflow: hidden;
-      border-radius: 24px;
-      border: 1px solid rgba(255, 255, 255, 0.9);
-      box-shadow: 0 18px 40px rgba(170, 170, 210, 0.55);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-    }
-    .weather-sunny {
-      background: linear-gradient(135deg, #FFECF5 0%, #FFD9EC 40%, #ECECFF 100%);
-    }
-    .weather-cloudy {
-      background: linear-gradient(135deg, #DDDDFF 0%, #E6E6F2 40%, #D8D8EB 100%);
-    }
-    .weather-rainy {
-      background: linear-gradient(135deg, #D8D8EB 0%, #E6E6F2 35%, #C4E1FF 100%);
+      box-shadow: 0 0 18px rgba(253, 203, 110, 0.7);
     }
   </style>
 </head>
 <body>
-<div id="app
-
+<div id="app" class="app-shell flex flex-col gap-4">
 
   <!-- Top Bar -->
   <header class="flex items-center justify-between gap-3">
@@ -1151,7 +1170,7 @@
 
 <script>
   // Aviationstack API key（請填完整 key）
-  const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; // flight_iata + flight_date[web:507][web:518][web:561]
+  const AVIATIONSTACK_KEY = '5b72xxxxxxxxxxxxxxxxxxxxxxxxxxxx'; // flight_iata + flight_date[web:507][web:518][web:561]
 
   let leafletMap = null;
   let routePolyline = null;
