@@ -849,22 +849,22 @@
             class="border border-secondary/60 rounded-lg px-2 py-1.5 bg-white outline-none"
           />
         </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-textSoft">開始日期</label>
-          <input
-            v-model="newTripForm.startDate"
-            type="date"
-            class="border border-secondary/60 rounded-lg px-2 py-1.5 bg-white outline-none"
-          />
+
+        <!-- 自動取得座標按鈕 -->
+        <div class="md:col-span-2 flex items-center justify-between text-[11px] mt-1">
+          <span class="text-textSoft">
+            可用城市名稱自動取得地圖中心緯度 / 經度
+          </span>
+          <button
+            @click="autoFillLatLng"
+            type="button"
+            class="px-2.5 py-1 rounded-full border border-secondary/70 text-textMain hover:bg-bgLight/80 flex items-center gap-1"
+          >
+            <i class="ri-compass-3-line text-xs text-primary"></i>
+            <span>自動取得座標</span>
+          </button>
         </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-textSoft">結束日期</label>
-          <input
-            v-model="newTripForm.endDate"
-            type="date"
-            class="border border-secondary/60 rounded-lg px-2 py-1.5 bg-white outline-none"
-          />
-        </div>
+
         <div class="flex flex-col gap-1">
           <label class="text-textSoft">地圖中心緯度</label>
           <input
@@ -1320,6 +1320,40 @@
           lng: 139.6503
         };
       },
+
+      // 自動取得城市座標（OpenStreetMap Nominatim）[web:1]
+      async autoFillLatLng() {
+        const query = this.newTripForm.city || this.newTripForm.destination;
+        if (!query) {
+          alert('請先輸入「城市名稱」或「目的地」。');
+          return;
+        }
+
+        try {
+          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
+          const res = await fetch(url, {
+            headers: {
+              'Accept-Language': 'zh-HK'
+            }
+          });
+          const data = await res.json();
+
+          if (!data || data.length === 0) {
+            alert('找不到這個城市的座標，試試「Tokyo, Japan」這類寫法。');
+            return;
+          }
+
+          const best = data[0];
+          this.newTripForm.lat = parseFloat(best.lat);
+          this.newTripForm.lng = parseFloat(best.lon);
+
+          alert(`已更新地圖中心：\nLat: ${this.newTripForm.lat}\nLng: ${this.newTripForm.lng}`);
+        } catch (e) {
+          console.error('Geocode error', e);
+          alert('自動取得座標時出現問題，可以稍後再試，或手動輸入緯度／經度。');
+        }
+      },
+
       createTrip() {
         if (!this.newTripForm.title || !this.newTripForm.destination) {
           alert('請至少填寫旅程名稱與目的地');
