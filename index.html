@@ -116,58 +116,61 @@
     <main class="pt-20 pb-28 px-4 max-w-6xl mx-auto">
       
       <section v-if="activeTab === 'info' && activeTrip" class="mx-auto max-w-3xl mb-8">
-        <h1 class="text-3xl font-bold text-slate-800 mb-8">{{ activeTrip.title }} ({{ activeTrip.destination }})</h1>
         
-        <div class="mb-10">
-          <h2 class="text-2xl font-bold mb-6 flex items-center gap-3 text-primary"><i class="ri-flight-takeoff-line"></i>航班詳情</h2>
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <h3 class="font-bold text-lg mb-4 text-slate-800 border-b border-primary/50 pb-2">去程 (Outbound)</h3>
-              
-              <label class="block text-sm font-medium mb-1 mt-4">航班編號</label>
-              <input v-model="activeTrip.flights.outbound.no" placeholder="e.g. NH924" class="w-full mb-4 text-sm">
-              
-              <label class="block text-sm font-medium mb-1">日期</label>
-              <input v-model="activeTrip.flights.outbound.date" type="date" class="w-full mb-4 text-sm">
-              
-              <div class="flex gap-2 mb-4">
-                <div class="flex-1">
-                  <label class="block text-sm font-medium mb-1">出發地</label>
-                  <input v-model="activeTrip.flights.outbound.from" placeholder="IATA" class="w-full text-sm">
-                </div>
-                <div class="flex-1">
-                  <label class="block text-sm font-medium mb-1">目的地</label>
-                  <input v-model="activeTrip.flights.outbound.to" placeholder="IATA" class="w-full text-sm">
-                </div>
-              </div>
-              
-              <button @click="fetchFlight('outbound')" class="mt-2 w-full bg-primary text-white py-3 rounded-xl font-medium transition-all hover:bg-primary/80">自動填寫去程</button>
-            </div>
+        <div class="bg-white/90 rounded-2xl p-6 mb-8">
+             <h1 class="text-3xl font-bold text-slate-800">{{ activeTrip.title }} ({{ activeTrip.destination }})</h1>
+        </div>
+        
+        <div class="bg-white/90 rounded-2xl p-6 mb-8">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3 text-primary"><i class="ri-flight-takeoff-line"></i>航班詳情</h2>
             
-            <div>
-              <h3 class="font-bold text-lg mb-4 text-slate-800 border-b border-primary/50 pb-2">回程 (Inbound)</h3>
-              
-              <label class="block text-sm font-medium mb-1 mt-4">航班編號</label>
-              <input v-model="activeTrip.flights.inbound.no" placeholder="e.g. NH923" class="w-full mb-4 text-sm">
-              
-              <label class="block text-sm font-medium mb-1">日期</label>
-              <input v-model="activeTrip.flights.inbound.date" type="date" class="w-full mb-4 text-sm">
-              
-              <div class="flex gap-2 mb-4">
-                <div class="flex-1">
-                  <label class="block text-sm font-medium mb-1">出發地</label>
-                  <input v-model="activeTrip.flights.inbound.from" placeholder="IATA" class="w-full text-sm">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <h3 class="font-bold text-lg mb-4 text-slate-800 border-b border-primary/50 pb-2">去程 (Outbound)</h3>
+                
+                <label class="block text-sm font-medium mb-1 mt-4">航班編號</label>
+                <input v-model="activeTrip.flights.outbound.no" placeholder="e.g. NH924" class="w-full mb-4 text-sm">
+                
+                <label class="block text-sm font-medium mb-1">日期</label>
+                <input v-model="activeTrip.flights.outbound.date" type="date" class="w-full mb-4 text-sm">
+                
+                <div class="flex gap-2 mb-4">
+                  <div class="flex-1">
+                    <label class="block text-sm font-medium mb-1">出發地</label>
+                    <input v-model="activeTrip.flights.outbound.from" placeholder="IATA" class="w-full text-sm">
+                  </div>
+                  <div class="flex-1">
+                    <label class="block text-sm font-medium mb-1">目的地</label>
+                    <input v-model="activeTrip.flights.outbound.to" placeholder="IATA" class="w-full text-sm">
+                  </div>
                 </div>
-                <div class="flex-1">
-                  <label class="block text-sm font-medium mb-1">目的地</label>
-                  <input v-model="activeTrip.flights.inbound.to" placeholder="IATA" class="w-full text-sm">
-                </div>
+                
+                <button @click="fetchFlight('outbound')" class="mt-2 w-full bg-primary text-white py-3 rounded-xl font-medium transition-all hover:bg-primary/80">自動填寫去程</button>
               </div>
+              
+              <div>
+                <h3 class="font-bold text-lg mb-4 text-slate-800 border-b border-primary/50 pb-2">回程 (Inbound)</h3>
+                
+                <label class="block text-sm font-medium mb-1 mt-4">航班編號</label>
+                <input v-model="activeTrip.flights.inbound.no" placeholder="e.g. NH923" class="w-full mb-4 text-sm">
+                
+                <label class="block text-sm font-medium mb-1">日期</label>
+                <input v-model="activeTrip.flights.inbound.date" type="date" class="w-full mb-4 text-sm">
+                
+                <div class="flex gap-2 mb-4">
+                  <div class="flex-1">
+                    <label class="block text-sm font-medium mb-1">出發地</label>
+                    <input v-model="activeTrip.flights.inbound.from" placeholder="IATA" class="w-full text-sm">
+                  </div>
+                  <div class="flex-1">
+                    <label class="block text-sm font-medium mb-1">目的地</label>
+                    <input v-model="activeTrip.flights.inbound.to" placeholder="IATA" class="w-full text-sm">
+                  </div>
+                </div>
 
-              <button @click="fetchFlight('inbound')" class="mt-2 w-full bg-primary text-white py-3 rounded-xl font-medium transition-all hover:bg-primary/80">自動填寫回程</button>
+                <button @click="fetchFlight('inbound')" class="mt-2 w-full bg-primary text-white py-3 rounded-xl font-medium transition-all hover:bg-primary/80">自動填寫回程</button>
+              </div>
             </div>
-          </div>
         </div>
         
         <div class="grid md:grid-cols-3 gap-6">
@@ -223,10 +226,14 @@
                 <input v-model="item.activity" placeholder="活動名稱" class="w-full mb-2 text-sm font-medium">
                 <input v-model="item.location" placeholder="地點/地址" class="w-full mb-2 text-sm">
                 <input v-model="item.mapsUrl" placeholder="Google Maps URL (可選)" class="w-full mb-2 text-xs">
+                
                 <div class="flex gap-2 mb-2">
                   <input v-model="item.bookingTime" placeholder="預約時間" class="flex-1 text-xs">
                   <input v-model="item.remark" placeholder="備註" class="flex-1 text-xs">
                 </div>
+                
+                <p v-if="item.bookingTime" class="text-sm font-medium mt-2 text-primary">預約時間: **Booked ({{ item.bookingTime }})**</p>
+
                 <div class="flex gap-2 mt-3">
                   <button @click="openItineraryMap(idx)" class="flex-1 bg-primary text-white py-2 rounded-lg text-sm transition-all hover:bg-primary/80"><i class="ri-map-pin-line"></i> 開啟地圖</button>
                   <button @click="removeItineraryItem(idx)" class="bg-secondary text-slate-800 py-2 px-4 rounded-lg text-sm transition-all hover:bg-red-400">刪除</button>
@@ -476,7 +483,7 @@
               inbound: { no: 'NH923', date: '2026-01-01', from: 'NRT', to: 'HKG' }
             },
             itinerary: [
-                { time: '10:00', activity: '機場報到', location: 'HKG', mapsUrl: '', bookingTime: '', remark: '' },
+                { time: '10:00', activity: '機場報到', location: 'HKG', mapsUrl: '', bookingTime: '12:00', remark: '' },
                 { time: '16:00', activity: '到達酒店 Check-in', location: 'Tokyo Hotel', mapsUrl: '', bookingTime: '', remark: '' },
                 { time: '19:00', activity: '晚餐 - 一蘭拉麵', location: 'Shibuya', mapsUrl: '', bookingTime: '', remark: '第一天' }
             ],
