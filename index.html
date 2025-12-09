@@ -131,14 +131,14 @@
         </span>
       </div>
 
-      <!-- Flights (editable) -->
+      <!-- Flights (editable, 去程 / 回程) -->
       <div class="flex flex-wrap gap-2 mt-3 text-[11px]">
-        <!-- OUTBOUND -->
+        <!-- 去程 -->
         <div
           class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-secondary/60 bg-bgLight/80"
         >
           <span class="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px]">
-            OUT
+            去程
           </span>
           <input
             v-model="activeTrip.flights.outbound.no"
@@ -163,12 +163,12 @@
           />
         </div>
 
-        <!-- INBOUND -->
+        <!-- 回程 -->
         <div
           class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-secondary/60 bg-bgLight/80"
         >
           <span class="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px]">
-            IN
+            回程
           </span>
           <input
             v-model="activeTrip.flights.inbound.no"
@@ -691,7 +691,7 @@
         class="rounded-xl border border-secondary/60 bg-bgLight/60 px-3 py-3 flex gap-3 text-xs"
         :class="{ 'opacity-60': item.purchased }"
       >
-        <div class="w-16 h-16 rounded-lg bg-white border border-secondary/60 flex items-center justify-center overflow-hidden flex-shrink-0">
+        <div class="w-16 h-16 rounded-lg bg白 border border-secondary/60 flex items-center justify-center overflow-hidden flex-shrink-0">
           <img
             v-if="item.imageData"
             :src="item.imageData"
