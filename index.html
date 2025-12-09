@@ -177,7 +177,7 @@
 
       <!-- Weather & Stats -->
       <div class="grid grid-cols-2 gap-4">
-        <!-- Weather Card (自動隨地點更新) -->
+        <!-- Weather Card -->
         <div :class="['glass-card p-5 flex flex-col justify-between relative overflow-hidden h-40', `weather-${weatherTheme}`]">
           <div class="relative z-10 h-full flex flex-col justify-between">
             <div class="flex justify-between items-start">
@@ -202,13 +202,13 @@
           <span class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">總花費 (HKD)</span>
           <span class="text-2xl font-black text-slate-800 mt-1">{{ totalExpensesHKD.toLocaleString() }}</span>
           <div class="text-[10px] text-slate-400 mt-2 bg-slate-50 px-3 py-1 rounded-full">
-            匯率 {{ activeTrip.exchangeRate }}
+            1 HKD ≈ {{ (activeTrip.exchangeRate || 1).toFixed(2) }} {{ activeTrip.currency }}
           </div>
         </div>
       </div>
     </section>
 
-    <!-- === Tab 2: 行程 / 地圖 (橫向 Day 卡片) === -->
+    <!-- === Tab 2: 行程 / 地圖 === -->
     <section v-if="activeTab === 'itinerary-map' && activeTrip" class="animate-fade-in">
       
       <!-- Controls -->
@@ -247,20 +247,15 @@
              <span class="bg-primary text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md shadow-primary/30">Day {{ dayIdx + 1 }}</span>
              <span class="text-xs text-slate-400 font-bold tracking-wider">{{ group.length }} 個景點</span>
           </div>
-          
           <div class="p-4 space-y-6">
             <div v-for="(item, idx) in group" :key="idx" class="relative pl-6 border-l-2 border-slate-200">
-              <!-- Dot -->
               <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-4 border-slate-300"></div>
-              
               <div class="flex justify-between items-start mb-1">
                 <input v-model="item.time" type="time" class="bg-transparent font-bold text-xl text-slate-700 w-24 p-0 border-0 focus:ring-0">
                 <button @click="removeItineraryItem(dayIdx, idx)" class="text-slate-300 hover:text-red-400"><i class="ri-close-circle-fill text-xl"></i></button>
               </div>
-              
               <input v-model="item.location" placeholder="地點名稱" class="w-full font-bold text-lg text-slate-800 bg-transparent mb-1 border-0 border-b border-transparent focus:border-primary focus:ring-0 placeholder-slate-300 p-0 transition">
               <input v-model="item.activity" placeholder="備註 / 活動" class="w-full text-sm text-slate-500 bg-transparent mb-3 border-0 focus:ring-0 p-0">
-              
               <div class="flex gap-2">
                 <button @click="openGoogleMaps(item.location)" class="flex-1 bg-white border border-slate-200 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition flex items-center justify-center gap-1">
                   <i class="ri-google-fill text-red-500"></i> Map
@@ -331,7 +326,7 @@
            <input v-model.number="activeTrip.exchangeRate" type="number" step="0.1" class="w-24 text-center bg-transparent border-b-2 border-slate-200 focus:outline-none focus:border-primary">
            <span class="text-xl self-end mb-1">{{ activeTrip.currency }}</span>
          </div>
-         <button @click="fetchRate" class="text-xs bg-slate-100 text-slate-500 px-3 py-1 rounded-full mt-3 hover:bg-slate-200"><i class="ri-refresh-line"></i> 更新</button>
+         <button @click="autoGeocode" class="text-xs bg-slate-100 text-slate-500 px-3 py-1 rounded-full mt-3 hover:bg-slate-200"><i class="ri-refresh-line"></i> 重新抓取即時匯率</button>
       </div>
       
       <div class="glass-card p-5 mb-6">
@@ -379,13 +374,12 @@
       </div>
     </section>
 
-    <!-- === Tab 5: History (大卡片) === -->
+    <!-- === Tab 5: History === -->
     <section v-if="activeTab === 'trips'" class="animate-fade-in pb-20">
       <div class="space-y-6">
         <div v-for="trip in trips" :key="trip.id" 
              @click="switchTrip(trip.id)"
              :class="['glass-card p-6 cursor-pointer transition-all duration-300', activeTripId === trip.id ? 'trip-card-active' : 'opacity-80 hover:opacity-100']">
-          
           <div class="flex justify-between items-start mb-4">
              <div>
                <div class="flex items-center gap-2 mb-1">
@@ -401,13 +395,11 @@
                 <div class="text-lg font-black text-slate-700">{{ trip.currency }}</div>
              </div>
           </div>
-          
           <div class="flex gap-4 text-xs text-slate-500 mb-5 bg-slate-50/50 p-3 rounded-xl">
              <div class="flex items-center gap-1"><i class="ri-calendar-line"></i> {{ trip.startDate }}</div>
              <div class="flex items-center gap-1"><i class="ri-arrow-right-line"></i></div>
              <div class="flex items-center gap-1"><i class="ri-calendar-check-line"></i> {{ trip.endDate }}</div>
           </div>
-
           <div class="pt-4 border-t border-slate-100 flex gap-3">
             <button @click.stop="openEditTripModal(trip)" class="flex-1 bg-white border border-slate-200 text-slate-600 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition shadow-sm">
               <i class="ri-edit-line mr-1"></i>編輯
@@ -431,20 +423,28 @@
       <div class="space-y-4">
         <input v-model="tempTrip.title" placeholder="旅程標題 (e.g. 畢業旅行)" class="w-full p-4 rounded-2xl bg-slate-50 border-0 font-bold focus:ring-2 ring-primary/20">
         
-        <!-- City & Country with Auto Geocode -->
         <div class="flex gap-3">
           <input v-model="tempTrip.city" placeholder="城市 (e.g. Tokyo)" class="flex-1 p-4 rounded-2xl bg-slate-50 border-0 text-sm">
-          <input v-model="tempTrip.destination" placeholder="國家 (e.g. Japan)" class="flex-1 p-4 rounded-2xl bg-slate-50 border-0 text-sm">
+          <input v-model="tempTrip.destination" placeholder="國家 (可選)" class="flex-1 p-4 rounded-2xl bg-slate-50 border-0 text-sm">
         </div>
-        <button @click="autoGeocode" type="button" class="w-full py-2 rounded-xl bg-blue-50 text-primary text-xs font-bold hover:bg-blue-100 transition">
-          <i class="ri-map-pin-add-line mr-1"></i>自動取得座標 (Auto Geocode)
+        
+        <!-- Smart Auto Fill Button -->
+        <button @click="autoGeocode" type="button" class="w-full py-3 rounded-xl bg-blue-50 text-primary text-xs font-bold hover:bg-blue-100 transition flex items-center justify-center gap-2 border border-blue-100">
+          <i class="ri-magic-line text-lg"></i>
+          自動取得座標 + 貨幣 + 匯率 (One-Click)
         </button>
 
         <div class="flex gap-3">
           <input v-model="tempTrip.startDate" type="date" class="flex-1 p-4 rounded-2xl bg-slate-50 border-0 text-sm">
           <input v-model="tempTrip.endDate" type="date" class="flex-1 p-4 rounded-2xl bg-slate-50 border-0 text-sm">
         </div>
-        <input v-model="tempTrip.currency" placeholder="幣別 (e.g. JPY)" class="w-full p-4 rounded-2xl bg-slate-50 border-0 uppercase text-center font-bold tracking-widest">
+        <div class="flex gap-3">
+          <input v-model="tempTrip.currency" placeholder="幣別" class="w-1/3 p-4 rounded-2xl bg-slate-50 border-0 uppercase text-center font-bold tracking-widest text-slate-600">
+           <div class="flex-1 p-4 rounded-2xl bg-slate-50 border-0 text-sm flex items-center text-slate-500">
+             <span class="mr-2">Rate:</span>
+             <span class="font-bold text-slate-700">{{ tempTrip.exchangeRate ? tempTrip.exchangeRate.toFixed(2) : '?' }}</span>
+           </div>
+        </div>
         
         <button @click="saveTrip" class="w-full bg-primary text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-primary/30 mt-2 hover:scale-[1.02] transition">儲存</button>
       </div>
@@ -498,7 +498,7 @@
       activeTrip() { return this.trips.find(t => t.id === this.activeTripId) || null; },
       groupedItinerary() {
         if (!this.activeTrip) return [];
-        const size = 5; // Day card 數量
+        const size = 5; 
         const result = [];
         for (let i = 0; i < this.activeTrip.itinerary.length; i += size) {
           result.push(this.activeTrip.itinerary.slice(i, i + size));
@@ -524,20 +524,19 @@
       },
       activeTripId() {
         this.fetchWeather();
-        this.fetchRate();
+        this.fetchRate(); // Switch trip also refreshes rate
       }
     },
     mounted() {
       this.loadData();
     },
     methods: {
-      saveData() { localStorage.setItem('christine_diary_v3', JSON.stringify(this.trips)); },
+      saveData() { localStorage.setItem('christine_diary_v4', JSON.stringify(this.trips)); },
       loadData() {
-        const saved = localStorage.getItem('christine_diary_v3');
+        const saved = localStorage.getItem('christine_diary_v4');
         if (saved) {
           this.trips = JSON.parse(saved);
         } else {
-          // 預設一個 Demo Trip
           this.trips = [{
             id: Date.now(), title: 'Japan Trip', destination: 'Japan', city: 'Tokyo', currency: 'JPY',
             startDate: '2025-12-24', endDate: '2026-01-01',
@@ -550,25 +549,63 @@
         this.activeTripId = this.trips[0].id;
         this.fetchWeather();
       },
-      // --- Auto Geocode (New!) ---
+      
+      // === Real-Time Magic: Coordinates + Currency + Rate ===
       async autoGeocode() {
         if (!this.tempTrip.city) return alert('請先輸入城市名稱 (City)');
+        
         try {
-          // 使用 OpenStreetMap Nominatim 免費 API
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${this.tempTrip.city},${this.tempTrip.destination || ''}`);
-          const data = await res.json();
-          if (data && data.length > 0) {
-            this.tempTrip.center = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-            alert(`已取得座標：${data[0].display_name}`);
-          } else {
-            alert('找不到該城市，請檢查拼字。');
+          // 1. Get Coordinates & Country Code (Nominatim)
+          // addressdetails=1 確保我們可以拿到 country_code (e.g., 'jp')
+          const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${this.tempTrip.city},${this.tempTrip.destination || ''}&addressdetails=1&limit=1`);
+          const geoData = await geoRes.json();
+          
+          if (!geoData || geoData.length === 0) {
+            return alert('找不到該城市，請檢查拼字。');
           }
+
+          const location = geoData[0];
+          this.tempTrip.center = { lat: parseFloat(location.lat), lng: parseFloat(location.lon) };
+          
+          // 如果使用者沒填國家，我們幫他填上
+          if(location.address && location.address.country) {
+             this.tempTrip.destination = location.address.country;
+          }
+
+          let currencyCode = 'USD'; // Fallback
+          const countryCode = location.address?.country_code; // e.g., 'jp', 'gb', 'us'
+
+          // 2. Get Currency Code (RestCountries via Alpha Code)
+          if (countryCode) {
+            try {
+              const countryRes = await fetch(`https://restcountries.com/v3.1/alpha/${countryCode}`);
+              const countryData = await countryRes.json();
+              if (countryData[0]?.currencies) {
+                // e.g. { JPY: {...} } -> keys -> ['JPY']
+                currencyCode = Object.keys(countryData[0].currencies)[0];
+                this.tempTrip.currency = currencyCode;
+              }
+            } catch (err) { console.error("Currency fetch fail", err); }
+          }
+          
+          // 3. Get Exchange Rate (Open Exchange Rates - Free)
+          // Base is HKD
+          try {
+             const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
+             const rateData = await rateRes.json();
+             if (rateData.rates && rateData.rates[currencyCode]) {
+                this.tempTrip.exchangeRate = rateData.rates[currencyCode];
+             }
+          } catch (err) { console.error("Rate fetch fail", err); }
+
+          alert(`成功！\n座標: ${location.lat}, ${location.lon}\n國家: ${this.tempTrip.destination}\n貨幣: ${currencyCode}\n匯率: 1 HKD ≈ ${this.tempTrip.exchangeRate} ${currencyCode}`);
+
         } catch (e) {
           console.error(e);
-          alert('座標取得失敗，請稍後再試。');
+          alert('自動取得失敗，請稍後再試。');
         }
       },
-      // --- Flight API ---
+
       async fetchFlight(type) {
         const flight = this.activeTrip.flights[type];
         if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
@@ -591,7 +628,6 @@
           alert('API 請求失敗，請檢查 Key 是否正確');
         }
       },
-      // --- Weather ---
       async fetchWeather() {
         if(!this.activeTrip?.center) return;
         try {
@@ -602,7 +638,6 @@
           this.weatherTheme = d.current_weather.weathercode < 3 ? 'sunny' : (d.current_weather.weathercode > 50 ? 'rainy' : 'cloudy');
         } catch(e){}
       },
-      // --- Other Methods (Same as before) ---
       handleImageUpload(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -633,7 +668,7 @@
           setTimeout(() => { this.map.invalidateSize(); }, 100);
         } catch (e) { console.error("Map init fail", e); }
       },
-      openNewTripModal() { this.editingTripId = null; this.tempTrip = {currency:'JPY', center:{lat:35.6,lng:139.6}}; this.showTripModal = true; },
+      openNewTripModal() { this.editingTripId = null; this.tempTrip = {currency:'', exchangeRate:0, center:{lat:35.6,lng:139.6}}; this.showTripModal = true; },
       openEditTripModal(trip) { this.editingTripId = trip.id; this.tempTrip = JSON.parse(JSON.stringify(trip)); this.showTripModal = true; },
       saveTrip() {
         if (!this.tempTrip.title) return;
@@ -641,9 +676,8 @@
           const idx = this.trips.findIndex(t => t.id === this.editingTripId);
           this.trips[idx] = { ...this.trips[idx], ...this.tempTrip };
         } else {
-          // 新旅程預設 center 是剛才 geocode 拿到的，如果沒有就用預設
           const center = this.tempTrip.center || {lat:35.6, lng:139.6};
-          const newTrip = { id: Date.now(), ...this.tempTrip, center: center, exchangeRate:1, flights:{outbound:{},inbound:{}}, itinerary:[], expenses:[], shoppingItems:[] };
+          const newTrip = { id: Date.now(), ...this.tempTrip, center: center, flights:{outbound:{},inbound:{}}, itinerary:[], expenses:[], shoppingItems:[] };
           this.trips.push(newTrip);
           this.activeTripId = newTrip.id;
         }
@@ -668,14 +702,14 @@
         this.newExpense = { name:'', amount:null, method:'現金', category:'飲食' };
         this.saveData();
       },
-      async fetchRate() {},
+      async fetchRate() { /* Optional standalone refresh, handled in autoGeocode primarily */ },
       openGoogleMaps(loc) { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`); },
       openDirections(dIdx, idx) { 
         const realIdx = dIdx*5 + idx;
         const loc = this.activeTrip.itinerary[realIdx].location;
         window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc)}`);
       },
-      runBatchImport() { /* ... batch import logic ... */ }
+      runBatchImport() { /* ... */ }
     }
   }).mount('#app');
 </script>
