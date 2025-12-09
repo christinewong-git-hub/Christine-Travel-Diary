@@ -76,6 +76,85 @@
       min-height: 280px;
       border-radius: 16px;
     }
+
+    /* Flight sky background + moving clouds */
+    .flight-sky {
+      position: relative;
+      overflow: hidden;
+    }
+    .cloud {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 999px;
+      filter: blur(0.5px);
+      animation: cloud-move 40s linear infinite;
+    }
+    .cloud::before,
+    .cloud::after {
+      content: '';
+      position: absolute;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 999px;
+    }
+    .cloud::before {
+      width: 60%;
+      height: 80%;
+      top: -40%;
+      left: 10%;
+    }
+    .cloud::after {
+      width: 50%;
+      height: 70%;
+      top: -30%;
+      right: 5%;
+    }
+    @keyframes cloud-move {
+      0% { transform: translateX(-120%); }
+      100% { transform: translateX(120%); }
+    }
+
+    /* Weather theme backgrounds */
+    .weather-card {
+      position: relative;
+      overflow: hidden;
+    }
+    .weather-sunny {
+      background: radial-gradient(circle at top, #ffeaa7 0, #ffffff 45%, #dff6ff 100%);
+    }
+    .weather-cloudy {
+      background: radial-gradient(circle at top, #dfe6e9 0, #ffffff 40%, #cfd9df 100%);
+    }
+    .weather-rainy {
+      background: radial-gradient(circle at top, #a5b1c2 0, #dfe6e9 40%, #8395a7 100%);
+    }
+    .sun-icon {
+      position: absolute;
+      top: -18px;
+      right: -18px;
+      width: 64px;
+      height: 64px;
+      background: radial-gradient(circle at center, #ffeaa7 0, #fdcb6e 65%, #e17055 100%);
+      border-radius: 999px;
+      box-shadow: 0 0 20px rgba(253, 203, 110, 0.6);
+      animation: sun-pulse 3s ease-in-out infinite;
+    }
+    @keyframes sun-pulse {
+      0%, 100% { transform: scale(1); opacity: 0.95; }
+      50% { transform: scale(1.05); opacity: 1; }
+    }
+    .rain-drop {
+      position: absolute;
+      width: 2px;
+      height: 16px;
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(52, 152, 219, 0.7));
+      border-radius: 999px;
+      animation: rain-fall 1.2s linear infinite;
+    }
+    @keyframes rain-fall {
+      0% { transform: translateY(-10px); opacity: 0; }
+      50% { opacity: 1; }
+      100% { transform: translateY(30px); opacity: 0; }
+    }
   </style>
 </head>
 <body>
@@ -133,9 +212,14 @@
     class="rounded-2xl border border-secondary/60 bg-white/95 backdrop-blur-sm p-4 flex flex-col gap-4"
   >
     <div class="flex flex-col md:flex-row gap-4">
-      <!-- Flight Card -->
-      <div class="flex-1 rounded-2xl bg-gradient-to-br from-primary/90 via-primary to-blue-400 text-white p-4 shadow-md">
-        <div class="flex items-center justify-between mb-2">
+      <!-- Flight Card: sky + moving clouds -->
+      <div class="flex-1 rounded-2xl flight-sky bg-gradient-to-br from-sky-300 via-sky-400 to-sky-600 text-white p-4 shadow-md">
+        <!-- Moving clouds -->
+        <div class="cloud" style="top: 10%; left: -40%; width: 120px; height: 48px; animation-duration: 45s;"></div>
+        <div class="cloud" style="top: 45%; left: -60%; width: 160px; height: 60px; animation-duration: 55s; animation-delay: -10s;"></div>
+        <div class="cloud" style="top: 75%; left: -50%; width: 130px; height: 52px; animation-duration: 50s; animation-delay: -5s;"></div>
+
+        <div class="relative flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
             <i class="ri-flight-takeoff-line text-xl"></i>
             <span class="text-sm font-semibold">Flight Details</span>
@@ -145,7 +229,7 @@
           </span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
+        <div class="relative grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
           <!-- Outbound -->
           <div class="bg-white/10 rounded-xl p-3 space-y-1">
             <div class="flex items-center gap-1 text-white/80 mb-1">
@@ -230,8 +314,23 @@
         </div>
       </div>
 
-      <!-- Weather Card -->
-      <div class="w-full md:w-64 rounded-2xl bg-gradient-to-br from-sky-100 via-bgLight to-white border border-secondary/50 p-4 flex flex-col justify-between">
+      <!-- Weather Card with fantasy backgrounds -->
+      <div
+        class="w-full md:w-64 rounded-2xl weather-card border border-secondary/50 p-4 flex flex-col justify-between"
+        :class="{
+          'weather-sunny': weatherTheme === 'sunny',
+          'weather-cloudy': weatherTheme === 'cloudy',
+          'weather-rainy': weatherTheme === 'rainy'
+        }"
+      >
+        <!-- Weather decoration -->
+        <div v-if="weatherTheme === 'sunny'" class="sun-icon"></div>
+        <div v-if="weatherTheme === 'rainy'">
+          <div class="rain-drop" style="top: 10px; left: 30px;"></div>
+          <div class="rain-drop" style="top: 18px; left: 55px; animation-delay: -0.4s;"></div>
+          <div class="rain-drop" style="top: 6px; left: 80px; animation-delay: -0.8s;"></div>
+        </div>
+
         <div class="flex items-center justify-between">
           <div class="flex flex-col gap-1">
             <span class="text-[11px] text-textSoft">Today · Weather</span>
@@ -246,7 +345,7 @@
           </div>
           <button
             @click="fetchWeather"
-            class="w-9 h-9 rounded-full bg-white border border-secondary/50 flex items-center justify-center text-textSoft hover:text-textMain"
+            class="w-9 h-9 rounded-full bg-white/80 border border-secondary/50 flex items-center justify-center text-textSoft hover:text-textMain"
             title="更新天氣"
           >
             <i class="ri-refresh-line text-xs"></i>
@@ -302,10 +401,10 @@
   </section>
 
   <!-- TAB: Itinerary / Map -->
-  <section v-if="activeTab === 'itinerary'" class="grid md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4">
-    <!-- 行程 Day 卡片 -->
+  <section v-if="activeTab === 'itinerary'" class="grid md:grid-cols-[minmax(0,2.2fr)_minmax(0,2.8fr)] gap-4">
+    <!-- 行程 Day 卡片：更大＋更多欄位 -->
     <div
-      class="rounded-2xl border border-secondary/60 bg-white/95 backdrop-blur-sm p-4 flex flex-col gap-3 max-h-[460px] overflow-x-auto"
+      class="rounded-2xl border border-secondary/60 bg-white/95 backdrop-blur-sm p-4 flex flex-col gap-3 max-h-[620px] overflow-x-auto overflow-y-auto"
     >
       <div class="flex items-center justify-between mb-1">
         <h2 class="text-sm font-semibold text-textMain flex items-center gap-1.5">
@@ -335,7 +434,7 @@
         <div
           v-for="(dayItems, dayIndex) in groupedItinerary"
           :key="'day-card-' + dayIndex"
-          class="min-w-[220px] rounded-2xl border border-secondary/50 bg-gradient-to-b from-bgLight to-white px-3 py-3 flex flex-col gap-2"
+          class="min-w-[260px] h-[420px] rounded-2xl border border-secondary/50 bg-gradient-to-b from-bgLight to-white px-3 py-3 flex flex-col gap-2"
         >
           <div class="flex items-center justify-between mb-1">
             <div class="flex items-center gap-2">
@@ -354,7 +453,7 @@
             </span>
           </div>
 
-          <div class="flex flex-col gap-2">
+          <div class="flex flex-col gap-2 overflow-y-auto pr-1">
             <div
               v-for="(item, idx) in dayItems"
               :key="'day-' + dayIndex + '-item-' + idx"
@@ -372,26 +471,58 @@
               <div
                 class="flex-1 bg-white/80 rounded-xl border border-secondary/40 px-2.5 py-1.5 text-[11px] shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
               >
+                <!-- 活動名稱 -->
                 <input
                   v-model="item.activity"
                   class="w-full bg-transparent outline-none text-[11px] font-semibold text-textMain"
                   placeholder="活動名稱"
                   @change="updateRoute"
                 />
+                <!-- 地址 / 地點 -->
                 <input
                   v-model="item.location"
                   class="w-full bg-transparent outline-none text-[10px] text-textSoft mt-0.5"
                   placeholder="地點 / 地址"
                   @change="updateRoute"
                 />
+                <!-- Google Maps URL -->
+                <input
+                  v-model="item.mapsUrl"
+                  class="w-full bg-bgLight/70 outline-none text-[10px] text-textSoft mt-1 px-2 py-1 rounded border border-secondary/40"
+                  placeholder="貼上 Google Maps URL（可選）"
+                />
+                <!-- Booked + 備註 -->
+                <div class="grid grid-cols-[1.1fr_1.9fr] gap-2 mt-1">
+                  <!-- Booked time -->
+                  <div class="flex flex-col gap-0.5">
+                    <span class="text-[10px] text-textSoft">Booked</span>
+                    <input
+                      v-model="item.bookingTime"
+                      class="w-full bg-bgLight/70 outline-none text-[10px] text-textMain px-2 py-1 rounded border border-secondary/40"
+                      placeholder="e.g. 19:30 / 20:00"
+                    />
+                  </div>
+                  <!-- 備註 -->
+                  <div class="flex flex-col gap-0.5">
+                    <span class="text-[10px] text-textSoft">備註</span>
+                    <input
+                      v-model="item.remark"
+                      class="w-full bg-bgLight/70 outline-none text-[10px] text-textMain px-2 py-1 rounded border border-secondary/40"
+                      placeholder="例如：預約名、special note"
+                    />
+                  </div>
+                </div>
+
+                <!-- 底部按鈕 -->
                 <div class="flex items-center justify-between mt-1">
                   <a
-                    :href="getSingleDirectionLink(item, getGlobalIndex(dayIndex, idx))"
+                    :href="item.mapsUrl || getSingleDirectionLink(item, getGlobalIndex(dayIndex, idx))"
                     target="_blank"
+                    rel="noopener"
                     class="text-[10px] text-primary hover:underline flex items-center gap-0.5"
                   >
                     <i class="ri-map-pin-line text-[11px]"></i>
-                    <span>Google Maps</span>
+                    <span>開啟地圖</span>
                   </a>
                   <button
                     @click="removeItineraryItem(getGlobalIndex(dayIndex, idx))"
@@ -834,16 +965,25 @@
               >
                 ACTIVE
               </span>
-              <button
-                @click.stop="deleteTrip(trip.id)"
-                class="text-[11px] rounded-full px-1.5 py-0.5"
-                :class="trip.id === activeTripId
-                  ? 'bg-black/20 text-white/80 hover:text-white'
-                  : 'bg-black/5 text-textSoft hover:text-red-500'"
-                title="刪除旅程"
-              >
-                <i class="ri-delete-bin-line text-[11px]"></i>
-              </button>
+              <div class="flex items-center gap-1">
+                <button
+                  @click.stop="startEditTrip(trip)"
+                  class="text-[11px] rounded-full px-1.5 py-0.5 bg-black/5 text-textSoft hover:bg-black/10 hover:text-textMain"
+                  title="編輯旅程"
+                >
+                  <i class="ri-edit-2-line text-[11px]"></i>
+                </button>
+                <button
+                  @click.stop="deleteTrip(trip.id)"
+                  class="text-[11px] rounded-full px-1.5 py-0.5"
+                  :class="trip.id === activeTripId
+                    ? 'bg-black/20 text-white/80 hover:text-white'
+                    : 'bg-black/5 text-textSoft hover:text-red-500'"
+                  title="刪除旅程"
+                >
+                  <i class="ri-delete-bin-line text-[11px]"></i>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -972,13 +1112,89 @@
         </button>
       </div>
     </div>
+
+    <!-- Edit Trip Form -->
+    <div
+      v-if="editingTripId"
+      class="mt-3 rounded-xl border border-secondary/60 bg-white px-3 py-3 text-[11px] flex flex-col gap-2"
+    >
+      <div class="flex items-center justify-between">
+        <span class="font-semibold text-textMain flex items-center gap-1">
+          <i class="ri-edit-2-line text-primary"></i>
+          <span>編輯旅程</span>
+        </span>
+        <button @click="cancelEditTrip" class="text-textSoft hover:text-textMain text-xs">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="grid md:grid-cols-2 gap-2">
+        <div class="flex flex-col gap-1">
+          <label class="text-textSoft">旅程名稱</label>
+          <input
+            v-model="editTripForm.title"
+            class="border border-secondary/60 rounded-lg px-2 py-1.5 bg-bgLight outline-none"
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-textSoft">目的地 (國家 / 城市)</label>
+          <input
+            v-model="editTripForm.destination"
+            class="border border-secondary/60 rounded-lg px-2 py-1.5 bg-bgLight outline-none"
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-textSoft">城市名稱 (天氣 / 地圖)</label>
+          <input
+            v-model="editTripForm.city"
+            class="border border-secondary/60 rounded-lg px-2 py-1.5 bg-bgLight outline-none"
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-textSoft">當地貨幣</label>
+          <input
+            v-model="editTripForm.currency"
+            class="border border-secondary/60 rounded-lg px-2 py-1.5 bg-bgLight outline-none"
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-textSoft">開始日期</label>
+          <input
+            v-model="editTripForm.startDate"
+            class="border border-secondary/60 rounded-lg px-2 py-1.5 bg-bgLight outline-none"
+            placeholder="YYYY-MM-DD"
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-textSoft">結束日期</label>
+          <input
+            v-model="editTripForm.endDate"
+            class="border border-secondary/60 rounded-lg px-2 py-1.5 bg-bgLight outline-none"
+            placeholder="YYYY-MM-DD"
+          />
+        </div>
+      </div>
+      <div class="mt-2 flex justify-end gap-2">
+        <button
+          @click="cancelEditTrip"
+          class="px-3 py-1.5 rounded-lg border border-secondary/60 text-textMain hover:bg-bgLight"
+        >
+          取消
+        </button>
+        <button
+          @click="saveEditedTrip"
+          class="px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90"
+        >
+          儲存修改
+        </button>
+      </div>
+    </div>
   </section>
 
 </div>
 
 <script>
-  // Aviationstack API key（請填完整 key）
-  const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; // [web:507][web:518]
+  // Aviationstack API key（填完整 key）
+  const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; // /v1/flights 用於查 flight_iata + flight_date[web:507][web:518][web:561]
 
   let leafletMap = null;
   let routePolyline = null;
@@ -1004,7 +1220,9 @@
         weather: { temp: '--', desc: '載入中...' },
 
         newExpense: { item: '', amount: null, payment: 'cash' },
+
         creatingTrip: false,
+        editingTripId: null,
         newTripForm: {
           title: '',
           destination: '',
@@ -1014,6 +1232,14 @@
           endDate: '',
           lat: 35.6762,
           lng: 139.6503
+        },
+        editTripForm: {
+          title: '',
+          destination: '',
+          city: '',
+          currency: 'JPY',
+          startDate: '',
+          endDate: ''
         },
 
         bulkPlaces: '',
@@ -1046,10 +1272,16 @@
           groups.push(items.slice(i, i + this.daySize));
         }
         return groups;
+      },
+      weatherTheme() {
+        const desc = (this.weather.desc || '').toLowerCase();
+        if (desc.includes('rain') || desc.includes('雨')) return 'rainy';
+        if (desc.includes('cloud') || desc.includes('雲') || desc.includes('陰')) return 'cloudy';
+        return 'sunny';
       }
     },
     created() {
-      const stored = localStorage.getItem('christine_travel_diary_trips'); // [web:373]
+      const stored = localStorage.getItem('christine_travel_diary_trips'); // 持久化 trips[web:373]
       if (stored) {
         try {
           this.trips = JSON.parse(stored);
@@ -1078,22 +1310,34 @@
             {
               time: "09:00",
               activity: "抵達東京羽田機場",
-              location: "Tokyo Haneda Airport, Japan"
+              location: "Tokyo Haneda Airport, Japan",
+              mapsUrl: "",
+              bookingTime: "",
+              remark: ""
             },
             {
               time: "11:00",
               activity: "酒店 Check-in",
-              location: "Shinjuku, Tokyo"
+              location: "Shinjuku, Tokyo",
+              mapsUrl: "",
+              bookingTime: "",
+              remark: ""
             },
             {
               time: "14:00",
               activity: "表參道 / 原宿逛街",
-              location: "Omotesando, Tokyo"
+              location: "Omotesando, Tokyo",
+              mapsUrl: "",
+              bookingTime: "",
+              remark: ""
             },
             {
               time: "19:00",
               activity: "新宿晚餐",
-              location: "Shinjuku, Tokyo"
+              location: "Shinjuku, Tokyo",
+              mapsUrl: "",
+              bookingTime: "",
+              remark: ""
             }
           ],
           routeSummary: null,
@@ -1116,7 +1360,7 @@
     watch: {
       trips: {
         handler(val) {
-          localStorage.setItem('christine_travel_diary_trips', JSON.stringify(val)); // [web:373]
+          localStorage.setItem('christine_travel_diary_trips', JSON.stringify(val)); // 保存 trips[web:373]
         },
         deep: true
       },
@@ -1134,7 +1378,6 @@
         this.activeTab = 'trips';
         this.creatingTrip = true;
       },
-
       getGlobalIndex(dayIndex, idxInDay) {
         return dayIndex * this.daySize + idxInDay;
       },
@@ -1145,7 +1388,7 @@
         leafletMap = L.map('map').setView([35.6762, 139.6503], 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(leafletMap); // [web:354][web:438]
+        }).addTo(leafletMap); // Leaflet + OSM 初始化[web:354][web:438]
         markersLayer = L.layerGroup().addTo(leafletMap);
       },
 
@@ -1220,7 +1463,7 @@
           );
         });
 
-        routePolyline = L.polyline(coords, { color: '#97CBFF', weight: 4 }).addTo(leafletMap); // [web:354][web:433]
+        routePolyline = L.polyline(coords, { color: '#97CBFF', weight: 4 }).addTo(leafletMap); // polyline route[web:354][web:433]
         leafletMap.fitBounds(routePolyline.getBounds(), { padding: [20, 20] });
 
         let totalDistance = 0;
@@ -1267,7 +1510,10 @@
           this.activeTrip.itinerary.push({
             time,
             activity,
-            location: location || activity
+            location: location || activity,
+            mapsUrl: '',
+            bookingTime: '',
+            remark: ''
           });
           this.activeTrip.itinerary.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
           this.$nextTick(() => this.updateRoute());
@@ -1311,7 +1557,10 @@
           this.activeTrip.itinerary.push({
             time: `${hour}:00`,
             activity: name || '未命名地點',
-            location: loc || name
+            location: loc || name,
+            mapsUrl: '',
+            bookingTime: '',
+            remark: ''
           });
         });
 
@@ -1385,8 +1634,10 @@
         }
         this.$nextTick(() => this.updateRoute());
       },
+
       startCreateTrip() {
         this.creatingTrip = true;
+        this.editingTripId = null;
         this.newTripForm = {
           title: '',
           destination: '',
@@ -1399,6 +1650,36 @@
         };
       },
 
+      startEditTrip(trip) {
+        this.creatingTrip = false;
+        this.editingTripId = trip.id;
+        this.editTripForm = {
+          title: trip.title,
+          destination: trip.destination,
+          city: trip.city,
+          currency: trip.currency,
+          startDate: trip.startDate,
+          endDate: trip.endDate
+        };
+      },
+      cancelEditTrip() {
+        this.editingTripId = null;
+      },
+      saveEditedTrip() {
+        if (!this.editingTripId) return;
+        const trip = this.trips.find(t => t.id === this.editingTripId);
+        if (!trip) return;
+
+        trip.title = this.editTripForm.title || trip.title;
+        trip.destination = this.editTripForm.destination || trip.destination;
+        trip.city = this.editTripForm.city || trip.city;
+        trip.currency = this.editTripForm.currency || trip.currency;
+        trip.startDate = this.editTripForm.startDate || trip.startDate;
+        trip.endDate = this.editTripForm.endDate || trip.endDate;
+
+        this.editingTripId = null;
+      },
+
       async autoFillLatLng() {
         const query = this.newTripForm.city || this.newTripForm.destination;
         if (!query) {
@@ -1409,9 +1690,7 @@
         try {
           const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
           const res = await fetch(url, {
-            headers: {
-              'Accept-Language': 'zh-HK'
-            }
+            headers: { 'Accept-Language': 'zh-HK' }
           });
           const data = await res.json();
 
@@ -1462,16 +1741,14 @@
         this.activeTripId = trip.id;
         this.creatingTrip = false;
         this.$nextTick(() => {
-          if (leafletMap) {
-            leafletMap.setView(trip.center, 12);
-          }
+          if (leafletMap) leafletMap.setView(trip.center, 12);
           this.fetchWeather();
           this.fetchRate();
           this.updateRoute();
         });
       },
 
-      // Aviationstack：自動填航班資料 [web:518][web:512]
+      // Aviationstack：自動填航班資料[web:518][web:561]
       async autoFillFlight(direction) {
         if (!this.activeTrip) return;
         const f = this.activeTrip.flights[direction];
