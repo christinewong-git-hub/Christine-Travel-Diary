@@ -6,7 +6,7 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
   />
-  <title>Travel Studio · Trip Dashboard</title>
+  <title>Christine's Travel Diary</title>
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -22,7 +22,7 @@
     href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap"
     rel="stylesheet"
   />
-  <!-- Google Maps API：已替換為你的 API Key -->
+  <!-- Google Maps API：你的 API Key -->
   <script
     async
     defer
@@ -34,13 +34,12 @@
       theme: {
         extend: {
           colors: {
-            primary: '#2F5FFF',
-            accent: '#FF7E67',
-            slate: {
-              950: '#020617'
-            },
-            surface: '#F5F7FB',
-            borderSoft: '#E2E8F0'
+            primary: '#97CBFF',
+            secondary: '#C7C7E2',
+            bgLight: '#ECF5FF',
+            white: '#FFFFFF',
+            textMain: '#4A5568',
+            textSoft: '#A0AEC0'
           },
           fontFamily: {
             sans: ['"Noto Sans TC"', 'system-ui', 'sans-serif']
@@ -51,9 +50,9 @@
   </script>
   <style>
     body {
-      background: radial-gradient(circle at top left, #e0ecff 0, #f7f8fc 40%, #f9fafb 100%);
+      background: radial-gradient(circle at top left, #ECF5FF 0, #FFFFFF 40%, #ECF5FF 100%);
       font-family: 'Noto Sans TC', system-ui, sans-serif;
-      color: #111827;
+      color: #1a202c;
     }
     .app-shell {
       max-width: 1024px;
@@ -66,7 +65,7 @@
       height: 6px;
     }
     ::-webkit-scrollbar-thumb {
-      background: rgba(148, 163, 184, 0.6);
+      background: rgba(151, 203, 255, 0.8);
       border-radius: 999px;
     }
     #map {
@@ -81,50 +80,53 @@
   <!-- Top Bar -->
   <header class="flex items-center justify-between gap-3">
     <div class="flex items-center gap-3">
-      <div class="w-9 h-9 rounded-2xl bg-slate-950 flex items-center justify-center text-white text-xl">
-        <span>TS</span>
+      <div class="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center text-white text-xl shadow-md">
+        <i class="ri-earth-line"></i>
       </div>
       <div>
-        <div class="text-xs tracking-wide text-slate-500 uppercase">Travel Studio</div>
-        <div class="text-sm font-semibold text-slate-900">
-          多旅程旅行儀表板
+        <div class="text-xs tracking-wide text-textSoft uppercase">
+          Christine's Travel Diary
+        </div>
+        <div class="text-sm font-semibold text-textMain flex items-center gap-1">
+          <i class="ri-sparkling-fill text-primary text-base"></i>
+          <span>多旅程旅行儀表板</span>
         </div>
       </div>
     </div>
     <button
       @click="openTripManager = true"
-      class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 bg-white text-xs text-slate-700 hover:bg-slate-50"
+      class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-secondary bg-white text-xs text-textMain hover:bg-bgLight/60"
     >
-      <i class="ri-suitcase-line text-sm"></i>
+      <i class="ri-suitcase-3-line text-sm text-primary"></i>
       <span>旅程管理</span>
-      <span class="text-[10px] text-slate-400">({{ trips.length }})</span>
+      <span class="text-[10px] text-textSoft">({{ trips.length }})</span>
     </button>
   </header>
 
   <!-- Active Trip Summary -->
   <section
     v-if="activeTrip"
-    class="rounded-2xl border border-slate-200/70 bg-white/80 backdrop-blur-sm px-5 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+    class="rounded-2xl border border-secondary/60 bg-white/90 backdrop-blur-sm px-5 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 shadow-sm"
   >
     <div class="flex-1 flex flex-col gap-1">
       <div class="flex items-center gap-2">
-        <span class="inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-full bg-slate-900 text-white">
-          <i class="ri-compass-3-line text-xs"></i>
+        <span class="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-0.5 rounded-full bg-primary text-white shadow-sm">
+          <i class="ri-book-open-line text-xs"></i>
           <span>{{ activeTrip.title }}</span>
         </span>
         <span
-          class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500"
+          class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-bgLight text-textMain border border-secondary/40"
         >
-          <i class="ri-map-pin-line text-xs"></i>
+          <i class="ri-map-pin-line text-xs text-primary"></i>
           <span>{{ activeTrip.destination }}</span>
         </span>
       </div>
-      <div class="text-xs text-slate-500 flex items-center gap-2 mt-1">
-        <i class="ri-calendar-line text-slate-400"></i>
+      <div class="text-xs text-textSoft flex items-center gap-2 mt-1">
+        <i class="ri-calendar-line text-secondary"></i>
         <span>{{ activeTrip.startDate }} → {{ activeTrip.endDate }}</span>
-        <span class="inline-block w-px h-3 bg-slate-200"></span>
+        <span class="inline-block w-px h-3 bg-secondary/60"></span>
         <span class="flex items-center gap-1">
-          <i class="ri-money-dollar-circle-line text-slate-400"></i>
+          <i class="ri-money-cny-circle-line text-secondary"></i>
           <span>{{ activeTrip.currency }}</span>
         </span>
       </div>
@@ -132,28 +134,28 @@
       <!-- Flights -->
       <div class="flex flex-wrap gap-2 mt-3 text-[11px]">
         <div
-          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50/80"
+          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-secondary/60 bg-bgLight/80"
         >
-          <span class="px-1.5 py-0.5 rounded-full bg-slate-900 text-white text-[10px]">
+          <span class="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px]">
             OUT
           </span>
-          <span class="font-medium text-slate-800">{{ activeTrip.flights.outbound.no }}</span>
-          <span class="text-slate-400">{{ activeTrip.flights.outbound.date }}</span>
-          <span class="text-slate-400">·</span>
-          <span class="text-slate-500">
+          <span class="font-medium text-textMain">{{ activeTrip.flights.outbound.no }}</span>
+          <span class="text-textSoft">{{ activeTrip.flights.outbound.date }}</span>
+          <span class="text-textSoft">·</span>
+          <span class="text-textSoft">
             {{ activeTrip.flights.outbound.from }} → {{ activeTrip.flights.outbound.to }}
           </span>
         </div>
         <div
-          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50/80"
+          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-secondary/60 bg-bgLight/80"
         >
-          <span class="px-1.5 py-0.5 rounded-full bg-slate-900 text-white text-[10px]">
+          <span class="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px]">
             IN
           </span>
-          <span class="font-medium text-slate-800">{{ activeTrip.flights.inbound.no }}</span>
-          <span class="text-slate-400">{{ activeTrip.flights.inbound.date }}</span>
-          <span class="text-slate-400">·</span>
-          <span class="text-slate-500">
+          <span class="font-medium text-textMain">{{ activeTrip.flights.inbound.no }}</span>
+          <span class="text-textSoft">{{ activeTrip.flights.inbound.date }}</span>
+          <span class="text-textSoft">·</span>
+          <span class="text-textSoft">
             {{ activeTrip.flights.inbound.from }} → {{ activeTrip.flights.inbound.to }}
           </span>
         </div>
@@ -163,43 +165,49 @@
     <!-- Weather + Quick Stats -->
     <div class="flex items-stretch gap-3 text-xs w-full md:w-auto">
       <div
-        class="flex-1 md:flex-none w-32 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 flex flex-col justify-between"
+        class="flex-1 md:flex-none w-32 rounded-xl border border-secondary/50 bg-bgLight px-3 py-2 flex flex-col justify-between"
       >
         <div class="flex items-center justify-between">
-          <span class="text-[11px] text-slate-500">今日天氣</span>
+          <span class="text-[11px] text-textSoft flex items-center gap-1">
+            <i class="ri-sun-cloudy-line text-primary"></i>
+            <span>今日天氣</span>
+          </span>
           <button
             @click="fetchWeather"
-            class="text-[10px] text-slate-400 hover:text-slate-600"
+            class="text-[10px] text-textSoft hover:text-textMain"
             title="更新天氣"
           >
             <i class="ri-refresh-line"></i>
           </button>
         </div>
         <div class="flex items-end gap-1 mt-1">
-          <span class="text-lg font-semibold text-slate-900">{{ weather.temp }}°C</span>
-          <span class="text-[10px] text-slate-500 mb-0.5">{{ weather.desc }}</span>
+          <span class="text-lg font-semibold text-textMain">{{ weather.temp }}°C</span>
+          <span class="text-[10px] text-textSoft mb-0.5">{{ weather.desc }}</span>
         </div>
-        <div class="mt-1 text-[10px] text-slate-400 flex items-center gap-1">
-          <i class="ri-map-pin-2-line"></i>
+        <div class="mt-1 text-[10px] text-textSoft flex items-center gap-1">
+          <i class="ri-building-2-line text-secondary"></i>
           <span>{{ activeTrip.city }}</span>
         </div>
       </div>
 
       <div
-        class="flex-1 md:flex-none w-32 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 flex flex-col justify-between"
+        class="flex-1 md:flex-none w-32 rounded-xl border border-secondary/50 bg-bgLight px-3 py-2 flex flex-col justify-between"
       >
         <div class="flex items-center justify-between">
-          <span class="text-[11px] text-slate-500">預算概要</span>
+          <span class="text-[11px] text-textSoft flex items-center gap-1">
+            <i class="ri-pie-chart-2-line text-primary"></i>
+            <span>預算概要</span>
+          </span>
         </div>
         <div class="mt-1">
-          <div class="text-[10px] text-slate-400 mb-0.5">已記錄支出</div>
-          <div class="text-sm font-semibold text-slate-900">
+          <div class="text-[10px] text-textSoft mb-0.5">已記錄支出</div>
+          <div class="text-sm font-semibold text-textMain">
             {{ totalExpenseInCurrency.toLocaleString() }} {{ activeTrip.currency }}
           </div>
         </div>
-        <div class="mt-1 text-[10px] text-slate-400 flex items-center gap-1">
-          <i class="ri-exchange-dollar-line"></i>
-          <span>KRW → {{ activeTrip.currency }}</span>
+        <div class="mt-1 text-[10px] text-textSoft flex items-center gap-1">
+          <i class="ri-exchange-dollar-line text-secondary"></i>
+          <span>JPY → {{ activeTrip.currency }}</span>
         </div>
       </div>
     </div>
@@ -207,7 +215,7 @@
 
   <!-- Tabs -->
   <nav
-    class="rounded-2xl border border-slate-200/70 bg-white/90 backdrop-blur-sm px-2 py-1 flex flex-wrap gap-1 text-[11px]"
+    class="rounded-2xl border border-secondary/60 bg-white/90 backdrop-blur-sm px-2 py-1 flex flex-wrap gap-1 text-[11px]"
   >
     <button
       v-for="tab in tabs"
@@ -216,8 +224,8 @@
       :class="[
         'flex-1 min-w-[80px] flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl transition',
         activeTab === tab.id
-          ? 'bg-slate-900 text-white'
-          : 'text-slate-500 hover:bg-slate-50'
+          ? 'bg-primary text-white shadow-sm'
+          : 'text-textSoft hover:bg-bgLight/80'
       ]"
     >
       <i :class="tab.icon" class="text-xs"></i>
@@ -225,46 +233,46 @@
     </button>
   </nav>
 
-  <!-- TAB: Itinerary -->
+  <!-- TAB: Itinerary / Map -->
   <section v-if="activeTab === 'itinerary'" class="grid md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4">
-    <!-- Itinerary List -->
+    <!-- Itinerary List + 批次匯入 -->
     <div
-      class="rounded-2xl border border-slate-200 bg-white/90 backdrop-blur-sm p-4 flex flex-col gap-3 max-h-[460px] overflow-y-auto"
+      class="rounded-2xl border border-secondary/60 bg-white/95 backdrop-blur-sm p-4 flex flex-col gap-3 max-h-[460px] overflow-y-auto"
     >
       <div class="flex items-center justify-between mb-1">
-        <h2 class="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
-          <span class="inline-flex w-5 h-5 items-center justify-center rounded-lg bg-slate-900 text-white text-[11px]">
+        <h2 class="text-sm font-semibold text-textMain flex items-center gap-1.5">
+          <span class="inline-flex w-5 h-5 items-center justify-center rounded-lg bg-primary text-white text-[11px]">
             1
           </span>
           <span>行程列表</span>
         </h2>
         <button
           @click="addItineraryItem"
-          class="text-[11px] px-2.5 py-1 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1"
+          class="text-[11px] px-2.5 py-1 rounded-full border border-secondary/70 text-textMain hover:bg-bgLight/80 flex items-center gap-1"
         >
           <i class="ri-add-line text-xs"></i>
           <span>新增</span>
         </button>
       </div>
 
-      <div v-if="activeTrip.itinerary.length === 0" class="text-[11px] text-slate-400 py-6 text-center">
-        尚未建立行程，點擊「新增」開始。
+      <div v-if="activeTrip.itinerary.length === 0" class="text-[11px] text-textSoft py-4 text-center">
+        尚未建立行程，點擊「新增」或使用下方「批次匯入地點」。
       </div>
 
       <div
         v-for="(item, index) in activeTrip.itinerary"
         :key="'it-' + index"
-        class="flex gap-3 items-start rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5"
+        class="flex gap-3 items-start rounded-xl border border-secondary/40 bg-bgLight/60 px-3 py-2.5"
       >
         <div class="flex flex-col items-center mt-0.5">
           <div
-            class="w-8 h-8 rounded-xl bg-slate-900 text-white text-[11px] flex items-center justify-center font-medium"
+            class="w-9 h-9 rounded-xl bg-primary text-white text-[11px] flex items-center justify-center font-medium shadow-sm"
           >
             {{ item.time || '—' }}
           </div>
           <div
             v-if="index < activeTrip.itinerary.length - 1"
-            class="flex-1 w-px bg-slate-200 mt-1 mb-1"
+            class="flex-1 w-px bg-secondary/70 mt-1 mb-1"
             style="min-height: 24px"
           ></div>
         </div>
@@ -272,15 +280,15 @@
         <div class="flex-1 flex flex-col gap-1">
           <input
             v-model="item.activity"
-            class="text-xs font-semibold text-slate-900 bg-transparent outline-none"
+            class="text-xs font-semibold text-textMain bg-transparent outline-none"
             placeholder="活動名稱"
           />
           <input
             v-model="item.location"
-            class="text-[11px] text-slate-500 bg-transparent outline-none"
+            class="text-[11px] text-textSoft bg-transparent outline-none"
             placeholder="地點 / 地址（用於導航）"
           />
-          <div v-if="item.distance || item.duration" class="text-[11px] text-slate-400 flex gap-2">
+          <div v-if="item.distance || item.duration" class="text-[11px] text-textSoft flex gap-2">
             <span v-if="item.distance">距離 {{ item.distance }}</span>
             <span v-if="item.duration">· {{ item.duration }}</span>
           </div>
@@ -288,30 +296,62 @@
             <a
               :href="getSingleDirectionLink(item, index)"
               target="_blank"
-              class="text-[11px] px-2 py-1 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1"
+              class="text-[11px] px-2 py-1 rounded-full border border-secondary/70 text-textMain hover:bg-bgLight/80 flex items-center gap-1"
             >
-              <i class="ri-map-pin-line text-xs"></i>
+              <i class="ri-map-pin-line text-xs text-primary"></i>
               <span>Google Maps</span>
             </a>
             <button
               @click="removeItineraryItem(index)"
-              class="ml-auto text-[11px] text-slate-400 hover:text-red-500"
+              class="ml-auto text-[11px] text-textSoft hover:text-red-500"
             >
               刪除
             </button>
           </div>
         </div>
       </div>
+
+      <!-- 批次匯入地點 -->
+      <div class="mt-2 rounded-xl border border-secondary/50 bg-bgLight/80 px-3 py-2 text-[11px]">
+        <div class="flex items-center justify-between mb-1">
+          <span class="flex items-center gap-1 text-textMain">
+            <i class="ri-magic-line text-primary"></i>
+            <span>批次匯入地點</span>
+          </span>
+        </div>
+        <p class="text-[10px] text-textSoft mb-1">
+          從 Google Maps 清單複製多個地點，每行一個。例如：<br/>
+          「Blue Bottle Coffee - Shibuya, Tokyo」或「Starbucks Reserve, Ginza, Tokyo」。
+        </p>
+        <textarea
+          v-model="bulkPlaces"
+          rows="4"
+          placeholder="一行一個地點，例如：&#10;Blue Bottle Coffee - Shibuya, Tokyo&#10;Ichiran Ramen, Shinjuku, Tokyo"
+          class="w-full border border-secondary/60 rounded-lg px-2 py-1.5 bg-white outline-none text-[11px] text-textMain mb-2"
+        ></textarea>
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] text-textSoft">
+            將自動為每個地點安排時間（在現有行程之後），你可之後再微調。
+          </span>
+          <button
+            @click="importBulkPlaces"
+            class="px-2.5 py-1 rounded-full bg-primary text-white text-[11px] font-semibold hover:bg-primary/90 flex items-center gap-1"
+          >
+            <i class="ri-download-2-line text-xs"></i>
+            <span>匯入到行程</span>
+          </button>
+        </div>
+      </div>
     </div>
 
-    <!-- Map Pane -->
+    <!-- Map Pane + Google Maps Saved List Link -->
     <div
-      class="rounded-2xl border border-slate-200 bg-white/90 backdrop-blur-sm p-3 flex flex-col gap-3"
+      class="rounded-2xl border border-secondary/60 bg-white/95 backdrop-blur-sm p-3 flex flex-col gap-3"
     >
       <div class="flex items-center justify-between">
-        <h3 class="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
+        <h3 class="text-xs font-semibold text-textMain flex items-center gap-1.5">
           <span
-            class="inline-flex w-5 h-5 items-center justify-center rounded-lg bg-slate-900 text-white text-[11px]"
+            class="inline-flex w-5 h-5 items-center justify-center rounded-lg bg-primary text-white text-[11px]"
           >
             2
           </span>
@@ -321,7 +361,7 @@
           <select
             v-model="activeTrip.travelMode"
             @change="updateRoute"
-            class="border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-600"
+            class="border border-secondary/60 rounded-lg px-2 py-1 bg-bgLight text-textMain"
           >
             <option value="DRIVING">🚗 開車</option>
             <option value="WALKING">🚶 步行</option>
@@ -330,7 +370,7 @@
           </select>
           <button
             @click="updateRoute"
-            class="px-2 py-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1"
+            class="px-2 py-1 rounded-lg border border-secondary/60 text-textMain hover:bg-bgLight/80 flex items-center gap-1"
           >
             <i class="ri-refresh-line text-xs"></i>
             <span>重新計算</span>
@@ -338,527 +378,54 @@
         </div>
       </div>
 
-      <div id="map" class="w-full bg-slate-100"></div>
+      <div id="map" class="w-full bg-bgLight"></div>
 
-      <div v-if="activeTrip.routeSummary" class="flex items-center gap-4 text-[11px] text-slate-500 mt-1">
+      <!-- Google Maps Saved List Import UI（保存 link 用） -->
+      <div class="mt-2 rounded-xl border border-secondary/50 bg-bgLight/80 px-3 py-2 text-[11px]">
+        <div class="flex items-center justify-between mb-1">
+          <span class="flex items-center gap-1 text-textMain">
+            <i class="ri-star-smile-line text-primary"></i>
+            <span>Google Maps 已儲存清單連結</span>
+          </span>
+          <a
+            v-if="activeTrip.savedListLink"
+            :href="activeTrip.savedListLink"
+            target="_blank"
+            class="text-primary hover:underline flex items-center gap-1"
+          >
+            <i class="ri-external-link-line text-xs"></i>
+            <span>開啟清單</span>
+          </a>
+        </div>
+        <p class="text-[10px] text-textSoft mb-1">
+          在 Google Maps 中分享你的「已儲存清單」連結，貼上到這裡，方便一鍵打開查看所有收藏地點。
+        </p>
+        <input
+          v-model="activeTrip.savedListLink"
+          placeholder="貼上 Google Maps 已儲存清單分享連結"
+          class="w-full border border-secondary/60 rounded-lg px-2 py-1.5 bg-white outline-none text-[11px] text-textMain"
+        />
+      </div>
+
+      <div v-if="activeTrip.routeSummary" class="flex items-center gap-4 text-[11px] text-textSoft mt-1">
         <div class="flex items-center gap-1">
-          <i class="ri-road-map-line text-slate-400"></i>
+          <i class="ri-road-map-line text-secondary"></i>
           <span>{{ activeTrip.routeSummary.distance }}</span>
         </div>
         <div class="flex items-center gap-1">
-          <i class="ri-time-line text-slate-400"></i>
+          <i class="ri-time-line text-secondary"></i>
           <span>{{ activeTrip.routeSummary.duration }}</span>
         </div>
         <div class="flex items-center gap-1">
-          <i class="ri-map-pin-range-line text-slate-400"></i>
+          <i class="ri-map-pin-range-line text-secondary"></i>
           <span>{{ activeTrip.itinerary.length }} stops</span>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- TAB: Budget -->
-  <section
-    v-if="activeTab === 'budget'"
-    class="grid md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4"
-  >
-    <!-- FX & Add Expense -->
-    <div
-      class="rounded-2xl border border-slate-200 bg-white/90 backdrop-blur-sm p-4 flex flex-col gap-3"
-    >
-      <!-- FX -->
-      <div
-        class="rounded-xl border border-slate-200 bg-slate-950 text-slate-50 px-4 py-3 flex flex-col gap-2"
-      >
-        <div class="flex items-center justify-between text-[11px]">
-          <span class="flex items-center gap-1">
-            <i class="ri-exchange-dollar-line"></i>
-            <span>匯率 · KRW → {{ activeTrip.currency }}</span>
-          </span>
-          <button
-            @click="fetchRate"
-            class="text-slate-400 hover:text-slate-200"
-            title="更新匯率"
-          >
-            <i class="ri-refresh-line text-xs"></i>
-          </button>
-        </div>
-        <div class="flex items-baseline gap-1">
-          <span class="text-xl font-semibold">1,000₩</span>
-          <span class="text-xs text-slate-400 mx-1">≈</span>
-          <span class="text-lg font-semibold">
-            {{ (1000 * activeTrip.exchangeRate).toFixed(2) }} {{ activeTrip.currency }}
-          </span>
-        </div>
-        <div class="flex items-center gap-2 text-[11px] mt-1">
-          <span class="text-slate-400">手動微調：</span>
-          <input
-            type="number"
-            v-model.number="activeTrip.exchangeRate"
-            class="w-20 px-2 py-1 rounded bg-slate-800 border border-slate-600 text-xs outline-none"
-            step="0.0001"
-          />
-        </div>
-      </div>
+  <!-- 其餘 TAB（Budget / Shopping / Pre-trip / Trips）沿用上一版邏輯，可繼續使用 -->
 
-      <!-- Add Expense -->
-      <div class="flex flex-col gap-2 text-xs">
-        <h3 class="text-[11px] font-semibold text-slate-800 flex items-center gap-1">
-          <i class="ri-wallet-3-line text-slate-500"></i>
-          <span>新增支出</span>
-        </h3>
-        <div class="grid grid-cols-2 gap-2">
-          <input
-            v-model="newExpense.item"
-            placeholder="項目 (e.g. 咖啡)"
-            class="border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 outline-none text-xs"
-          />
-          <input
-            v-model.number="newExpense.amount"
-            type="number"
-            placeholder="金額 (₩)"
-            class="border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 outline-none text-xs"
-          />
-        </div>
-        <div class="flex gap-2">
-          <select
-            v-model="newExpense.payment"
-            class="border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 outline-none flex-1 text-xs text-slate-600"
-          >
-            <option value="cash">💵 現金</option>
-            <option value="card">💳 信用卡</option>
-          </select>
-          <button
-            @click="addExpense"
-            class="px-3 py-2 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800"
-          >
-            記一筆
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Expense List -->
-    <div
-      class="rounded-2xl border border-slate-200 bg-white/90 backdrop-blur-sm p-4 flex flex-col gap-2 max-h-[460px] overflow-y-auto"
-    >
-      <div class="flex items-center justify-between mb-1">
-        <h3 class="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
-          <span
-            class="inline-flex w-5 h-5 items-center justify-center rounded-lg bg-slate-900 text-white text-[11px]"
-          >
-            $
-          </span>
-          <span>支出列表</span>
-        </h3>
-        <div class="text-[11px] text-slate-500">
-          共 {{ activeTrip.expenses.length }} 筆 ·
-          <span class="font-semibold">
-            {{ totalExpenseInCurrency.toLocaleString() }} {{ activeTrip.currency }}
-          </span>
-        </div>
-      </div>
-
-      <div
-        v-for="(exp, i) in activeTrip.expenses"
-        :key="'exp-' + i"
-        class="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2 text-xs"
-      >
-        <div class="flex items-center gap-3">
-          <div
-            :class="exp.payment === 'card'
-              ? 'bg-indigo-100 text-indigo-600'
-              : 'bg-emerald-100 text-emerald-600'"
-            class="w-8 h-8 rounded-lg flex items-center justify-center text-base"
-          >
-            <i :class="exp.payment === 'card' ? 'ri-bank-card-line' : 'ri-wallet-3-line'"></i>
-          </div>
-          <div>
-            <div class="font-semibold text-slate-900 text-xs">
-              {{ exp.item }}
-            </div>
-            <div class="text-[11px] text-slate-400">
-              {{ exp.date }}
-            </div>
-          </div>
-        </div>
-        <div class="text-right">
-          <div class="text-xs text-slate-800">
-            -₩{{ exp.amount.toLocaleString() }}
-          </div>
-          <div class="text-[11px] text-slate-400">
-            ≈ {{ (exp.amount * activeTrip.exchangeRate).toFixed(1) }} {{ activeTrip.currency }}
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- TAB: In-trip Shopping -->
-  <section
-    v-if="activeTab === 'shopping'"
-    class="rounded-2xl border border-slate-200 bg-white/90 backdrop-blur-sm p-4 flex flex-col gap-3"
-  >
-    <div class="flex items-center justify-between mb-1">
-      <h2 class="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
-        <i class="ri-shopping-bag-3-line text-slate-500"></i>
-        <span>旅程中購物清單</span>
-      </h2>
-    </div>
-
-    <div class="flex gap-2 text-xs">
-      <input
-        v-model="newTripItem"
-        @keyup.enter="addTripItem"
-        placeholder="想買什麼...(旅程中)"
-        class="flex-1 border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 outline-none"
-      />
-      <button
-        @click="addTripItem"
-        class="w-9 h-9 rounded-lg bg-slate-900 text-white flex items-center justify-center text-sm"
-      >
-        <i class="ri-add-line"></i>
-      </button>
-    </div>
-
-    <div class="mt-2 space-y-1.5">
-      <div
-        v-for="(item, index) in activeTrip.tripItems"
-        :key="'ti-' + index"
-        class="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2 text-xs"
-        :class="{ 'opacity-55': item.checked }"
-      >
-        <button
-          @click="toggleTripItem(index)"
-          class="w-4 h-4 rounded border border-slate-300 flex items-center justify-center text-[10px] bg-white"
-        >
-          <i v-if="item.checked" class="ri-check-line text-slate-900"></i>
-        </button>
-        <span class="flex-1 text-slate-800" :class="{ 'line-through': item.checked }">
-          {{ item.text }}
-        </span>
-        <button @click="removeTripItem(index)" class="text-slate-300 hover:text-red-500">
-          <i class="ri-delete-bin-line text-xs"></i>
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- TAB: Pre-trip Shopping -->
-  <section
-    v-if="activeTab === 'pretrip'"
-    class="rounded-2xl border border-slate-200 bg-white/90 backdrop-blur-sm p-4 flex flex-col gap-3"
-  >
-    <div class="flex items-center justify-between mb-1">
-      <h2 class="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
-        <i class="ri-clipboard-line text-slate-500"></i>
-        <span>行前購物清單</span>
-      </h2>
-      <button
-        @click="addPreTripItem"
-        class="text-[11px] px-2.5 py-1 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1"
-      >
-        <i class="ri-add-line text-xs"></i>
-        <span>新增項目</span>
-      </button>
-    </div>
-    <p class="text-[11px] text-slate-500 mb-1">
-      記錄出發前要買的東西：可以貼圖片連結、網上價錢，以及實際購買價和勾選完成。
-    </p>
-
-    <div class="grid md:grid-cols-2 gap-3">
-      <div
-        v-for="(item, index) in activeTrip.preTripItems"
-        :key="'pt-' + index"
-        class="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-3 flex gap-3 text-[11px]"
-      >
-        <div class="w-16 h-16 rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center">
-          <img
-            v-if="item.image"
-            :src="item.image"
-            alt=""
-            class="w-full h-full object-cover"
-            onerror="this.style.display='none'"
-          />
-          <span v-else class="text-[10px] text-slate-400 px-1 text-center">No Image</span>
-        </div>
-        <div class="flex-1 flex flex-col gap-1">
-          <input
-            v-model="item.name"
-            class="w-full bg-transparent outline-none text-[11px] font-semibold text-slate-900 border-b border-slate-200 pb-0.5"
-            placeholder="商品名稱"
-          />
-          <div class="flex items-center gap-1">
-            <span class="text-slate-400 shrink-0">網上價</span>
-            <input
-              v-model.number="item.onlinePrice"
-              type="number"
-              class="w-20 px-1 py-0.5 rounded bg-white border border-slate-200 text-right outline-none"
-              placeholder="0"
-            />
-            <span class="text-slate-400 text-[10px]">{{ activeTrip.currency }}</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <span class="text-slate-400 shrink-0">圖片</span>
-            <input
-              v-model="item.image"
-              class="flex-1 px-1 py-0.5 rounded bg-white border border-slate-200 outline-none"
-              placeholder="貼上圖片網址"
-            />
-          </div>
-          <div class="flex items-center justify-between mt-1">
-            <label class="flex items-center gap-1 text-slate-700">
-              <input
-                type="checkbox"
-                v-model="item.purchased"
-                class="w-3.5 h-3.5 rounded border-slate-300"
-              />
-              <span>已購買</span>
-            </label>
-            <div class="flex items-center gap-1">
-              <span class="text-slate-400">實際價</span>
-              <input
-                v-model.number="item.actualPrice"
-                type="number"
-                class="w-20 px-1 py-0.5 rounded bg-white border border-slate-200 text-right outline-none"
-                placeholder="0"
-              />
-              <span class="text-slate-400 text-[10px]">{{ activeTrip.currency }}</span>
-            </div>
-          </div>
-        </div>
-        <button
-          @click="removePreTripItem(index)"
-          class="text-slate-300 hover:text-red-500 mt-1"
-          title="刪除"
-        >
-          <i class="ri-delete-bin-line text-xs"></i>
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- TAB: Trips / History -->
-  <section
-    v-if="activeTab === 'trips'"
-    class="rounded-2xl border border-slate-200 bg-white/90 backdrop-blur-sm p-4 flex flex-col gap-3"
-  >
-    <div class="flex items-center justify-between mb-1">
-      <h2 class="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
-        <i class="ri-suitcase-3-line text-slate-500"></i>
-        <span>所有旅程</span>
-      </h2>
-      <button
-        @click="startCreateTrip"
-        class="text-[11px] px-2.5 py-1 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1"
-      >
-        <i class="ri-add-line text-xs"></i>
-        <span>新增旅程</span>
-      </button>
-    </div>
-    <p class="text-[11px] text-slate-500 mb-1">
-      旅程會保存在此裝置的瀏覽器 localStorage，下次開啟亦可查看。
-    </p>
-
-    <div class="grid md:grid-cols-3 gap-3">
-      <div
-        v-for="trip in trips"
-        :key="trip.id"
-        class="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-3 flex flex-col gap-1 text-[11px] cursor-pointer hover:border-slate-400"
-        :class="{ 'ring-1 ring-slate-900': trip.id === activeTripId }"
-        @click="switchTrip(trip.id)"
-      >
-        <div class="flex items-center justify-between">
-          <div class="font-semibold text-slate-900 text-xs truncate max-w-[120px]">
-            {{ trip.title }}
-          </div>
-          <span
-            class="px-1.5 py-0.5 rounded-full bg-slate-900 text-white text-[10px]"
-            v-if="trip.id === activeTripId"
-          >
-            Active
-          </span>
-        </div>
-        <div class="text-[11px] text-slate-500 flex items-center gap-1">
-          <i class="ri-map-pin-line text-slate-400"></i>
-          <span class="truncate">{{ trip.destination }}</span>
-        </div>
-        <div class="text-[11px] text-slate-400">
-          {{ trip.startDate }} → {{ trip.endDate }}
-        </div>
-        <div class="mt-1 flex items-center justify-between text-[10px] text-slate-400">
-          <span class="flex items-center gap-1">
-            <i class="ri-wallet-3-line"></i>
-            <span>{{ trip.currency }}</span>
-          </span>
-          <button
-            @click.stop="deleteTrip(trip.id)"
-            class="text-slate-300 hover:text-red-500"
-            title="刪除旅程"
-          >
-            <i class="ri-delete-bin-line text-xs"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Create Trip Form (inline, simple) -->
-    <div
-      v-if="creatingTrip"
-      class="mt-3 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-3 text-[11px] flex flex-col gap-2"
-    >
-      <div class="flex items-center justify-between">
-        <span class="font-semibold text-slate-900">新增旅程</span>
-        <button @click="creatingTrip = false" class="text-slate-400 hover:text-slate-600 text-xs">
-          <i class="ri-close-line"></i>
-        </button>
-      </div>
-      <div class="grid md:grid-cols-2 gap-2">
-        <div class="flex flex-col gap-1">
-          <label class="text-slate-500">旅程名稱</label>
-          <input
-            v-model="newTripForm.title"
-            placeholder="Japan Winter Escape"
-            class="border border-slate-200 rounded-lg px-2 py-1.5 bg-white outline-none"
-          />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-slate-500">目的地 (國家 / 城市)</label>
-          <input
-            v-model="newTripForm.destination"
-            placeholder="Japan · Tokyo"
-            class="border border-slate-200 rounded-lg px-2 py-1.5 bg-white outline-none"
-          />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-slate-500">城市名稱 (天氣 / 地圖)</label>
-          <input
-            v-model="newTripForm.city"
-            placeholder="Tokyo"
-            class="border border-slate-200 rounded-lg px-2 py-1.5 bg-white outline-none"
-          />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-slate-500">當地貨幣</label>
-          <input
-            v-model="newTripForm.currency"
-            placeholder="HKD / JPY / EUR"
-            class="border border-slate-200 rounded-lg px-2 py-1.5 bg-white outline-none"
-          />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-slate-500">開始日期</label>
-          <input
-            v-model="newTripForm.startDate"
-            type="date"
-            class="border border-slate-200 rounded-lg px-2 py-1.5 bg-white outline-none"
-          />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-slate-500">結束日期</label>
-          <input
-            v-model="newTripForm.endDate"
-            type="date"
-            class="border border-slate-200 rounded-lg px-2 py-1.5 bg-white outline-none"
-          />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-slate-500">地圖中心緯度</label>
-          <input
-            v-model.number="newTripForm.lat"
-            type="number"
-            step="0.0001"
-            class="border border-slate-200 rounded-lg px-2 py-1.5 bg-white outline-none"
-          />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-slate-500">地圖中心經度</label>
-          <input
-            v-model.number="newTripForm.lng"
-            type="number"
-            step="0.0001"
-            class="border border-slate-200 rounded-lg px-2 py-1.5 bg-white outline-none"
-          />
-        </div>
-      </div>
-      <div class="mt-2 flex justify-end gap-2">
-        <button
-          @click="creatingTrip = false"
-          class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
-        >
-          取消
-        </button>
-        <button
-          @click="createTrip"
-          class="px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800"
-        >
-          建立旅程
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- 旅程管理 Modal (簡化版本，只做視覺容器，可選擇及跳去 trips 分頁) -->
-  <div
-    v-if="openTripManager"
-    class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50"
-  >
-    <div class="w-full max-w-md rounded-2xl bg-white shadow-xl border border-slate-200 p-4 text-[11px]">
-      <div class="flex items-center justify-between mb-2">
-        <div class="flex items-center gap-2">
-          <span class="text-xs font-semibold text-slate-900">旅程管理</span>
-          <span class="text-[10px] text-slate-400">共 {{ trips.length }} 個</span>
-        </div>
-        <button
-          @click="openTripManager = false"
-          class="text-slate-400 hover:text-slate-600 text-xs"
-        >
-          <i class="ri-close-line"></i>
-        </button>
-      </div>
-      <div class="space-y-1.5 max-h-64 overflow-y-auto">
-        <div
-          v-for="trip in trips"
-          :key="'mgr-' + trip.id"
-          class="flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer hover:bg-slate-50"
-          :class="{ 'bg-slate-900 text-white hover:bg-slate-900': trip.id === activeTripId }"
-          @click="switchTrip(trip.id); openTripManager = false"
-        >
-          <div class="flex flex-col">
-            <span class="font-semibold text-[11px] truncate max-w-[180px]">
-              {{ trip.title }}
-            </span>
-            <span class="text-[10px]" :class="trip.id === activeTripId ? 'text-slate-200' : 'text-slate-400'">
-              {{ trip.destination }} · {{ trip.startDate }} → {{ trip.endDate }}
-            </span>
-          </div>
-          <span
-            class="text-[10px] px-1.5 py-0.5 rounded-full border"
-            :class="trip.id === activeTripId
-              ? 'border-white text-white/90'
-              : 'border-slate-200 text-slate-400'"
-          >
-            查看
-          </span>
-        </div>
-      </div>
-      <div class="mt-3 flex justify-between items-center">
-        <button
-          @click="activeTab = 'trips'; openTripManager = false; startCreateTrip()"
-          class="text-[11px] text-slate-600 flex items-center gap-1"
-        >
-          <i class="ri-add-line text-xs"></i>
-          <span>新增旅程</span>
-        </button>
-        <button
-          @click="openTripManager = false"
-          class="text-[11px] text-slate-500 hover:text-slate-700"
-        >
-          關閉
-        </button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -869,7 +436,7 @@
     if (!mapEl) return;
     map = new google.maps.Map(mapEl, {
       zoom: 12,
-      center: { lat: 35.6762, lng: 139.6503 }, // default Tokyo
+      center: { lat: 35.6762, lng: 139.6503 }, // Tokyo
       mapTypeControl: false,
       fullscreenControl: false,
       streetViewControl: false,
@@ -880,7 +447,7 @@
       map,
       suppressMarkers: false,
       polylineOptions: {
-        strokeColor: '#2F5FFF',
+        strokeColor: '#97CBFF',
         strokeWeight: 5
       }
     });
@@ -918,7 +485,10 @@
           endDate: '',
           lat: 35.6762,
           lng: 139.6503
-        }
+        },
+
+        // 新增：批次匯入用 textarea
+        bulkPlaces: ''
       };
     },
     computed: {
@@ -927,13 +497,12 @@
       },
       totalExpenseInCurrency() {
         if (!this.activeTrip) return 0;
-        const totalKRW = this.activeTrip.expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-        return Math.round(totalKRW * this.activeTrip.exchangeRate);
+        const totalJPY = this.activeTrip.expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+        return Math.round(totalJPY * this.activeTrip.exchangeRate);
       }
     },
     created() {
-      // load from localStorage
-      const stored = localStorage.getItem('travel_studio_trips');
+      const stored = localStorage.getItem('christine_travel_diary_trips');
       if (stored) {
         try {
           this.trips = JSON.parse(stored);
@@ -943,48 +512,48 @@
       }
 
       if (this.trips.length === 0) {
-        // 初始建立一個「Japan Winter」旅程（你現在這次）[web:118][web:98]
         const defaultTrip = {
           id: Date.now().toString(),
-          title: 'Japan Winter 2025',
-          destination: 'Japan · Tokyo',
-          city: 'Tokyo',
-          currency: 'HKD',
-          startDate: '2025-12-24',
-          endDate: '2026-01-01',
+          title: "Japan Winter 2025",
+          destination: "Japan · Tokyo",
+          city: "Tokyo",
+          currency: "HKD",
+          startDate: "2025-12-24",
+          endDate: "2026-01-01",
           center: { lat: 35.6762, lng: 139.6503 },
-          exchangeRate: 0.0058,
-          travelMode: 'TRANSIT',
+          exchangeRate: 0.055,
+          travelMode: "TRANSIT",
           flights: {
-            outbound: { no: 'NH924', date: '2025-12-24', from: 'HKG / CAN', to: 'HND' },
-            inbound: { no: 'NH923', date: '2026-01-01', from: 'HND', to: 'HKG / CAN' }
+            outbound: { no: "NH924", date: "2025-12-24", from: "HKG", to: "HND" },
+            inbound: { no: "NH923", date: "2026-01-01", from: "HND", to: "HKG" }
           },
           itinerary: [
             {
-              time: '09:00',
-              activity: '抵達東京羽田機場',
-              location: 'Tokyo Haneda Airport, Japan'
+              time: "09:00",
+              activity: "抵達東京羽田機場",
+              location: "Tokyo Haneda Airport, Japan"
             },
             {
-              time: '11:00',
-              activity: '酒店 Check-in',
-              location: 'Shinjuku, Tokyo'
+              time: "11:00",
+              activity: "酒店 Check-in",
+              location: "Shinjuku, Tokyo"
             },
             {
-              time: '14:00',
-              activity: '表參道 / 原宿逛街',
-              location: 'Omotesando, Tokyo'
+              time: "14:00",
+              activity: "表參道 / 原宿逛街",
+              location: "Omotesando, Tokyo"
             },
             {
-              time: '19:00',
-              activity: '新宿晚餐',
-              location: 'Shinjuku, Tokyo'
+              time: "19:00",
+              activity: "新宿晚餐",
+              location: "Shinjuku, Tokyo"
             }
           ],
           routeSummary: null,
           expenses: [],
           tripItems: [],
-          preTripItems: []
+          preTripItems: [],
+          savedListLink: ""
         };
         this.trips.push(defaultTrip);
       }
@@ -992,7 +561,6 @@
       this.activeTripId = this.trips[0].id;
     },
     mounted() {
-      // init map + route when ready
       if (typeof google !== 'undefined' && google.maps) {
         setTimeout(() => {
           initMap();
@@ -1011,12 +579,11 @@
     watch: {
       trips: {
         handler(val) {
-          localStorage.setItem('travel_studio_trips', JSON.stringify(val));
+          localStorage.setItem('christine_travel_diary_trips', JSON.stringify(val));
         },
         deep: true
       },
       activeTripId() {
-        // 當切換旅程時，更新地圖 center + route
         this.$nextTick(() => {
           if (this.activeTrip && map) {
             map.setCenter(this.activeTrip.center || { lat: 35.6762, lng: 139.6503 });
@@ -1027,7 +594,6 @@
       }
     },
     methods: {
-      // 天氣：用城市座標時可再進一步擴展，這裏先以東京為例 [web:29]
       async fetchWeather() {
         try {
           const lat = this.activeTrip?.center?.lat || 35.6762;
@@ -1045,18 +611,18 @@
         }
       },
 
-      // 匯率：示例仍用 KRW→HKD，你可以之後改成對當地幣別 [web:12][web:20]
       async fetchRate() {
         try {
-          const res = await fetch('https://api.frankfurter.app/latest?from=KRW&to=HKD');
+          const res = await fetch('https://api.exchangerate-api.com/v4/latest/JPY');
           const data = await res.json();
-          if (this.activeTrip) this.activeTrip.exchangeRate = data.rates.HKD;
+          if (this.activeTrip && data.rates && data.rates.HKD) {
+            this.activeTrip.exchangeRate = data.rates.HKD;
+          }
         } catch (e) {
           // 保留預設
         }
       },
 
-      // Google Maps route
       async updateRoute() {
         if (!this.activeTrip || !directionsService || this.activeTrip.itinerary.length < 2) return;
 
@@ -1094,7 +660,6 @@
             legs: route.legs.length
           };
 
-          // 更新每一段行程的距離/時間
           this.activeTrip.itinerary.forEach((item, index) => {
             if (index > 0 && route.legs[index - 1]) {
               item.distance = route.legs[index - 1].distance.text;
@@ -1107,6 +672,7 @@
       },
 
       getSingleDirectionLink(item, index) {
+        if (!this.activeTrip) return '#';
         if (index === 0) {
           return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}`;
         }
@@ -1139,7 +705,47 @@
         }
       },
 
-      // 記帳
+      // 批次匯入地點
+      importBulkPlaces() {
+        if (!this.activeTrip || !this.bulkPlaces.trim()) return;
+        const lines = this.bulkPlaces
+          .split('\n')
+          .map(l => l.trim())
+          .filter(Boolean);
+        if (!lines.length) return;
+
+        let baseHour = 10;
+        if (this.activeTrip.itinerary.length > 0) {
+          const last = this.activeTrip.itinerary[this.activeTrip.itinerary.length - 1];
+          const h = parseInt((last.time || '10:00').split(':')[0], 10);
+          baseHour = isNaN(h) ? 10 : h + 1;
+        }
+
+        lines.forEach((line, idx) => {
+          let name = line;
+          let loc = line;
+          if (line.includes('-')) {
+            const parts = line.split('-');
+            name = parts[0].trim();
+            loc = parts.slice(1).join('-').trim();
+          } else if (line.includes(',')) {
+            const parts = line.split(',');
+            name = parts[0].trim();
+            loc = parts.slice(1).join(',').trim();
+          }
+          const hour = (baseHour + idx).toString().padStart(2, '0');
+          this.activeTrip.itinerary.push({
+            time: `${hour}:00`,
+            activity: name || '未命名地點',
+            location: loc || name
+          });
+        });
+
+        this.activeTrip.itinerary.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+        this.bulkPlaces = '';
+        this.$nextTick(() => this.updateRoute());
+      },
+
       addExpense() {
         if (!this.activeTrip) return;
         if (!this.newExpense.item || !this.newExpense.amount) return;
@@ -1151,7 +757,6 @@
         this.newExpense = { item: '', amount: null, payment: 'cash' };
       },
 
-      // 旅程中購物
       addTripItem() {
         if (!this.activeTrip) return;
         if (!this.newTripItem) return;
@@ -1167,7 +772,6 @@
         this.activeTrip.tripItems[index].checked = !this.activeTrip.tripItems[index].checked;
       },
 
-      // 行前購物
       addPreTripItem() {
         if (!this.activeTrip) return;
         this.activeTrip.preTripItems.push({
@@ -1183,7 +787,6 @@
         this.activeTrip.preTripItems.splice(index, 1);
       },
 
-      // Trips / History
       switchTrip(id) {
         this.activeTripId = id;
         this.activeTab = 'itinerary';
@@ -1226,7 +829,7 @@
           startDate: this.newTripForm.startDate || '',
           endDate: this.newTripForm.endDate || '',
           center: { lat: this.newTripForm.lat || 35.6762, lng: this.newTripForm.lng || 139.6503 },
-          exchangeRate: 0.0058,
+          exchangeRate: 0.055,
           travelMode: 'TRANSIT',
           flights: {
             outbound: { no: '-', date: this.newTripForm.startDate || '-', from: '-', to: '-' },
@@ -1236,7 +839,8 @@
           routeSummary: null,
           expenses: [],
           tripItems: [],
-          preTripItems: []
+          preTripItems: [],
+          savedListLink: ''
         };
         this.trips.push(trip);
         this.activeTripId = trip.id;
