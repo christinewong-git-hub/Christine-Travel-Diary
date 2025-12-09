@@ -26,14 +26,17 @@
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""
   />
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIJ5luJxN9vC2p2p3p3p3p3p/2Dh0Fw="
     crossorigin=""
   ></script>
+
+  <!-- Firebase SDK (compat 版本，適合單一 index.html) -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
 
   <script>
     tailwind.config = {
@@ -99,15 +102,97 @@
         </div>
       </div>
     </div>
-    <button
-      @click="handleTripManagerClick"
-      class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-secondary bg-white text-xs text-textMain hover:bg-bgLight/60"
-    >
-      <i class="ri-suitcase-3-line text-sm text-primary"></i>
-      <span>旅程管理</span>
-      <span class="text-[10px] text-textSoft">({{ trips.length }})</span>
-    </button>
+
+    <!-- Firebase Login Status -->
+    <div class="flex items-center gap-2 text-[11px]">
+      <span v-if="currentUserEmail" class="text-textSoft hidden md:inline">
+        已登入：{{ currentUserEmail }}
+      </span>
+      <button
+        v-if="!currentUserEmail"
+        @click="showLogin = true"
+        class="px-2 py-1 rounded-full border border-secondary bg-white text-textMain hover:bg-bgLight/60 flex items-center gap-1"
+      >
+        <i class="ri-user-line text-xs text-primary"></i>
+        <span>登入 / 註冊</span>
+      </button>
+      <button
+        v-else
+        @click="logout"
+        class="px-2 py-1 rounded-full border border-secondary bg-white text-textMain hover:bg-bgLight/60 flex items-center gap-1"
+      >
+        <i class="ri-logout-box-r-line text-xs"></i>
+        <span>登出</span>
+      </button>
+
+      <button
+        @click="handleTripManagerClick"
+        class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-secondary bg-white text-xs text-textMain hover:bg-bgLight/60"
+      >
+        <i class="ri-suitcase-3-line text-sm text-primary"></i>
+        <span>旅程管理</span>
+        <span class="text-[10px] text-textSoft">({{ trips.length }})</span>
+      </button>
+    </div>
   </header>
+
+  <!-- Login Dialog -->
+  <div
+    v-if="showLogin"
+    class="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
+  >
+    <div class="w-80 rounded-2xl bg-white border border-secondary/70 p-4 text-[11px] shadow-lg">
+      <div class="flex items-center justify-between mb-2">
+        <span class="font-semibold text-textMain flex items-center gap-1">
+          <i class="ri-user-star-line text-primary"></i>
+          <span>登入 / 註冊 Firebas e 帳戶</span>
+        </span>
+        <button @click="showLogin = false" class="text-textSoft hover:text-textMain text-xs">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <p class="text-textSoft mb-2">
+        只會用於同步你的旅程資料，不會公開給其他人。
+      </p>
+      <div class="flex flex-col gap-2">
+        <div class="flex flex-col gap-1">
+          <label class="text-textSoft">Email</label>
+          <input
+            v-model="loginForm.email"
+            type="email"
+            class="border border-secondary/60 rounded-lg px-2 py-1.5 bg-bgLight outline-none"
+            placeholder="you@example.com"
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-textSoft">Password</label>
+          <input
+            v-model="loginForm.password"
+            type="password"
+            class="border border-secondary/60 rounded-lg px-2 py-1.5 bg-bgLight outline-none"
+            placeholder="至少 6 位字元"
+          />
+        </div>
+        <div class="text-[10px] text-red-500 min-h-[16px]" v-if="loginError">
+          {{ loginError }}
+        </div>
+        <div class="flex justify-end gap-2 mt-1">
+          <button
+            @click="showLogin = false"
+            class="px-3 py-1.5 rounded-lg border border-secondary/60 text-textMain hover:bg-bgLight"
+          >
+            取消
+          </button>
+          <button
+            @click="loginOrSignup"
+            class="px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90"
+          >
+            登入 / 註冊
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Active Trip Summary -->
   <section
@@ -137,7 +222,7 @@
         </span>
       </div>
 
-      <!-- Flights (去程 / 回程，可編輯) -->
+      <!-- Flights -->
       <div class="flex flex-wrap gap-2 mt-3 text-[11px]">
         <!-- 去程 -->
         <div
@@ -150,22 +235,26 @@
             v-model="activeTrip.flights.outbound.no"
             class="w-16 text-[11px] font-semibold text-textMain bg-transparent outline-none border-b border-secondary/50"
             placeholder="Flight"
+            @change="saveActiveTrip"
           />
           <input
             v-model="activeTrip.flights.outbound.date"
             class="w-24 text-[11px] text-textSoft bg-transparent outline-none border-b border-secondary/50"
             placeholder="YYYY-MM-DD"
+            @change="saveActiveTrip"
           />
           <input
             v-model="activeTrip.flights.outbound.from"
             class="w-10 text-[11px] text-textSoft bg-transparent outline-none border-b border-secondary/50"
             placeholder="HKG"
+            @change="saveActiveTrip"
           />
           <span class="text-textSoft">→</span>
           <input
             v-model="activeTrip.flights.outbound.to"
             class="w-10 text-[11px] text-textSoft bg-transparent outline-none border-b border-secondary/50"
             placeholder="HND"
+            @change="saveActiveTrip"
           />
         </div>
 
@@ -180,22 +269,26 @@
             v-model="activeTrip.flights.inbound.no"
             class="w-16 text-[11px] font-semibold text-textMain bg-transparent outline-none border-b border-secondary/50"
             placeholder="Flight"
+            @change="saveActiveTrip"
           />
           <input
             v-model="activeTrip.flights.inbound.date"
             class="w-24 text-[11px] text-textSoft bg-transparent outline-none border-b border-secondary/50"
             placeholder="YYYY-MM-DD"
+            @change="saveActiveTrip"
           />
           <input
             v-model="activeTrip.flights.inbound.from"
             class="w-10 text-[11px] text-textSoft bg-transparent outline-none border-b border-secondary/50"
             placeholder="HND"
+            @change="saveActiveTrip"
           />
           <span class="text-textSoft">→</span>
           <input
             v-model="activeTrip.flights.inbound.to"
             class="w-10 text-[11px] text-textSoft bg-transparent outline-none border-b border-secondary/50"
             placeholder="HKG"
+            @change="saveActiveTrip"
           />
         </div>
       </div>
@@ -334,11 +427,13 @@
               v-model="item.activity"
               class="text-xs font-semibold text-textMain bg-transparent outline-none"
               placeholder="活動名稱"
+              @change="saveActiveTripAndRoute"
             />
             <input
               v-model="item.location"
               class="text-[11px] text-textSoft bg-transparent outline-none"
               placeholder="地點 / 地址（用於導航）"
+              @change="saveActiveTripAndRoute"
             />
             <div v-if="item.distance || item.duration" class="text-[11px] text-textSoft flex gap-2">
               <span v-if="item.distance">距離 {{ item.distance }}</span>
@@ -373,8 +468,7 @@
           </span>
         </div>
         <p class="text-[10px] text-textSoft mb-1">
-          從 Google Maps 清單複製多個地點，每行一個。例如：<br/>
-          「Blue Bottle Coffee - Shibuya, Tokyo」或「Starbucks Reserve, Ginza, Tokyo」。
+          從 Google Maps 清單複製多個地點，每行一個。
         </p>
         <textarea
           v-model="bulkPlaces"
@@ -384,7 +478,7 @@
         ></textarea>
         <div class="flex items-center justify-between">
           <span class="text-[10px] text-textSoft">
-            將自動為每個地點安排時間（在現有行程之後），你可之後再微調。
+            將自動為每個地點安排時間，你可之後再微調。
           </span>
           <button
             @click="importBulkPlaces"
@@ -408,10 +502,11 @@
           >
             2
           </span>
+          <span>路線地圖</span>
         </h3>
         <div class="flex items-center gap-2 text-[11px] text-textSoft">
           <i class="ri-map-line text-primary"></i>
-          <span>Leaflet + OpenStreetMap（純前端，不需 API Key）</span>
+          <span>Leaflet + OpenStreetMap（純前端）</span>
         </div>
       </div>
 
@@ -449,10 +544,11 @@
           </a>
         </div>
         <p class="text-[10px] text-textSoft mb-1">
-          在 Google Maps 中分享你的「已儲存清單」連結，貼上到這裡，方便一鍵打開查看所有收藏地點。
+          在 Google Maps 中分享你的「已儲存清單」連結，貼上到這裡。
         </p>
         <input
           v-model="activeTrip.savedListLink"
+          @change="saveActiveTrip"
           placeholder="貼上 Google Maps 已儲存清單分享連結"
           class="w-full border border-secondary/60 rounded-lg px-2 py-1.5 bg-white outline-none text-[11px] text-textMain"
         />
@@ -460,7 +556,7 @@
     </div>
   </section>
 
-  <!-- TAB: Budget (HKD → 當地貨幣) -->
+  <!-- TAB: Budget -->
   <section
     v-if="activeTab === 'budget'"
     class="grid md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4"
@@ -498,6 +594,7 @@
           <input
             type="number"
             v-model.number="activeTrip.exchangeRate"
+            @change="saveActiveTrip"
             class="w-24 px-2 py-1 rounded bg-white/90 text-xs text-textMain outline-none"
             step="0.0001"
           />
@@ -597,7 +694,7 @@
     </div>
   </section>
 
-  <!-- TAB: In-trip Shopping -->
+  <!-- TAB: Shopping -->
   <section
     v-if="activeTab === 'shopping'"
     class="rounded-2xl border border-secondary/60 bg-white/95 backdrop-blur-sm p-4 flex flex-col gap-3"
@@ -737,7 +834,7 @@
     class="rounded-2xl border border-secondary/60 bg-white/95 backdrop-blur-sm p-4 flex flex-col gap-3"
   >
     <div class="flex items-center justify-between mb-1">
-      <h2 class="text-sm font-semibold text-textMain flex items-centergap-1.5">
+      <h2 class="text-sm font-semibold text-textMain flex items-center gap-1.5">
         <i class="ri-suitcase-3-line text-primary"></i>
         <span>旅程 / History</span>
       </h2>
@@ -750,7 +847,7 @@
       </button>
     </div>
     <p class="text-[11px] text-textSoft mb-1">
-      旅程會保存在此裝置的瀏覽器 localStorage，下次開啟亦可查看。
+      已登入時，旅程會同步儲存在 Firebase（多裝置共享）；未登入時則存於此裝置的 localStorage。
     </p>
 
     <div class="grid md:grid-cols-3 gap-3">
@@ -894,6 +991,21 @@
 </div>
 
 <script>
+  // Firebase config（使用你提供的專案設定）[web:383][web:415]
+  const firebaseConfig = {
+    apiKey: "AIzaSyDHfhq36jAG7ktsgEk-xK_qum6EetlaMkw",
+    authDomain: "christine-s-travel-plan.firebaseapp.com",
+    projectId: "christine-s-travel-plan",
+    storageBucket: "christine-s-travel-plan.firebasestorage.app",
+    messagingSenderId: "645802320428",
+    appId: "1:645802320428:web:bd14a98f4d012684136789",
+    measurementId: "G-EVQ0T4Q29W"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
   let leafletMap = null;
   let routePolyline = null;
   let markersLayer = null;
@@ -939,7 +1051,13 @@
           purchased: false
         },
 
-        daySize: 5
+        daySize: 5,
+
+        // Firebase login state
+        currentUserEmail: null,
+        showLogin: false,
+        loginForm: { email: '', password: '' },
+        loginError: ''
       };
     },
     computed: {
@@ -953,6 +1071,7 @@
       }
     },
     created() {
+      // 預設 localStorage 版本（未登入時用）
       const stored = localStorage.getItem('christine_travel_diary_trips');
       if (stored) {
         try {
@@ -965,6 +1084,7 @@
       if (this.trips.length === 0) {
         const defaultTrip = {
           id: Date.now().toString(),
+          createdAt: Date.now(),
           title: "Japan Winter 2025",
           destination: "Japan · Tokyo",
           city: "Tokyo",
@@ -1016,10 +1136,32 @@
       this.updateRoute();
       this.fetchWeather();
       this.fetchRate();
+
+      // 監聽 Firebase 登入狀態 [web:383][web:410]
+      auth.onAuthStateChanged(user => {
+        if (user) {
+          this.currentUserEmail = user.email;
+          this.loadTripsFromFirestore();
+        } else {
+          this.currentUserEmail = null;
+          // 回到 localStorage 版本
+          const stored = localStorage.getItem('christine_travel_diary_trips');
+          if (stored) {
+            try {
+              this.trips = JSON.parse(stored);
+            } catch {
+              this.trips = [];
+            }
+          }
+          this.activeTripId = this.trips[0]?.id || null;
+          this.$nextTick(() => this.updateRoute());
+        }
+      });
     },
     watch: {
       trips: {
         handler(val) {
+          // 無論有沒有登入，都先寫 localStorage（當作本機備份）[web:373]
           localStorage.setItem('christine_travel_diary_trips', JSON.stringify(val));
         },
         deep: true
@@ -1037,6 +1179,88 @@
       handleTripManagerClick() {
         this.activeTab = 'trips';
         this.creatingTrip = true;
+      },
+
+      // Login / Signup（Email + Password）[web:383][web:410]
+      async loginOrSignup() {
+        this.loginError = '';
+        const { email, password } = this.loginForm;
+        if (!email || !password) {
+          this.loginError = '請輸入 Email 和 Password';
+          return;
+        }
+        try {
+          try {
+            await auth.signInWithEmailAndPassword(email, password);
+          } catch (e) {
+            await auth.createUserWithEmailAndPassword(email, password);
+          }
+          this.showLogin = false;
+          this.loginForm = { email: '', password: '' };
+        } catch (e) {
+          console.error(e);
+          this.loginError = '登入 / 註冊失敗，請檢查 Email / 密碼格式。';
+        }
+      },
+      async logout() {
+        await auth.signOut();
+      },
+
+      // Firestore 同步 [web:396][web:419]
+      async loadTripsFromFirestore() {
+        if (!auth.currentUser) return;
+        const uid = auth.currentUser.uid;
+        const snap = await db
+          .collection('users')
+          .doc(uid)
+          .collection('trips')
+          .orderBy('createdAt', 'asc')
+          .get();
+
+        const trips = [];
+        snap.forEach(doc => trips.push(doc.data()));
+        if (!trips.length) {
+          // 如果雲端沒有資料，就把本機 trips 上傳一次
+          for (const t of this.trips) {
+            await this.saveTripToFirestore(t);
+          }
+        } else {
+          this.trips = trips;
+        }
+        this.activeTripId = this.trips[0]?.id || null;
+        this.$nextTick(() => this.updateRoute());
+      },
+      async saveTripToFirestore(trip) {
+        if (!auth.currentUser) return;
+        const uid = auth.currentUser.uid;
+        await db
+          .collection('users')
+          .doc(uid)
+          .collection('trips')
+          .doc(trip.id)
+          .set({
+            ...trip,
+            createdAt: trip.createdAt || Date.now()
+          });
+      },
+      async deleteTripFromFirestore(id) {
+        if (!auth.currentUser) return;
+        const uid = auth.currentUser.uid;
+        await db
+          .collection('users')
+          .doc(uid)
+          .collection('trips')
+          .doc(id)
+          .delete();
+      },
+      async saveActiveTrip() {
+        if (this.activeTrip) {
+          await this.saveTripToFirestore(this.activeTrip);
+        }
+      },
+      async saveActiveTripAndRoute() {
+        await this.saveActiveTrip();
+        this.updateRoute();
       },
 
       // Day helpers
@@ -1082,17 +1306,15 @@
           const data = await res.json();
           if (this.activeTrip && data.rates && data.rates[target]) {
             this.activeTrip.exchangeRate = data.rates[target];
+            await this.saveActiveTrip();
           }
-        } catch (e) {
-          // keep default
-        }
+        } catch (e) {}
       },
 
-      // 使用 Nominatim 取得每個地點座標並畫線 [web:1]
+      // 使用 Nominatim 取得座標 + 路線直線 polyline [web:356][web:353]
       async updateRoute() {
         if (!this.activeTrip || !leafletMap || !this.activeTrip.itinerary.length) return;
 
-        // 清除舊圖層
         markersLayer.clearLayers();
         if (routePolyline) {
           leafletMap.removeLayer(routePolyline);
@@ -1117,11 +1339,7 @@
               const lat = parseFloat(best.lat);
               const lng = parseFloat(best.lon);
               coords.push([lat, lng]);
-              geocoded.push({
-                item,
-                lat,
-                lng
-              });
+              geocoded.push({ item, lat, lng });
             }
           } catch (e) {
             console.error('Geocode error for', item.location, e);
@@ -1130,19 +1348,16 @@
 
         if (!coords.length) return;
 
-        // 加 marker
-        geocoded.forEach((g, idx) => {
+        geocoded.forEach(g => {
           const marker = L.marker([g.lat, g.lng]).addTo(markersLayer);
           marker.bindPopup(
             `<strong>${g.item.time || ''} ${g.item.activity || ''}</strong><br/>${g.item.location || ''}`
           );
         });
 
-        // 畫 polyline
         routePolyline = L.polyline(coords, { color: '#97CBFF', weight: 4 }).addTo(leafletMap);
         leafletMap.fitBounds(routePolyline.getBounds(), { padding: [20, 20] });
 
-        // 簡單距離估算（直線 km）
         let totalDistance = 0;
         for (let i = 1; i < coords.length; i++) {
           const [lat1, lon1] = coords[i - 1];
@@ -1190,15 +1405,14 @@
             location: location || activity
           });
           this.activeTrip.itinerary.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-          this.$nextTick(() => this.updateRoute());
+          this.saveActiveTripAndRoute();
         }
       },
       removeItineraryItem(index) {
         if (!this.activeTrip) return;
-        if (confirm('確定刪除此行程？')) {
-          this.activeTrip.itinerary.splice(index, 1);
-          this.$nextTick(() => this.updateRoute());
-        }
+        if (!confirm('確定刪除此行程？')) return;
+        this.activeTrip.itinerary.splice(index, 1);
+        this.saveActiveTripAndRoute();
       },
 
       importBulkPlaces() {
@@ -1238,7 +1452,7 @@
 
         this.activeTrip.itinerary.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
         this.bulkPlaces = '';
-        this.$nextTick(() => this.updateRoute());
+        this.saveActiveTripAndRoute();
       },
 
       addExpense() {
@@ -1251,6 +1465,7 @@
           date: `${d.getMonth() + 1}/${d.getDate()}`
         });
         this.newExpense = { item: '', amount: null, payment: 'cash' };
+        this.saveActiveTrip();
       },
 
       handleShoppingImageChange(event, index) {
@@ -1279,14 +1494,17 @@
           imageData: '',
           purchased: false
         };
+        this.saveActiveTrip();
       },
       removeShoppingItem(index) {
         if (!this.activeTrip) return;
         this.activeTrip.shoppingItems.splice(index, 1);
+        this.saveActiveTrip();
       },
       toggleShoppingPurchased(index) {
         if (!this.activeTrip) return;
         this.activeTrip.shoppingItems[index].purchased = !this.activeTrip.shoppingItems[index].purchased;
+        this.saveActiveTrip();
       },
 
       switchTrip(id) {
@@ -1294,7 +1512,7 @@
         this.activeTab = 'itinerary';
         this.$nextTick(() => this.updateRoute());
       },
-      deleteTrip(id) {
+      async deleteTrip(id) {
         if (this.trips.length === 1) {
           alert('至少需要保留一個旅程');
           return;
@@ -1303,6 +1521,9 @@
         this.trips = this.trips.filter(t => t.id !== id);
         if (!this.trips.find(t => t.id === this.activeTripId)) {
           this.activeTripId = this.trips[0]?.id || null;
+        }
+        if (auth.currentUser) {
+          await this.deleteTripFromFirestore(id);
         }
         this.$nextTick(() => this.updateRoute());
       },
@@ -1352,13 +1573,14 @@
         }
       },
 
-      createTrip() {
+      async createTrip() {
         if (!this.newTripForm.title || !this.newTripForm.destination) {
           alert('請至少填寫旅程名稱與目的地');
           return;
         }
         const trip = {
           id: Date.now().toString(),
+          createdAt: Date.now(),
           title: this.newTripForm.title,
           destination: this.newTripForm.destination,
           city: this.newTripForm.city || this.newTripForm.destination,
@@ -1382,6 +1604,11 @@
         this.trips.push(trip);
         this.activeTripId = trip.id;
         this.creatingTrip = false;
+
+        if (auth.currentUser) {
+          await this.saveTripToFirestore(trip);
+        }
+
         this.$nextTick(() => {
           if (leafletMap) {
             leafletMap.setView(trip.center, 12);
