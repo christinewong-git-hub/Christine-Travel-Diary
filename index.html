@@ -131,33 +131,66 @@
         </span>
       </div>
 
-      <!-- Flights -->
+      <!-- Flights (可手動輸入) -->
       <div class="flex flex-wrap gap-2 mt-3 text-[11px]">
+        <!-- OUTBOUND -->
         <div
           class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-secondary/60 bg-bgLight/80"
         >
           <span class="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px]">
             OUT
           </span>
-          <span class="font-medium text-textMain">{{ activeTrip.flights.outbound.no }}</span>
-          <span class="text-textSoft">{{ activeTrip.flights.outbound.date }}</span>
-          <span class="text-textSoft">·</span>
-          <span class="text-textSoft">
-            {{ activeTrip.flights.outbound.from }} → {{ activeTrip.flights.outbound.to }}
-          </span>
+          <input
+            v-model="activeTrip.flights.outbound.no"
+            class="w-16 text-[11px] font-semibold text-textMain bg-transparent outline-none border-b border-secondary/50"
+            placeholder="Flight"
+          />
+          <input
+            v-model="activeTrip.flights.outbound.date"
+            class="w-24 text-[11px] text-textSoft bg-transparent outline-none border-b border-secondary/50"
+            placeholder="YYYY-MM-DD"
+          />
+          <input
+            v-model="activeTrip.flights.outbound.from"
+            class="w-10 text-[11px] text-textSoft bg-transparent outline-none border-b border-secondary/50"
+            placeholder="HKG"
+          />
+          <span class="text-textSoft">→</span>
+          <input
+            v-model="activeTrip.flights.outbound.to"
+            class="w-10 text-[11px] text-textSoft bg-transparent outline-none border-b border-secondary/50"
+            placeholder="HND"
+          />
         </div>
+
+        <!-- INBOUND -->
         <div
           class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-secondary/60 bg-bgLight/80"
         >
           <span class="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px]">
             IN
           </span>
-          <span class="font-medium text-textMain">{{ activeTrip.flights.inbound.no }}</span>
-          <span class="text-textSoft">{{ activeTrip.flights.inbound.date }}</span>
-          <span class="text-textSoft">·</span>
-          <span class="text-textSoft">
-            {{ activeTrip.flights.inbound.from }} → {{ activeTrip.flights.inbound.to }}
-          </span>
+          <input
+            v-model="activeTrip.flights.inbound.no"
+            class="w-16 text-[11px] font-semibold text-textMain bg-transparent outline-none border-b border-secondary/50"
+            placeholder="Flight"
+          />
+          <input
+            v-model="activeTrip.flights.inbound.date"
+            class="w-24 text-[11px] text-textSoft bg-transparent outline-none border-b border-secondary/50"
+            placeholder="YYYY-MM-DD"
+          />
+          <input
+            v-model="activeTrip.flights.inbound.from"
+            class="w-10 text-[11px] text-textSoft bg-transparent outline-none border-b border-secondary/50"
+            placeholder="HND"
+          />
+          <span class="text-textSoft">→</span>
+          <input
+            v-model="activeTrip.flights.inbound.to"
+            class="w-10 text-[11px] text-textSoft bg-transparent outline-none border-b border-secondary/50"
+            placeholder="HKG"
+          />
         </div>
       </div>
     </div>
@@ -207,7 +240,7 @@
         </div>
         <div class="mt-1 text-[10px] text-textSoft flex items-center gap-1">
           <i class="ri-exchange-dollar-line text-secondary"></i>
-          <span>JPY → {{ activeTrip.currency }} (實時)</span>
+          <span>HKD → {{ activeTrip.currency }} (實時)</span>
         </div>
       </div>
     </div>
@@ -259,7 +292,7 @@
         尚未建立行程，點擊「新增」或使用下方「批次匯入地點」。
       </div>
 
-      <!-- 帶 Day1 / Day2 / Day3 的行程列表 -->
+      <!-- 行程 + Day1/Day2/Day3 -->
       <div v-for="(item, index) in activeTrip.itinerary" :key="'it-' + index">
         <!-- Day 標題 -->
         <div
@@ -437,7 +470,7 @@
     </div>
   </section>
 
-  <!-- TAB: Budget -->
+  <!-- TAB: Budget (HKD → 當地貨幣) -->
   <section
     v-if="activeTab === 'budget'"
     class="grid md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4"
@@ -453,7 +486,7 @@
         <div class="flex items-center justify-between text-[11px]">
           <span class="flex items-center gap-1">
             <i class="ri-exchange-dollar-line"></i>
-            <span>實時匯率 · JPY → {{ activeTrip?.currency || 'HKD' }}</span>
+            <span>實時匯率 · HKD → {{ activeTrip?.currency || 'JPY' }}</span>
           </span>
           <button
             @click="fetchRate"
@@ -464,10 +497,10 @@
           </button>
         </div>
         <div class="flex items-baseline gap-1">
-          <span class="text-xl font-semibold">1,000¥</span>
+          <span class="text-xl font-semibold">1,000 HKD</span>
           <span class="text-xs text-white/80 mx-1">≈</span>
           <span class="text-lg font-semibold">
-            {{ (1000 * (activeTrip?.exchangeRate || 0)).toFixed(2) }} {{ activeTrip?.currency || 'HKD' }}
+            {{ (1000 * (activeTrip?.exchangeRate || 0)).toFixed(2) }} {{ activeTrip?.currency || 'JPY' }}
           </span>
         </div>
         <div class="flex items-center gap-2 text-[11px] mt-1">
@@ -496,7 +529,7 @@
           <input
             v-model.number="newExpense.amount"
             type="number"
-            placeholder="金額 (¥)"
+            placeholder="金額 (HKD)"
             class="border border-secondary/60 rounded-lg px-3 py-2 bg-bgLight outline-none text-xs"
           />
         </div>
@@ -564,7 +597,7 @@
         </div>
         <div class="text-right">
           <div class="text-xs text-textMain">
-            -¥{{ exp.amount.toLocaleString() }}
+            -HKD {{ exp.amount.toLocaleString() }}
           </div>
           <div class="text-[11px] text-textSoft">
             ≈ {{ (exp.amount * (activeTrip.exchangeRate || 0)).toFixed(1) }} {{ activeTrip.currency }}
@@ -718,13 +751,13 @@
         <i class="ri-suitcase-3-line text-primary"></i>
         <span>旅程 / History</span>
       </h2>
-    <button
-      @click="startCreateTrip"
-      class="text-[11px] px-2.5 py-1 rounded-full border border-secondary/70 text-textMain hover:bg-bgLight/80 flex items-center gap-1"
-    >
-      <i class="ri-add-line text-xs"></i>
-      <span>新增旅程</span>
-    </button>
+      <button
+        @click="startCreateTrip"
+        class="text-[11px] px-2.5 py-1 rounded-full border border-secondary/70 text-textMain hover:bg-bgLight/80 flex items-center gap-1"
+      >
+        <i class="ri-add-line text-xs"></i>
+        <span>新增旅程</span>
+      </button>
     </div>
     <p class="text-[11px] text-textSoft mb-1">
       旅程會保存在此裝置的瀏覽器 localStorage，下次開啟亦可查看。
@@ -812,7 +845,7 @@
           <label class="text-textSoft">當地貨幣</label>
           <input
             v-model="newTripForm.currency"
-            placeholder="HKD / JPY / EUR"
+            placeholder="JPY / EUR / etc."
             class="border border-secondary/60 rounded-lg px-2 py-1.5 bg-white outline-none"
           />
         </div>
@@ -914,13 +947,12 @@
         weather: { temp: '--', desc: '載入中...' },
 
         newExpense: { item: '', amount: null, payment: 'cash' },
-        newTripItem: '',
         creatingTrip: false,
         newTripForm: {
           title: '',
           destination: '',
           city: '',
-          currency: 'HKD',
+          currency: 'JPY',
           startDate: '',
           endDate: '',
           lat: 35.6762,
@@ -947,8 +979,8 @@
       },
       totalExpenseInCurrency() {
         if (!this.activeTrip) return 0;
-        const totalJPY = (this.activeTrip.expenses || []).reduce((sum, e) => sum + (e.amount || 0), 0);
-        return Math.round(totalJPY * (this.activeTrip.exchangeRate || 0));
+        const totalHKD = (this.activeTrip.expenses || []).reduce((sum, e) => sum + (e.amount || 0), 0);
+        return Math.round(totalHKD * (this.activeTrip.exchangeRate || 0));
       }
     },
     created() {
@@ -967,11 +999,12 @@
           title: "Japan Winter 2025",
           destination: "Japan · Tokyo",
           city: "Tokyo",
-          currency: "HKD",
+          currency: "JPY",
           startDate: "2025-12-24",
           endDate: "2026-01-01",
           center: { lat: 35.6762, lng: 139.6503 },
-          exchangeRate: 0.055,
+          // 1 HKD ≈ 18 JPY（示意值，可用實時匯率覆蓋）[web:199]
+          exchangeRate: 18,
           travelMode: "TRANSIT",
           flights: {
             outbound: { no: "NH924", date: "2025-12-24", from: "HKG", to: "HND" },
@@ -1049,7 +1082,7 @@
         this.creatingTrip = true;
       },
 
-      // Day Label helpers
+      // Day helpers
       getDayLabel(index) {
         const day = Math.floor(index / this.daySize) + 1;
         return 'Day ' + day;
@@ -1075,16 +1108,17 @@
         }
       },
 
-      // Live JPY→HKD rate [web:150][web:232]
+      // Live HKD → 當地貨幣（預設 JPY）的匯率 [web:201][web:227]
       async fetchRate() {
         try {
-          const res = await fetch('https://api.exchangerate-api.com/v4/latest/JPY');
+          const target = this.activeTrip?.currency || 'JPY';
+          const res = await fetch(`https://api.exchangerate.host/latest?base=HKD&symbols=${target}`);
           const data = await res.json();
-          if (this.activeTrip && data.rates && data.rates.HKD) {
-            this.activeTrip.exchangeRate = data.rates.HKD;
+          if (this.activeTrip && data.rates && data.rates[target]) {
+            this.activeTrip.exchangeRate = data.rates[target];
           }
         } catch (e) {
-          // keep default fallback
+          // 保留預設 exchangeRate
         }
       },
 
@@ -1222,7 +1256,6 @@
         this.newExpense = { item: '', amount: null, payment: 'cash' };
       },
 
-      // 旅程購物：image + price + checkbox
       handleShoppingImageChange(event, index) {
         const file = event.target.files[0];
         if (!file) return;
@@ -1280,7 +1313,7 @@
           title: '',
           destination: '',
           city: '',
-          currency: 'HKD',
+          currency: 'JPY',
           startDate: '',
           endDate: '',
           lat: 35.6762,
@@ -1297,15 +1330,15 @@
           title: this.newTripForm.title,
           destination: this.newTripForm.destination,
           city: this.newTripForm.city || this.newTripForm.destination,
-          currency: this.newTripForm.currency || 'HKD',
+          currency: this.newTripForm.currency || 'JPY',
           startDate: this.newTripForm.startDate || '',
           endDate: this.newTripForm.endDate || '',
           center: { lat: this.newTripForm.lat || 35.6762, lng: this.newTripForm.lng || 139.6503 },
-          exchangeRate: 0.055,
+          exchangeRate: 18,
           travelMode: 'TRANSIT',
           flights: {
-            outbound: { no: '-', date: this.newTripForm.startDate || '-', from: '-', to: '-' },
-            inbound: { no: '-', date: this.newTripForm.endDate || '-', from: '-', to: '-' }
+            outbound: { no: '-', date: this.newTripForm.startDate || '-', from: 'HKG', to: 'HND' },
+            inbound: { no: '-', date: this.newTripForm.endDate || '-', from: 'HND', to: 'HKG' }
           },
           itinerary: [],
           routeSummary: null,
@@ -1323,6 +1356,7 @@
             map.setZoom(12);
           }
           this.fetchWeather();
+          this.fetchRate();
         });
       }
     }
