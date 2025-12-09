@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Christine's Travel Diary</title>
+  <title>Christine's Travel Diary 💖</title>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -38,6 +38,9 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- 🔥 Chart.js + SheetJS (粉嫩 Budget 功能) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <style>
     body {
@@ -58,7 +61,6 @@
       border-radius: 24px;
     }
 
-    /* 粉淺藍天背景 - Flight Details */
     .flight-sky { 
       background: linear-gradient(180deg, #C4E1FF 0%, #D6EFFF 100%); 
       position: relative;
@@ -80,7 +82,6 @@
       z-index: 999; 
     }
     
-    /* 大卡片 Trips */
     .trip-card-active {
       background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
       border: 2px solid #97CBFF;
@@ -88,7 +89,6 @@
       box-shadow: 0 10px 30px rgba(151, 203, 255, 0.4);
     }
     
-    /* Weather Themes */
     .weather-sunny { background: linear-gradient(135deg, #FFECF5 0%, #FFD9EC 40%, #ECECFF 100%); }
     .weather-cloudy { background: linear-gradient(135deg, #DDDDFF 0%, #E6E6F2 40%, #D8D8EB 100%); }
     .weather-rainy { background: linear-gradient(135deg, #D8D8EB 0%, #E6E6F2 35%, #C4E1FF 100%); }
@@ -102,7 +102,7 @@
   <header class="fixed top-0 left-0 w-full p-6 z-50 flex items-center justify-between pointer-events-none">
     <div class="flex items-center gap-2 pointer-events-auto bg-white/30 backdrop-blur-sm pr-4 py-1 rounded-full">
       <div class="bg-primary/20 p-2 rounded-full"><i class="ri-plane-fill text-xl text-primary"></i></div>
-      <h1 class="text-lg font-bold text-slate-700 tracking-wide">Christine's Travel Diary</h1>
+      <h1 class="text-lg font-bold text-slate-700 tracking-wide">Christine's Travel Diary 💖</h1>
     </div>
     <button @click="openNewTripModal" class="pointer-events-auto w-10 h-10 rounded-full bg-white/90 backdrop-blur shadow-lg text-primary flex items-center justify-center hover:scale-110 transition active:scale-95">
       <i class="ri-add-line text-xl"></i>
@@ -112,19 +112,15 @@
   <!-- Main Content -->
   <main class="pt-24 px-4 max-w-3xl mx-auto pb-8">
     
-    <!-- === Tab 1: Trip Info (獨立頁面) === -->
+    <!-- === Tab 1: Trip Info === -->
     <section v-if="activeTab === 'info' && activeTrip" class="animate-fade-in space-y-5">
-      
-      <!-- Flight Card (粉淺藍天) -->
       <div class="glass-card overflow-hidden shadow-lg border-0">
         <div class="flight-sky p-6 relative">
-          <!-- 裝飾雲 -->
           <i class="ri-cloud-fill absolute top-4 right-8 text-white/60 text-5xl opacity-80"></i>
           <i class="ri-cloud-fill absolute bottom-6 left-6 text-white/40 text-3xl opacity-60"></i>
           
           <h2 class="text-slate-700 font-bold text-lg mb-5 flex items-center gap-2 relative z-10">
-            <span class="bg-white/50 p-1.5 rounded-full"><i class="ri-flight-takeoff-line"></i></span> 
-            航班資訊
+            <span class="bg-white/50 p-1.5 rounded-full"><i class="ri-flight-takeoff-line"></i></span> 航班資訊
           </h2>
           
           <!-- Outbound -->
