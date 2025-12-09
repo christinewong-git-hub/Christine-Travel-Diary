@@ -1193,8 +1193,8 @@
 </div>
 
 <script>
-  // Aviationstack API key（填完整 key）
-  const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; // /v1/flights 用於查 flight_iata + flight_date[web:507][web:518][web:561]
+  // Aviationstack API key（請填完整 key）
+  const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; // Flight API[web:507][web:518][web:561]
 
   let leafletMap = null;
   let routePolyline = null;
@@ -1281,7 +1281,7 @@
       }
     },
     created() {
-      const stored = localStorage.getItem('christine_travel_diary_trips'); // 持久化 trips[web:373]
+      const stored = localStorage.getItem('christine_travel_diary_trips'); // localStorage 持久化[web:373]
       if (stored) {
         try {
           this.trips = JSON.parse(stored);
@@ -1360,7 +1360,7 @@
     watch: {
       trips: {
         handler(val) {
-          localStorage.setItem('christine_travel_diary_trips', JSON.stringify(val)); // 保存 trips[web:373]
+          localStorage.setItem('christine_travel_diary_trips', JSON.stringify(val)); // 每次改動保存[web:373]
         },
         deep: true
       },
@@ -1388,7 +1388,7 @@
         leafletMap = L.map('map').setView([35.6762, 139.6503], 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(leafletMap); // Leaflet + OSM 初始化[web:354][web:438]
+        }).addTo(leafletMap); // Leaflet + OSM[web:354][web:438]
         markersLayer = L.layerGroup().addTo(leafletMap);
       },
 
@@ -1463,7 +1463,7 @@
           );
         });
 
-        routePolyline = L.polyline(coords, { color: '#97CBFF', weight: 4 }).addTo(leafletMap); // polyline route[web:354][web:433]
+        routePolyline = L.polyline(coords, { color: '#97CBFF', weight: 4 }).addTo(leafletMap); // route polyline[web:354][web:433]
         leafletMap.fitBounds(routePolyline.getBounds(), { padding: [20, 20] });
 
         let totalDistance = 0;
