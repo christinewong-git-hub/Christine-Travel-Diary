@@ -55,7 +55,14 @@
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.8);
       box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
-      border-radius: 20px;
+      border-radius: 24px;
+    }
+
+    /* 粉淺藍天背景 - Flight Details */
+    .flight-sky { 
+      background: linear-gradient(180deg, #C4E1FF 0%, #D6EFFF 100%); 
+      position: relative;
+      overflow: hidden;
     }
 
     #map { 
@@ -73,17 +80,18 @@
       z-index: 999; 
     }
     
-    .image-preview {
-      width: 60px; height: 60px; object-fit: cover;
-      border-radius: 12px; border: 2px solid #fff;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    /* 大卡片 Trips */
+    .trip-card-active {
+      background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+      border: 2px solid #97CBFF;
+      transform: scale(1.02);
+      box-shadow: 0 10px 30px rgba(151, 203, 255, 0.4);
     }
-
-    .flight-sky { background: linear-gradient(135deg, #C4E1FF 0%, #D2E9FF 50%, #DDDDFF 100%); }
+    
+    /* Weather Themes */
     .weather-sunny { background: linear-gradient(135deg, #FFECF5 0%, #FFD9EC 40%, #ECECFF 100%); }
     .weather-cloudy { background: linear-gradient(135deg, #DDDDFF 0%, #E6E6F2 40%, #D8D8EB 100%); }
     .weather-rainy { background: linear-gradient(135deg, #D8D8EB 0%, #E6E6F2 35%, #C4E1FF 100%); }
-    .active-trip-card { border: 2px solid #97CBFF; background: rgba(255, 255, 255, 0.95); }
   </style>
 </head>
 <body>
@@ -104,135 +112,162 @@
   <!-- Main Content -->
   <main class="pt-24 px-4 max-w-3xl mx-auto pb-8">
     
-    <!-- === Tab 1: Trip Info === -->
-    <section v-if="activeTab === 'info' && activeTrip" class="animate-fade-in">
-      <div class="glass-card overflow-hidden mb-5 shadow-lg">
-        <div class="flight-sky p-5 relative">
-          <i class="ri-cloud-fill absolute top-4 right-10 text-white/40 text-4xl"></i>
-          <i class="ri-cloud-fill absolute bottom-4 left-10 text-white/30 text-2xl"></i>
-          <h2 class="text-white font-bold text-lg mb-4 flex items-center gap-2 relative z-10">
-            <i class="ri-flight-takeoff-line"></i> 航班資訊
+    <!-- === Tab 1: Trip Info (獨立頁面) === -->
+    <section v-if="activeTab === 'info' && activeTrip" class="animate-fade-in space-y-5">
+      
+      <!-- Flight Card (粉淺藍天) -->
+      <div class="glass-card overflow-hidden shadow-lg border-0">
+        <div class="flight-sky p-6 relative">
+          <!-- 裝飾雲 -->
+          <i class="ri-cloud-fill absolute top-4 right-8 text-white/60 text-5xl opacity-80"></i>
+          <i class="ri-cloud-fill absolute bottom-6 left-6 text-white/40 text-3xl opacity-60"></i>
+          
+          <h2 class="text-slate-700 font-bold text-lg mb-5 flex items-center gap-2 relative z-10">
+            <span class="bg-white/50 p-1.5 rounded-full"><i class="ri-flight-takeoff-line"></i></span> 
+            航班資訊
           </h2>
+          
           <!-- Outbound -->
-          <div class="bg-white/40 backdrop-blur-md rounded-xl p-3 mb-3 relative z-10 border border-white/50">
+          <div class="bg-white/60 backdrop-blur-md rounded-2xl p-4 mb-3 relative z-10 shadow-sm">
             <div class="flex justify-between items-center mb-2">
-              <span class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">去程 Outbound</span>
-              <button @click="fetchFlight('outbound')" class="text-[10px] bg-white px-2 py-1 rounded-full text-primary font-bold shadow-sm active:scale-95 transition">自動填寫</button>
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-white/50 px-2 py-0.5 rounded-full">去程 Outbound</span>
+              <button @click="fetchFlight('outbound')" class="text-[10px] bg-white px-3 py-1 rounded-full text-primary font-bold shadow-sm active:scale-95 transition">自動填寫</button>
             </div>
-            <div class="flex gap-2 mb-2">
-               <input v-model="activeTrip.flights.outbound.no" placeholder="航班號 (e.g. NH924)" class="w-1/2 p-2 rounded-lg text-sm bg-white/70 border-0 text-center font-mono placeholder:text-slate-400">
-               <input v-model="activeTrip.flights.outbound.date" type="date" class="w-1/2 p-2 rounded-lg text-sm bg-white/70 border-0">
+            <div class="flex gap-2 mb-3">
+               <input v-model="activeTrip.flights.outbound.no" placeholder="航班號 (e.g. NH924)" class="w-1/2 p-2 rounded-xl text-sm bg-white/50 border-0 text-center font-mono placeholder:text-slate-400 focus:bg-white transition">
+               <input v-model="activeTrip.flights.outbound.date" type="date" class="w-1/2 p-2 rounded-xl text-sm bg-white/50 border-0 focus:bg-white transition">
             </div>
-            <div class="flex justify-between text-sm font-bold text-slate-800 px-2">
+            <div class="flex justify-between text-sm font-bold text-slate-800 px-4 py-1">
                <div class="text-center">
-                 <div class="text-lg">{{ activeTrip.flights.outbound.from || 'HKG' }}</div>
-                 <div class="text-[10px] text-slate-600">{{ activeTrip.flights.outbound.depTime || '--:--' }}</div>
+                 <div class="text-2xl font-black text-slate-700">{{ activeTrip.flights.outbound.from || 'HKG' }}</div>
+                 <div class="text-xs text-slate-500 mt-1">{{ activeTrip.flights.outbound.depTime || '--:--' }}</div>
                </div>
-               <i class="ri-arrow-right-line text-white self-center"></i>
+               <i class="ri-flight-takeoff-line text-slate-400 text-xl self-center mx-2"></i>
                <div class="text-center">
-                 <div class="text-lg">{{ activeTrip.flights.outbound.to || 'NRT' }}</div>
-                 <div class="text-[10px] text-slate-600">{{ activeTrip.flights.outbound.arrTime || '--:--' }}</div>
+                 <div class="text-2xl font-black text-slate-700">{{ activeTrip.flights.outbound.to || 'NRT' }}</div>
+                 <div class="text-xs text-slate-500 mt-1">{{ activeTrip.flights.outbound.arrTime || '--:--' }}</div>
                </div>
             </div>
           </div>
+
           <!-- Inbound -->
-          <div class="bg-white/40 backdrop-blur-md rounded-xl p-3 relative z-10 border border-white/50">
+          <div class="bg-white/60 backdrop-blur-md rounded-2xl p-4 relative z-10 shadow-sm">
             <div class="flex justify-between items-center mb-2">
-              <span class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">回程 Inbound</span>
-              <button @click="fetchFlight('inbound')" class="text-[10px] bg-white px-2 py-1 rounded-full text-primary font-bold shadow-sm active:scale-95 transition">自動填寫</button>
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-white/50 px-2 py-0.5 rounded-full">回程 Inbound</span>
+              <button @click="fetchFlight('inbound')" class="text-[10px] bg-white px-3 py-1 rounded-full text-primary font-bold shadow-sm active:scale-95 transition">自動填寫</button>
             </div>
-            <div class="flex gap-2 mb-2">
-               <input v-model="activeTrip.flights.inbound.no" placeholder="航班號 (e.g. NH923)" class="w-1/2 p-2 rounded-lg text-sm bg-white/70 border-0 text-center font-mono placeholder:text-slate-400">
-               <input v-model="activeTrip.flights.inbound.date" type="date" class="w-1/2 p-2 rounded-lg text-sm bg-white/70 border-0">
+            <div class="flex gap-2 mb-3">
+               <input v-model="activeTrip.flights.inbound.no" placeholder="航班號 (e.g. NH923)" class="w-1/2 p-2 rounded-xl text-sm bg-white/50 border-0 text-center font-mono placeholder:text-slate-400 focus:bg-white transition">
+               <input v-model="activeTrip.flights.inbound.date" type="date" class="w-1/2 p-2 rounded-xl text-sm bg-white/50 border-0 focus:bg-white transition">
             </div>
-             <div class="flex justify-between text-sm font-bold text-slate-800 px-2">
+             <div class="flex justify-between text-sm font-bold text-slate-800 px-4 py-1">
                <div class="text-center">
-                 <div class="text-lg">{{ activeTrip.flights.inbound.from || 'NRT' }}</div>
-                 <div class="text-[10px] text-slate-600">{{ activeTrip.flights.inbound.depTime || '--:--' }}</div>
+                 <div class="text-2xl font-black text-slate-700">{{ activeTrip.flights.inbound.from || 'NRT' }}</div>
+                 <div class="text-xs text-slate-500 mt-1">{{ activeTrip.flights.inbound.depTime || '--:--' }}</div>
                </div>
-               <i class="ri-arrow-right-line text-white self-center"></i>
+               <i class="ri-flight-land-line text-slate-400 text-xl self-center mx-2"></i>
                <div class="text-center">
-                 <div class="text-lg">{{ activeTrip.flights.inbound.to || 'HKG' }}</div>
-                 <div class="text-[10px] text-slate-600">{{ activeTrip.flights.inbound.arrTime || '--:--' }}</div>
+                 <div class="text-2xl font-black text-slate-700">{{ activeTrip.flights.inbound.to || 'HKG' }}</div>
+                 <div class="text-xs text-slate-500 mt-1">{{ activeTrip.flights.inbound.arrTime || '--:--' }}</div>
                </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-4 mb-5">
-        <div :class="['glass-card p-4 flex flex-col justify-between relative overflow-hidden', `weather-${weatherTheme}`]">
-          <div class="relative z-10">
+      <!-- Weather & Stats -->
+      <div class="grid grid-cols-2 gap-4">
+        <!-- Weather Card (自動隨地點更新) -->
+        <div :class="['glass-card p-5 flex flex-col justify-between relative overflow-hidden h-40', `weather-${weatherTheme}`]">
+          <div class="relative z-10 h-full flex flex-col justify-between">
             <div class="flex justify-between items-start">
-              <i class="ri-sun-cloudy-line text-2xl text-slate-600"></i>
-              <button @click="fetchWeather" class="bg-white/40 rounded-full p-1"><i class="ri-refresh-line text-xs"></i></button>
+              <div>
+                <span class="text-xs font-bold text-slate-500 block mb-1">{{ activeTrip.city || 'Location' }}</span>
+                <i class="ri-sun-cloudy-line text-2xl text-slate-700"></i>
+              </div>
+              <button @click="fetchWeather" class="bg-white/40 rounded-full p-1.5 hover:bg-white/60 transition"><i class="ri-refresh-line text-xs"></i></button>
             </div>
-            <div class="mt-2">
-              <span class="text-3xl font-bold text-slate-700">{{ weatherData ? Math.round(weatherData.temperature) : '--' }}°</span>
-              <p class="text-xs text-slate-500">{{ weatherDesc }}</p>
+            <div>
+              <span class="text-4xl font-black text-slate-800 tracking-tight">{{ weatherData ? Math.round(weatherData.temperature) : '--' }}°</span>
+              <p class="text-xs text-slate-600 font-medium mt-1">{{ weatherDesc }}</p>
             </div>
           </div>
         </div>
         
-        <div class="glass-card p-4 flex flex-col justify-center items-center">
-          <span class="text-xs text-secondary uppercase mb-1">總花費 (HKD)</span>
-          <span class="text-2xl font-bold text-primary">{{ totalExpensesHKD.toLocaleString() }}</span>
-          <div class="text-[10px] text-slate-400 mt-1 bg-slate-100 px-2 py-0.5 rounded-full">
+        <!-- Stats Card -->
+        <div class="glass-card p-5 flex flex-col justify-center items-center h-40">
+          <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mb-2">
+            <i class="ri-wallet-3-line text-primary text-xl"></i>
+          </div>
+          <span class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">總花費 (HKD)</span>
+          <span class="text-2xl font-black text-slate-800 mt-1">{{ totalExpensesHKD.toLocaleString() }}</span>
+          <div class="text-[10px] text-slate-400 mt-2 bg-slate-50 px-3 py-1 rounded-full">
             匯率 {{ activeTrip.exchangeRate }}
           </div>
         </div>
       </div>
     </section>
 
-    <!-- === Tab 2: 行程 / 地圖 === -->
+    <!-- === Tab 2: 行程 / 地圖 (橫向 Day 卡片) === -->
     <section v-if="activeTab === 'itinerary-map' && activeTrip" class="animate-fade-in">
-      <div class="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
-        <button @click="addItineraryItem" class="flex-shrink-0 bg-primary text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-blue-300 transition active:scale-95">
-          <i class="ri-add-line mr-1"></i>新增
+      
+      <!-- Controls -->
+      <div class="flex gap-3 mb-5 overflow-x-auto pb-2 scrollbar-hide">
+        <button @click="addItineraryItem" class="flex-shrink-0 bg-primary text-white px-5 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-200 hover:shadow-xl transition active:scale-95 flex items-center gap-2">
+          <i class="ri-add-circle-fill text-lg"></i>新增
         </button>
-        <button @click="showBatchImport = !showBatchImport" class="flex-shrink-0 bg-white text-slate-600 px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm border border-slate-100">
-          <i class="ri-file-list-line mr-1"></i>批次
+        <button @click="showBatchImport = !showBatchImport" class="flex-shrink-0 bg-white text-slate-600 px-5 py-3 rounded-2xl text-sm font-bold shadow-sm border border-slate-100 flex items-center gap-2">
+          <i class="ri-file-list-3-line text-lg"></i>批次
         </button>
-        <button @click="forceUpdateMap" class="flex-shrink-0 bg-white text-slate-600 px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm border border-slate-100">
-          <i class="ri-refresh-line mr-1"></i>刷新地圖
+        <button @click="forceUpdateMap" class="flex-shrink-0 bg-white text-slate-600 px-5 py-3 rounded-2xl text-sm font-bold shadow-sm border border-slate-100 flex items-center gap-2">
+          <i class="ri-map-2-line text-lg"></i>刷新
         </button>
       </div>
 
       <div v-if="showBatchImport" class="glass-card p-4 mb-4 animate-slide-up">
-        <textarea v-model="batchImportText" placeholder="貼上地點清單 (例如：\n東京鐵塔\n淺草寺\n晴空塔)" class="w-full h-32 p-3 rounded-xl bg-slate-50 border-0 text-sm mb-3 focus:ring-2 ring-primary/50"></textarea>
+        <textarea v-model="batchImportText" placeholder="貼上地點清單..." class="w-full h-32 p-3 rounded-xl bg-slate-50 border-0 text-sm mb-3 focus:ring-2 ring-primary/50"></textarea>
         <button @click="runBatchImport" class="w-full bg-secondary text-white py-2 rounded-xl font-medium">開始匯入</button>
       </div>
 
-      <div class="glass-card p-2 mb-6 shadow-sm relative z-0">
+      <!-- Map -->
+      <div class="glass-card p-2 mb-8 shadow-md relative z-0">
         <div id="map"></div>
+        <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-slate-700 shadow-sm z-[400] border border-slate-200">
+          <i class="ri-map-pin-range-line text-primary mr-1"></i>MAP
+        </div>
         <div class="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-slate-600 shadow-sm z-[400]">
           {{ (activeTrip.routeSummary?.distance || 0).toFixed(1) }} km
         </div>
       </div>
 
-      <div class="pb-24">
-        <div v-for="(group, dayIdx) in groupedItinerary" :key="dayIdx" class="mb-8">
-          <div class="sticky top-20 z-10 flex justify-center mb-6">
-            <span class="bg-primary text-white px-4 py-1 rounded-full text-sm font-bold shadow-lg shadow-primary/30">Day {{ dayIdx + 1 }}</span>
+      <!-- Day Cards Timeline -->
+      <div class="pb-24 space-y-8">
+        <div v-for="(group, dayIdx) in groupedItinerary" :key="dayIdx" class="glass-card p-1">
+          <div class="bg-slate-50/50 p-4 rounded-t-[22px] border-b border-slate-100 flex justify-between items-center">
+             <span class="bg-primary text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md shadow-primary/30">Day {{ dayIdx + 1 }}</span>
+             <span class="text-xs text-slate-400 font-bold tracking-wider">{{ group.length }} 個景點</span>
           </div>
-          <div class="relative pl-4 ml-2 border-l-2 border-dashed border-slate-300 space-y-8">
-            <div v-for="(item, idx) in group" :key="idx" class="relative group">
-              <div class="absolute -left-[23px] top-4 w-4 h-4 rounded-full bg-white border-4 border-primary shadow-sm"></div>
-              <div class="glass-card p-4 ml-3 hover:scale-[1.01] transition duration-200">
-                <div class="flex justify-between items-center mb-2">
-                  <input v-model="item.time" type="time" class="bg-transparent font-bold text-2xl text-slate-700 w-32 p-0 border-0 focus:ring-0">
-                  <button @click="removeItineraryItem(dayIdx, idx)" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:bg-red-50 hover:text-red-400 transition"><i class="ri-delete-bin-line"></i></button>
-                </div>
-                <input v-model="item.location" placeholder="地點名稱" class="w-full font-bold text-lg text-slate-800 bg-transparent mb-1 border-0 border-b border-transparent focus:border-primary focus:ring-0 placeholder-slate-300 p-0">
-                <input v-model="item.activity" placeholder="做什麼？" class="w-full text-sm text-slate-500 bg-transparent mb-4 border-0 focus:ring-0 p-0">
-                <div class="flex gap-2 mt-2">
-                  <button @click="openGoogleMaps(item.location)" class="flex-1 bg-slate-50 py-2 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-1 active:bg-slate-200">
-                    <i class="ri-google-fill text-red-500"></i> Google Map
-                  </button>
-                  <button @click="openDirections(dayIdx, idx)" class="flex-1 bg-primary/10 py-2 rounded-lg text-xs font-bold text-primary flex items-center justify-center gap-1 active:bg-primary/20">
-                    <i class="ri-direction-fill"></i> 路線
-                  </button>
-                </div>
+          
+          <div class="p-4 space-y-6">
+            <div v-for="(item, idx) in group" :key="idx" class="relative pl-6 border-l-2 border-slate-200">
+              <!-- Dot -->
+              <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-4 border-slate-300"></div>
+              
+              <div class="flex justify-between items-start mb-1">
+                <input v-model="item.time" type="time" class="bg-transparent font-bold text-xl text-slate-700 w-24 p-0 border-0 focus:ring-0">
+                <button @click="removeItineraryItem(dayIdx, idx)" class="text-slate-300 hover:text-red-400"><i class="ri-close-circle-fill text-xl"></i></button>
+              </div>
+              
+              <input v-model="item.location" placeholder="地點名稱" class="w-full font-bold text-lg text-slate-800 bg-transparent mb-1 border-0 border-b border-transparent focus:border-primary focus:ring-0 placeholder-slate-300 p-0 transition">
+              <input v-model="item.activity" placeholder="備註 / 活動" class="w-full text-sm text-slate-500 bg-transparent mb-3 border-0 focus:ring-0 p-0">
+              
+              <div class="flex gap-2">
+                <button @click="openGoogleMaps(item.location)" class="flex-1 bg-white border border-slate-200 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition flex items-center justify-center gap-1">
+                  <i class="ri-google-fill text-red-500"></i> Map
+                </button>
+                <button @click="openDirections(dayIdx, idx)" class="flex-1 bg-primary/10 py-2 rounded-xl text-xs font-bold text-primary hover:bg-primary/20 transition flex items-center justify-center gap-1">
+                  <i class="ri-direction-fill"></i> Route
+                </button>
               </div>
             </div>
           </div>
@@ -344,24 +379,42 @@
       </div>
     </section>
 
-    <!-- === Tab 5: History === -->
+    <!-- === Tab 5: History (大卡片) === -->
     <section v-if="activeTab === 'trips'" class="animate-fade-in pb-20">
-      <div class="space-y-4">
+      <div class="space-y-6">
         <div v-for="trip in trips" :key="trip.id" 
              @click="switchTrip(trip.id)"
-             :class="['glass-card p-5 cursor-pointer transition active:scale-95', activeTripId === trip.id ? 'active-trip-card' : '']">
-          <div class="flex justify-between items-start">
+             :class="['glass-card p-6 cursor-pointer transition-all duration-300', activeTripId === trip.id ? 'trip-card-active' : 'opacity-80 hover:opacity-100']">
+          
+          <div class="flex justify-between items-start mb-4">
              <div>
-               <h3 class="text-xl font-bold text-slate-800">{{ trip.title }}</h3>
-               <div class="flex items-center gap-1 text-sm text-slate-500 mt-1">
-                 <i class="ri-map-pin-line"></i> {{ trip.destination }}
+               <div class="flex items-center gap-2 mb-1">
+                 <h3 class="text-2xl font-black text-slate-800">{{ trip.title }}</h3>
+                 <span v-if="activeTripId === trip.id" class="px-2 py-0.5 bg-blue-500 text-white text-[9px] font-bold rounded-full tracking-wider shadow-sm">CURRENT</span>
+               </div>
+               <div class="flex items-center gap-1 text-sm font-medium text-slate-500">
+                 <i class="ri-map-pin-2-fill text-primary"></i> {{ trip.city }}, {{ trip.destination }}
                </div>
              </div>
-             <span v-if="activeTripId === trip.id" class="px-2 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded-md">CURRENT</span>
+             <div class="text-right">
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Currency</div>
+                <div class="text-lg font-black text-slate-700">{{ trip.currency }}</div>
+             </div>
           </div>
-          <div class="mt-4 pt-4 border-t border-slate-100 flex gap-2">
-            <button @click.stop="openEditTripModal(trip)" class="flex-1 bg-slate-50 text-slate-600 py-2 rounded-lg text-xs font-bold hover:bg-slate-100">編輯</button>
-            <button @click.stop="deleteTrip(trip.id)" class="px-3 bg-red-50 text-red-400 rounded-lg"><i class="ri-delete-bin-line"></i></button>
+          
+          <div class="flex gap-4 text-xs text-slate-500 mb-5 bg-slate-50/50 p-3 rounded-xl">
+             <div class="flex items-center gap-1"><i class="ri-calendar-line"></i> {{ trip.startDate }}</div>
+             <div class="flex items-center gap-1"><i class="ri-arrow-right-line"></i></div>
+             <div class="flex items-center gap-1"><i class="ri-calendar-check-line"></i> {{ trip.endDate }}</div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 flex gap-3">
+            <button @click.stop="openEditTripModal(trip)" class="flex-1 bg-white border border-slate-200 text-slate-600 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition shadow-sm">
+              <i class="ri-edit-line mr-1"></i>編輯
+            </button>
+            <button @click.stop="deleteTrip(trip.id)" class="px-4 bg-red-50 text-red-400 rounded-xl hover:bg-red-100 transition">
+              <i class="ri-delete-bin-line"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -376,16 +429,24 @@
       <div class="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-6"></div>
       <h3 class="text-xl font-bold mb-6 text-center text-slate-800">{{ editingTripId ? '編輯旅程' : '新增旅程' }}</h3>
       <div class="space-y-4">
-        <input v-model="tempTrip.title" placeholder="旅程標題" class="w-full p-4 rounded-2xl bg-slate-50 border-0 font-bold">
+        <input v-model="tempTrip.title" placeholder="旅程標題 (e.g. 畢業旅行)" class="w-full p-4 rounded-2xl bg-slate-50 border-0 font-bold focus:ring-2 ring-primary/20">
+        
+        <!-- City & Country with Auto Geocode -->
         <div class="flex gap-3">
-          <input v-model="tempTrip.destination" placeholder="國家" class="flex-1 p-4 rounded-2xl bg-slate-50 border-0">
-          <input v-model="tempTrip.currency" placeholder="幣別" class="w-24 p-4 rounded-2xl bg-slate-50 border-0 uppercase text-center">
+          <input v-model="tempTrip.city" placeholder="城市 (e.g. Tokyo)" class="flex-1 p-4 rounded-2xl bg-slate-50 border-0 text-sm">
+          <input v-model="tempTrip.destination" placeholder="國家 (e.g. Japan)" class="flex-1 p-4 rounded-2xl bg-slate-50 border-0 text-sm">
         </div>
+        <button @click="autoGeocode" type="button" class="w-full py-2 rounded-xl bg-blue-50 text-primary text-xs font-bold hover:bg-blue-100 transition">
+          <i class="ri-map-pin-add-line mr-1"></i>自動取得座標 (Auto Geocode)
+        </button>
+
         <div class="flex gap-3">
           <input v-model="tempTrip.startDate" type="date" class="flex-1 p-4 rounded-2xl bg-slate-50 border-0 text-sm">
           <input v-model="tempTrip.endDate" type="date" class="flex-1 p-4 rounded-2xl bg-slate-50 border-0 text-sm">
         </div>
-        <button @click="saveTrip" class="w-full bg-primary text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-primary/30 mt-2">儲存</button>
+        <input v-model="tempTrip.currency" placeholder="幣別 (e.g. JPY)" class="w-full p-4 rounded-2xl bg-slate-50 border-0 uppercase text-center font-bold tracking-widest">
+        
+        <button @click="saveTrip" class="w-full bg-primary text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-primary/30 mt-2 hover:scale-[1.02] transition">儲存</button>
       </div>
     </div>
   </div>
@@ -404,9 +465,7 @@
 
 <script>
   const { createApp } = Vue;
-
-  // === 請替換成您的 Aviationstack Key ===
-  const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; 
+  const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; // 請換成您的 Key
 
   createApp({
     data() {
@@ -423,12 +482,11 @@
         showBatchImport: false,
         batchImportText: '',
         
-        // Forms
         newExpense: { name: '', amount: null, method: '現金', category: '飲食' },
         newShoppingItem: { name: '', onlinePrice: '', localPrice: '', bought: false, image: '' },
 
         tabs: [
-          { id: 'info', label: 'Info', icon: 'ri-information-line' },
+          { id: 'info', label: 'Trip Info', icon: 'ri-information-line' },
           { id: 'itinerary-map', label: '行程', icon: 'ri-map-pin-user-line' },
           { id: 'budget', label: '記帳', icon: 'ri-wallet-3-line' },
           { id: 'shopping', label: '購物', icon: 'ri-shopping-bag-3-line' },
@@ -440,7 +498,7 @@
       activeTrip() { return this.trips.find(t => t.id === this.activeTripId) || null; },
       groupedItinerary() {
         if (!this.activeTrip) return [];
-        const size = 5;
+        const size = 5; // Day card 數量
         const result = [];
         for (let i = 0; i < this.activeTrip.itinerary.length; i += size) {
           result.push(this.activeTrip.itinerary.slice(i, i + size));
@@ -452,10 +510,10 @@
         return this.activeTrip.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       },
       weatherDesc() {
-        if (!this.weatherData) return '...';
+        if (!this.weatherData) return 'Loading...';
         const code = this.weatherData.weathercode;
-        const map = { 0:'晴朗', 1:'多雲', 2:'陰天', 3:'毛毛雨', 61:'雨', 80:'陣雨' };
-        return map[code] || '多雲';
+        const map = { 0:'晴朗 Sunny', 1:'多雲 Cloudy', 2:'陰天 Overcast', 3:'毛毛雨 Drizzle', 61:'雨 Rain', 80:'陣雨 Showers' };
+        return map[code] || '多雲 Cloudy';
       }
     },
     watch: {
@@ -473,12 +531,13 @@
       this.loadData();
     },
     methods: {
-      saveData() { localStorage.setItem('christine_diary_v2', JSON.stringify(this.trips)); },
+      saveData() { localStorage.setItem('christine_diary_v3', JSON.stringify(this.trips)); },
       loadData() {
-        const saved = localStorage.getItem('christine_diary_v2');
+        const saved = localStorage.getItem('christine_diary_v3');
         if (saved) {
           this.trips = JSON.parse(saved);
         } else {
+          // 預設一個 Demo Trip
           this.trips = [{
             id: Date.now(), title: 'Japan Trip', destination: 'Japan', city: 'Tokyo', currency: 'JPY',
             startDate: '2025-12-24', endDate: '2026-01-01',
@@ -491,22 +550,37 @@
         this.activeTripId = this.trips[0].id;
         this.fetchWeather();
       },
+      // --- Auto Geocode (New!) ---
+      async autoGeocode() {
+        if (!this.tempTrip.city) return alert('請先輸入城市名稱 (City)');
+        try {
+          // 使用 OpenStreetMap Nominatim 免費 API
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${this.tempTrip.city},${this.tempTrip.destination || ''}`);
+          const data = await res.json();
+          if (data && data.length > 0) {
+            this.tempTrip.center = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+            alert(`已取得座標：${data[0].display_name}`);
+          } else {
+            alert('找不到該城市，請檢查拼字。');
+          }
+        } catch (e) {
+          console.error(e);
+          alert('座標取得失敗，請稍後再試。');
+        }
+      },
+      // --- Flight API ---
       async fetchFlight(type) {
         const flight = this.activeTrip.flights[type];
         if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
-        
         try {
           const res = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}`);
           const data = await res.json();
-          
           if (data.data && data.data.length > 0) {
             const f = data.data.find(d => d.flight_date === flight.date) || data.data[0];
-            
             flight.from = f.departure.iata;
             flight.to = f.arrival.iata;
             flight.depTime = f.departure.scheduled ? f.departure.scheduled.slice(11,16) : '--:--';
             flight.arrTime = f.arrival.scheduled ? f.arrival.scheduled.slice(11,16) : '--:--';
-            
             this.saveData();
             alert(`已更新航班: ${flight.from} -> ${flight.to}`);
           } else {
@@ -517,6 +591,18 @@
           alert('API 請求失敗，請檢查 Key 是否正確');
         }
       },
+      // --- Weather ---
+      async fetchWeather() {
+        if(!this.activeTrip?.center) return;
+        try {
+          const {lat,lng} = this.activeTrip.center;
+          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
+          const d = await res.json();
+          this.weatherData = d.current_weather;
+          this.weatherTheme = d.current_weather.weathercode < 3 ? 'sunny' : (d.current_weather.weathercode > 50 ? 'rainy' : 'cloudy');
+        } catch(e){}
+      },
+      // --- Other Methods (Same as before) ---
       handleImageUpload(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -541,16 +627,13 @@
           const container = document.getElementById('map');
           if (!container) return;
           if (this.map) { this.map.off(); this.map.remove(); }
-
           const center = this.activeTrip.center || [35.6895, 139.6917];
           this.map = L.map('map', { zoomControl: false }).setView(center, 13);
-          
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(this.map);
-          
           setTimeout(() => { this.map.invalidateSize(); }, 100);
         } catch (e) { console.error("Map init fail", e); }
       },
-      openNewTripModal() { this.editingTripId = null; this.tempTrip = {currency:'JPY'}; this.showTripModal = true; },
+      openNewTripModal() { this.editingTripId = null; this.tempTrip = {currency:'JPY', center:{lat:35.6,lng:139.6}}; this.showTripModal = true; },
       openEditTripModal(trip) { this.editingTripId = trip.id; this.tempTrip = JSON.parse(JSON.stringify(trip)); this.showTripModal = true; },
       saveTrip() {
         if (!this.tempTrip.title) return;
@@ -558,7 +641,9 @@
           const idx = this.trips.findIndex(t => t.id === this.editingTripId);
           this.trips[idx] = { ...this.trips[idx], ...this.tempTrip };
         } else {
-          const newTrip = { id: Date.now(), ...this.tempTrip, center: {lat:35.6,lng:139.6}, exchangeRate:1, flights:{outbound:{},inbound:{}}, itinerary:[], expenses:[], shoppingItems:[] };
+          // 新旅程預設 center 是剛才 geocode 拿到的，如果沒有就用預設
+          const center = this.tempTrip.center || {lat:35.6, lng:139.6};
+          const newTrip = { id: Date.now(), ...this.tempTrip, center: center, exchangeRate:1, flights:{outbound:{},inbound:{}}, itinerary:[], expenses:[], shoppingItems:[] };
           this.trips.push(newTrip);
           this.activeTripId = newTrip.id;
         }
@@ -583,23 +668,14 @@
         this.newExpense = { name:'', amount:null, method:'現金', category:'飲食' };
         this.saveData();
       },
-      async fetchWeather() {
-        if(!this.activeTrip?.center) return;
-        try {
-          const {lat,lng} = this.activeTrip.center;
-          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
-          const d = await res.json();
-          this.weatherData = d.current_weather;
-          this.weatherTheme = d.current_weather.weathercode < 3 ? 'sunny' : 'cloudy';
-        } catch(e){}
-      },
       async fetchRate() {},
       openGoogleMaps(loc) { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`); },
       openDirections(dIdx, idx) { 
         const realIdx = dIdx*5 + idx;
         const loc = this.activeTrip.itinerary[realIdx].location;
         window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc)}`);
-      }
+      },
+      runBatchImport() { /* ... batch import logic ... */ }
     }
   }).mount('#app');
 </script>
