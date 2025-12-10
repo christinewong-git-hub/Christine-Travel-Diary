@@ -298,7 +298,7 @@
               
               <option :value="null">所有消費 (包含旅行前)</option>
               <option :value="0">旅行前消費 (Day 0)</option>
-              <option v-for="day in totalDays" :value="day" :key="'day_opt_' + day">
+              <option v-for="day in totalDays" :value="day" :key="day">
                   Day {{ day }}
               </option>
           </select>
@@ -345,7 +345,7 @@
         <h3 class="font-bold mb-4">記一筆</h3>
         
         <select v-model.number="newExpense.day" class="w-full p-3 rounded-xl bg-slate-50 border-0 mb-3 text-sm text-slate-600 font-bold text-center">
-            <option v-for="day in totalDays" :value="day" :key="'new_exp_day_' + day">
+            <option v-for="day in totalDays" :value="day" :key="day">
                 Day {{ day }}
             </option>
             <option :value="0">旅行前</option> 
@@ -667,26 +667,22 @@
           }
           const expenses = this.activeTrip.expenses;
           
-          // 檢查 activeBudgetDay 是否為 null 或 undefined (顯示所有)
-          if (this.activeBudgetDay === null || this.activeBudgetDay === undefined) {
+          if (this.activeBudgetDay === null) {
+              // null 表示顯示所有消費 (包含 Day 0)
               return expenses;
           }
           
-          // 檢查 activeBudgetDay 是否為 0 (旅行前 Day 0)
           if (this.activeBudgetDay === 0) {
-              // 篩選出 exp.day === 0 的項目
-              // (Number(exp.day) || 1) 是為了處理 exp.day 舊數據缺失的情況，但 Day 0 應該確保是 0
-              return expenses.filter(exp => (Number(exp.day) || 1) === 0);
+              // Day 0 用於旅行前消費
+              return expenses.filter(exp => exp.day === 0);
           }
           
-          // 檢查 activeBudgetDay 是否為 Day X (1, 2, 3...)
-          // 確保 this.activeBudgetDay 是數字且大於 0
+          // Day X (1, 2, 3...) - 確保嚴格的數值比較
           if (typeof this.activeBudgetDay === 'number' && this.activeBudgetDay > 0) {
-              // 確保 exp.day 也是數字，且做嚴格比較 (===)
-              return expenses.filter(exp => (Number(exp.day) || 1) === this.activeBudgetDay); 
+              // 修正：使用 Number() 確保 exp.day 的數值正確性，再做嚴格比較
+              return expenses.filter(exp => (Number(exp.day) || 1) === this.activeBudgetDay);
           }
           
-          // Fallback，預設顯示所有
           return expenses; 
       },
 
@@ -760,7 +756,7 @@
       
       // 🎯 總結篩選 Day 文本
       activeBudgetDayText() {
-          if (this.activeBudgetDay === null || this.activeBudgetDay === undefined) {
+          if (this.activeBudgetDay === null) {
               return '所有';
           } else if (this.activeBudgetDay === 0) {
               return '旅行前 (Day 0)';
@@ -775,7 +771,7 @@
           setTimeout(() => this.forceUpdateMap(), 500);
         } else if (newTab === 'budget') { 
           // 切換到記帳頁籤時，如果當前 Day 大於總天數 (例如 Day 5/4)，重設為 null (所有)
-          if (this.activeBudgetDay !== null && this.activeBudgetDay !== undefined && this.activeBudgetDay > this.totalDays) {
+          if (this.activeBudgetDay !== null && this.activeBudgetDay > this.totalDays) {
               this.activeBudgetDay = null;
           }
           this.$nextTick(() => this.updateChart());
@@ -795,20 +791,9 @@
       activeDay() {
         this.forceUpdateMap();
       },
-      // 🎯 關鍵修復點：監聽 activeBudgetDay 變化，並強制更新圖表
-      activeBudgetDay(newVal, oldVal) {
-          if (newVal !== oldVal) {
-              // 確保 newVal 是 number 類型，或明確的 null/undefined
-              
-              // 1. 更新圖表 (這會間接觸發 filteredExpenses 的依賴鏈)
-              this.updateChart(); 
-              
-              // 2. 更新記帳表單的 Day 預設值
-              // 如果選擇了 Day X (X>0)，則預設為 X，否則預設為 Day 1
-              this.newExpense.day = newVal > 0 && newVal <= this.totalDays ? newVal : 1;
-
-              // 3. 確保如果 Day X 超出天數，下次切換時會修正為 null (已在 activeTab watch 實現，這裡僅作輔助檢查)
-          }
+      // 🎯 當 Budget Day 改變時，更新圖表 (因為 filteredExpenses 改變了)
+      activeBudgetDay() {
+          this.updateChart(); 
       },
       // 當總花費或類別資料變動時，更新圖表
       categorySummary: {
