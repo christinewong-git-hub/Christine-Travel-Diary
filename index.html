@@ -100,6 +100,11 @@
     .day-selector-scroll::-webkit-scrollbar {
         display: none; /* Chrome, Safari, Opera */
     }
+    
+    /* Shopping Card Image Aspect Ratio */
+    .aspect-square {
+        aspect-ratio: 1 / 1;
+    }
   </style>
 </head>
 <body>
@@ -443,13 +448,23 @@
         </div>
       </div>
       
-      </section>
+    </section>
 
     <section v-if="activeTab === 'shopping' && activeTrip" class="animate-fade-in">
+      
+      <div class="glass-card p-5 mb-6 text-center border border-green-200 bg-green-50/70">
+        <h3 class="font-bold mb-2 flex items-center justify-center gap-2 text-green-600">
+            <i class="ri-money-cny-box-line text-2xl"></i>
+            總共節省了 (HKD)
+        </h3>
+        <span class="text-4xl font-black text-green-700">{{ totalSavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
+      </div>
+
       <div class="glass-card p-5 mb-6">
         <h3 class="font-bold mb-4 flex items-center gap-2"><i class="ri-shopping-bag-3-line text-primary"></i> 新增購物項目</h3>
+        
         <div class="flex gap-3 mb-3">
-          <label class="w-20 h-20 flex-shrink-0 bg-slate-50 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:border-primary hover:text-primary transition relative overflow-hidden">
+          <label class="w-20 h-20 flex-shrink-0 bg-slate-50 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:border-primary hover:text-primary transition relative overflow-hidden aspect-square">
             <input type="file" accept="image/*" class="hidden" @change="handleImageUpload">
             <img v-if="newShoppingItem.image" :src="newShoppingItem.image" class="absolute inset-0 w-full h-full object-cover">
             <div v-else class="flex flex-col items-center">
@@ -457,39 +472,74 @@
                 <span class="text-[10px] mt-1">上傳圖片</span>
             </div>
           </label>
+          
           <div class="flex-1 space-y-2">
-            <input v-model="newShoppingItem.name" placeholder="品名" class="w-full p-2 rounded-lg bg-slate-50 border-0 text-sm">
+            <input v-model="newShoppingItem.name" placeholder="品名" class="w-full p-2 rounded-lg bg-slate-50 border-0 text-sm focus:ring-1 ring-primary/50">
+            
             <div class="flex gap-2">
-              <input v-model="newShoppingItem.onlinePrice" placeholder="網上價" class="w-1/2 p-2 rounded-lg bg-slate-50 border-0 text-sm">
-              <input v-model="newShoppingItem.localPrice" placeholder="當地價" class="w-1/2 p-2 rounded-lg bg-slate-50 border-0 text-sm">
+              <input v-model.number="newShoppingItem.quantity" type="number" min="1" placeholder="數量 (Qty)" class="w-1/3 p-2 rounded-lg bg-slate-50 border-0 text-sm text-center focus:ring-1 ring-primary/50">
+              <div class="flex-1 text-xs text-slate-500 bg-slate-50 p-2 rounded-lg flex items-center gap-1">
+                  <i class="ri-currency-line"></i> 
+                  <span class="font-bold text-slate-700">{{ activeTrip.currency }}</span>
+                  <span class="ml-auto">1 HKD ≈ {{ (activeTrip.exchangeRate || 1).toFixed(2) }} {{ activeTrip.currency }}</span>
+              </div>
+            </div>
+
+            <div class="flex gap-2 text-sm">
+                <div class="relative w-1/2">
+                    <input v-model.number="newShoppingItem.onlinePrice" type="number" placeholder="網上價 (HKD)" class="w-full p-2 rounded-lg bg-slate-50 border-0 pl-16 focus:ring-1 ring-primary/50">
+                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">HKD</span>
+                </div>
+                <div class="relative w-1/2">
+                    <input v-model.number="newShoppingItem.localPrice" type="number" placeholder="當地價" class="w-full p-2 rounded-lg bg-slate-50 border-0 pl-16 focus:ring-1 ring-primary/50">
+                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">{{ activeTrip.currency }}</span>
+                </div>
             </div>
           </div>
         </div>
+        
         <button @click="addShoppingItem" class="w-full bg-primary text-white py-2.5 rounded-xl font-bold shadow-md active:scale-95 transition">加入清單</button>
       </div>
 
-      <div class="grid grid-cols-1 gap-4 pb-20">
-        <div v-for="(item, idx) in activeTrip.shoppingItems" :key="idx" :class="['glass-card p-4 transition-all', item.bought ? 'opacity-60 bg-slate-50' : '']">
-          <div class="flex gap-4">
-            <div class="w-20 h-20 rounded-xl bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-100">
-              <img v-if="item.image" :src="item.image" class="w-full h-full object-cover">
-              <div v-else class="w-full h-full flex items-center justify-center text-slate-300"><i class="ri-image-line text-2xl"></i></div>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex justify-between items-start">
-                <h4 class="font-bold text-slate-800 truncate pr-2" :class="{'line-through text-slate-400': item.bought}">{{ item.name }}</h4>
-                <button @click="removeShoppingItem(idx)" class="text-slate-300 hover:text-red-400 p-1"><i class="ri-close-line"></i></button>
-              </div>
-              <div class="text-xs text-slate-500 mt-1 space-y-0.5">
-                <div class="flex justify-between"><span>網上:</span> <span>{{ item.onlinePrice || '-' }}</span></div>
-                <div class="flex justify-between font-medium text-primary"><span>當地:</span> <span>{{ item.localPrice || '-' }}</span></div>
-              </div>
-              <label class="flex items-center gap-2 mt-2 cursor-pointer bg-white/50 p-1.5 rounded-lg w-fit hover:bg-white transition">
-                <input type="checkbox" v-model="item.bought" @change="saveData" class="w-4 h-4 rounded text-primary border-slate-300 focus:ring-primary">
-                <span class="text-xs font-bold text-slate-600">已買</span>
-              </label>
-            </div>
+      <div class="grid grid-cols-2 gap-4 pb-20">
+        <div v-for="(item, idx) in shoppingListWithSavings" :key="idx" 
+             :class="['glass-card p-3 shadow-md transition-all duration-300 relative overflow-hidden', 
+                      item.bought ? 'opacity-50 bg-slate-50 border-dashed border-slate-200' : '']">
+          
+          <label class="absolute top-0 left-0 z-10 w-full h-full cursor-pointer p-3 flex justify-end">
+            <input type="checkbox" v-model="item.bought" @change="saveData" class="w-6 h-6 rounded-full text-primary border-slate-300 focus:ring-primary shadow-lg border-2">
+          </label>
+          
+          <div class="aspect-square bg-slate-100 rounded-xl overflow-hidden border mb-2 relative">
+             <img v-if="item.image" :src="item.image" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105">
+             <div v-else class="w-full h-full flex items-center justify-center text-slate-300"><i class="ri-image-line text-4xl"></i></div>
           </div>
+          
+          <div class="relative">
+             <div class="flex justify-between items-start mb-1">
+                 <h4 class="font-bold text-slate-800 text-sm truncate pr-2" :class="{'line-through text-slate-400': item.bought}">{{ item.name }} (x{{ item.quantity }})</h4>
+                 <button @click="removeShoppingItem(item.id)" class="text-slate-300 hover:text-red-400 p-1 flex-shrink-0"><i class="ri-close-line"></i></button>
+             </div>
+
+             <div class="text-xs text-slate-500 space-y-0.5">
+                 <div class="flex justify-between">
+                     <span class="font-medium text-slate-700">網上價 (HKD):</span> 
+                     <span :class="item.bought ? 'text-slate-400' : 'text-slate-700 font-bold'">{{ item.onlinePriceHKD.toFixed(2) }}</span>
+                 </div>
+                 <div class="flex justify-between">
+                     <span class="font-medium">當地價 (HKD):</span> 
+                     <span :class="item.bought ? 'text-slate-400' : 'text-primary font-bold'">{{ item.localPriceHKD.toFixed(2) }}</span>
+                 </div>
+             </div>
+             
+             <div v-if="item.savingsHKD > 0" class="mt-2 text-center bg-green-100/70 p-1.5 rounded-lg border border-green-200">
+                 <span class="text-xs font-black text-green-600">節省: {{ item.savingsHKD.toFixed(2) }} HKD</span>
+             </div>
+             <div v-else-if="item.savingsHKD < 0" class="mt-2 text-center bg-red-100/70 p-1.5 rounded-lg border border-red-200">
+                 <span class="text-xs font-black text-red-600">更貴: {{ Math.abs(item.savingsHKD).toFixed(2) }} HKD</span>
+             </div>
+          </div>
+          
         </div>
       </div>
     </section>
@@ -617,7 +667,16 @@
           day: 1, 
         },
         inputCurrency: '', 
-        newShoppingItem: { name: '', onlinePrice: '', localPrice: '', bought: false, image: '' },
+        
+        // **已修改**: 新增 quantity，localPrice 和 onlinePrice 變為數字
+        newShoppingItem: { 
+            name: '', 
+            onlinePrice: null, // 預計為 HKD
+            localPrice: null,  // 預計為當地幣別金額
+            quantity: 1,       // 新增數量欄位
+            bought: false, 
+            image: '' 
+        },
         
         activeDay: 1, // 行程頁面專用
 
@@ -651,7 +710,7 @@
             .sort((a, b) => (a.day || 1) - (b.day || 1)) 
             .forEach(item => {
                 const dayIndex = (item.day || 1) - 1; 
-                if (dayIndex >= 0 && dayIndex < days.length) { // 確保索引在範圍內
+                if (dayIndex >= 0 && dayIndex < days.length) { 
                     days[dayIndex].items.push(item);
                 }
             });
@@ -667,7 +726,6 @@
         return days;
       },
       
-      // filteredExpenses: 永遠返回所有消費
       filteredExpenses() {
           if (!this.activeTrip || !this.activeTrip.expenses) {
               return [];
@@ -675,7 +733,6 @@
           return this.activeTrip.expenses; 
       },
 
-      // 總花費 (依賴 filteredExpenses，即所有消費的總和)
       totalExpensesHKD() {
         if (!this.activeTrip) return 0;
         return this.filteredExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -704,7 +761,6 @@
           return (amount / rate);
       },
       
-      // 計算各類別總花費 (使用 filteredExpenses，即所有消費)
       categorySummary() {
           if (!this.activeTrip || !this.filteredExpenses) {
               return { labels: [], data: [] };
@@ -722,9 +778,7 @@
           return { labels, data };
       },
 
-      // 計算按支付方式劃分的總結 (依賴 filteredExpenses，即所有消費)
       paymentSummary() {
-          // 初始值包含新增的 '其他'
           const summary = { '現金': 0, '信用卡': 0, '其他': 0 };
           if (!this.activeTrip) return summary;
 
@@ -734,12 +788,10 @@
               if (summary.hasOwnProperty(method)) {
                   summary[method] += amount;
               } else {
-                  // 如果是未知的支付方式，也計入 '其他'
                   summary['其他'] += amount; 
               }
           });
 
-          // 確保只顯示兩位小數
           summary['現金'] = parseFloat(summary['現金'].toFixed(2));
           summary['信用卡'] = parseFloat(summary['信用卡'].toFixed(2));
           summary['其他'] = parseFloat(summary['其他'].toFixed(2));
@@ -751,12 +803,10 @@
           return '所有'; 
       },
 
-      // **更新的 Computed Property**：用於按 Day 分組並插入每日總計
       groupedAndSortedExpenses() {
           if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return [];
 
           const expenses = this.activeTrip.expenses.slice() 
-              // 1. 確保 Day 欄位存在，並依 Day 排序 (0, 1, 2, ...)
               .sort((a, b) => (a.day === undefined ? 1 : a.day) - (b.day === undefined ? 1 : b.day));
 
           const result = [];
@@ -775,10 +825,8 @@
           for (const day of sortedDays) {
               const dayExpenses = daysGrouped[day];
               
-              // 計算該日總計
               const total = dayExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
               
-              // 插入每日總計標頭
               result.push({
                   isHeader: true,
                   day: day,
@@ -787,11 +835,55 @@
                   id: `header-${day}`
               });
 
-              // 插入該日的所有交易記錄
               result.push(...dayExpenses);
           }
 
           return result;
+      },
+
+      // **已新增**: 包含價格換算和節省計算的購物清單
+      shoppingListWithSavings() {
+          if (!this.activeTrip || !this.activeTrip.shoppingItems) return [];
+          const rate = this.activeTrip.exchangeRate || 1; // 1 HKD = X 外幣
+
+          const processedList = this.activeTrip.shoppingItems.map(item => {
+              // 確保 quantity, localPrice, onlinePrice 是有效數字
+              const quantity = Math.max(1, Number(item.quantity) || 1);
+              const localPrice = Number(item.localPrice) || 0;
+              const onlinePrice = Number(item.onlinePrice) || 0;
+              
+              // 1. 計算當地價換算成 HKD 的總額 (單價 / 匯率 * 數量)
+              const localPriceHKD = localPrice > 0 && rate > 0 
+                  ? (localPrice / rate) * quantity 
+                  : 0;
+              
+              // 2. 計算網上價 HKD 的總額
+              const onlinePriceHKD = onlinePrice * quantity;
+              
+              // 3. 計算總共節省的金額 (網上價 - 當地價換算 HKD)
+              const savingsHKD = onlinePriceHKD - localPriceHKD;
+
+              return {
+                  ...item,
+                  quantity: quantity,
+                  localPriceHKD: parseFloat(localPriceHKD.toFixed(2)),
+                  onlinePriceHKD: parseFloat(onlinePriceHKD.toFixed(2)),
+                  savingsHKD: parseFloat(savingsHKD.toFixed(2)),
+              };
+          });
+          
+          // 排序邏輯：未買的在前，其次按節省金額降序
+          return processedList.sort((a, b) => {
+              if (a.bought === b.bought) {
+                  return b.savingsHKD - a.savingsHKD; // 未買的則按節省金額降序
+              }
+              return a.bought ? 1 : -1; // false (0) < true (1)，所以未買的在前
+          });
+      },
+
+      // **已新增**: 總節省金額
+      totalSavings() {
+          return this.shoppingListWithSavings.reduce((sum, item) => sum + item.savingsHKD, 0);
       }
     },
     watch: {
@@ -799,7 +891,6 @@
         if (newTab === 'itinerary-map') {
           setTimeout(() => this.forceUpdateMap(), 500);
         } else if (newTab === 'budget') { 
-          // 切換到記帳頁籤時，直接更新圖表
           this.$nextTick(() => this.updateChart());
         }
       },
@@ -817,7 +908,6 @@
         this.forceUpdateMap();
       },
       
-      // 當總花費或類別資料變動時，更新圖表
       categorySummary: {
           handler() {
               this.updateChart();
@@ -840,17 +930,18 @@
       
       saveData() { 
           localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips)); 
-          this.updateChart(); // 儲存資料時，更新圖表
+          this.updateChart(); 
       },
       loadData() {
         const saved = localStorage.getItem('christine_travel_diary_v4');
         if (saved) {
           const parsedTrips = JSON.parse(saved).map(trip => {
+              // ... (Expenses and Itinerary loading logic remains the same)
               if (trip.expenses) {
                   trip.expenses = trip.expenses.map(exp => ({ 
                       id: exp.id || Date.now() + Math.random(), 
                       amount: exp.amount || 0,
-                      day: exp.day === undefined ? 1 : exp.day, // 處理 Day 欄位
+                      day: exp.day === undefined ? 1 : exp.day, 
                       ...exp 
                   }));
               } else {
@@ -860,12 +951,26 @@
                   trip.itinerary = trip.itinerary.map(item => ({ 
                       id: item.id || Date.now() + Math.random(), 
                       day: item.day || 1, 
-                      mapLink: item.mapLink || '', // 確保 mapLink 存在
+                      mapLink: item.mapLink || '', 
                       ...item 
                   }));
               } else {
                   trip.itinerary = [];
               }
+              
+              // **更新**: 確保 shoppingItems 欄位存在，且包含新欄位
+              if (trip.shoppingItems) {
+                  trip.shoppingItems = trip.shoppingItems.map(item => ({
+                      id: item.id || Date.now() + Math.random(),
+                      quantity: item.quantity || 1, // 確保 quantity 存在
+                      localPrice: item.localPrice || null, 
+                      onlinePrice: item.onlinePrice || null, 
+                      ...item
+                  }));
+              } else {
+                  trip.shoppingItems = [];
+              }
+
               return trip;
           });
           this.trips = parsedTrips;
@@ -878,8 +983,12 @@
             center: { lat: 35.6895, lng: 139.6917 }, exchangeRate: 19.2,
             flights: { outbound: { no: 'CX500', date: '2025-12-24' }, inbound: { no: 'CX501', date: '2025-12-28' } },
             itinerary: defaultItinerary, 
-            expenses: [{ id: Date.now()+1, name: '機票', amount: 3500, method: '信用卡', category: '旅行前', date: '12/10', day: 0, localAmount: 67200 }], // Day 0 用於旅行前消費
-            shoppingItems: []
+            expenses: [{ id: Date.now()+1, name: '機票', amount: 3500, method: '信用卡', category: '旅行前', date: '12/10', day: 0, localAmount: 67200 }], 
+            // **新增預設購物清單項目**
+            shoppingItems: [
+                { id: Date.now()+2, name: '防曬霜', onlinePrice: 200, localPrice: 3000, quantity: 2, bought: false, image: '' },
+                { id: Date.now()+3, name: '手信餅乾', onlinePrice: 150, localPrice: 2500, quantity: 3, bought: true, image: '' },
+            ]
           }];
           this.saveData();
         }
@@ -887,20 +996,19 @@
         if (this.activeTripId) {
           this.fetchWeather();
           this.newExpense.day = 1;
+          this.inputCurrency = this.activeTrip.currency; 
         }
       },
       
-      // 計算整個旅程的總和 (包含 Day 0 旅行前)
       calculateTripTotal(trip) {
         if (!trip.expenses) return 0;
         return trip.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       },
       
-      // 計算單一 Day 的總和 (新增的方法)
       calculateDayTotal(dayIndex) {
           if (!this.activeTrip || !this.activeTrip.expenses) return 0;
           const total = this.activeTrip.expenses
-                     .filter(exp => (exp.day === undefined ? 1 : exp.day) === dayIndex) // 確保匹配 Day 0 或 Day X
+                     .filter(exp => (exp.day === undefined ? 1 : exp.day) === dayIndex) 
                      .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
           return parseFloat(total.toFixed(2));
       },
@@ -1006,11 +1114,9 @@
             return alert('請輸入消費項目和有效的金額');
         }
         
-        // 如果類別是 '旅行前'，強制將 Day 設為 0
         if (this.newExpense.category === '旅行前') {
             this.newExpense.day = 0; 
         } else if (!this.newExpense.day || this.newExpense.day === 0) {
-             // 如果選了 Day 0 但類別不是旅行前，則修正為 Day 1
              if (this.newExpense.category !== '旅行前') {
                  this.newExpense.day = 1;
              }
@@ -1028,10 +1134,9 @@
             category: this.newExpense.category,
             localAmount: this.newExpense.localAmount, 
             date: `${d.getMonth()+1}/${d.getDate()}`,
-            day: this.newExpense.day, // 儲存 Day X 或 0
+            day: this.newExpense.day, 
         });
         
-        // 重置輸入欄位
         this.newExpense = { 
             name:'', 
             localAmount:null, 
@@ -1053,7 +1158,6 @@
         }
       },
 
-      // CSV 匯出功能 (保持不變)
       exportExpensesToCSV() {
           if (!this.activeTrip || !this.activeTrip.expenses.length) {
               return alert('目前沒有消費記錄可以匯出！');
@@ -1061,23 +1165,20 @@
           
           const trip = this.activeTrip;
           
-          // 匯出所有消費記錄，並按 Day 排序
           const expensesToExport = this.activeTrip.expenses
-              .slice() // 建立副本以避免修改原始數據
+              .slice() 
               .sort((a, b) => (a.day === undefined ? 1 : a.day) - (b.day === undefined ? 1 : b.day)); 
 
           if (expensesToExport.length === 0) {
               return alert(`暫無消費記錄可以匯出！`);
           }
 
-          // 2. 定義 CSV 標題列
           const headers = [
               "Day", "日期", "項目", "類別", "支付方式", 
               `當地金額 (${trip.currency})`, "匯率 (1 HKD = X)", 
               "港幣金額 (HKD)"
           ];
           
-          // 3. 轉換資料
           const rows = expensesToExport.map(exp => [
               exp.day === 0 ? '旅行前' : exp.day || 1, 
               exp.date || '',
@@ -1086,16 +1187,14 @@
               exp.method || '',
               (exp.localAmount || 0).toFixed(2),
               (trip.exchangeRate || 1).toFixed(2),
-              (exp.amount || 0).toFixed(2) // 港幣金額 (已換算)
+              (exp.amount || 0).toFixed(2) 
           ]);
           
-          // 4. 組合成 CSV 字串
           const csvContent = [
               headers.join(','),
               ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
           ].join('\n');
           
-          // 5. 觸發下載
           const encodedUri = encodeURI("data:text/csv;charset=utf-8,\uFEFF" + csvContent);
           const link = document.createElement("a");
           
@@ -1110,7 +1209,6 @@
           alert(`「${fileName}」匯出成功！`);
       },
 
-      // 圓餅圖更新方法 (保持不變)
       updateChart() {
           if (this.activeTab !== 'budget') return;
           
@@ -1119,16 +1217,6 @@
           
           if (!ctx) return;
 
-          const colors = [
-              '#97CBFF', // primary
-              '#FFD9EC', // Pinkish
-              '#C7C7E2', // Secondary
-              '#A4D8B9', // Light Green
-              '#F5E6CC', // Light Yellow
-              '#DDDDFF', // Light Purple
-              '#8A2BE2', // 紫色 - 旅行前
-          ];
-          
           const categoryColors = {
               '飲食': '#FFD9EC', 
               '購物': '#C7C7E2', 
@@ -1139,7 +1227,7 @@
           };
           
           const backgroundColors = summary.labels.map(label => 
-              categoryColors[label] || colors[summary.labels.indexOf(label) % colors.length]
+              categoryColors[label] || '#97CBFF'
           );
 
 
@@ -1192,7 +1280,7 @@
           }
       },
       
-      // === 購物功能 (保持不變) ===
+      // === 購物功能 (已修改) ===
       handleImageUpload(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -1203,31 +1291,40 @@
       },
       addShoppingItem() {
         if(!this.newShoppingItem.name) return;
-        this.activeTrip.shoppingItems.unshift({ id: Date.now() + Math.random(), ...this.newShoppingItem }); 
-        this.newShoppingItem = { name: '', onlinePrice: '', localPrice: '', bought: false, image: '' };
+        
+        this.activeTrip.shoppingItems.unshift({ 
+            id: Date.now() + Math.random(), 
+            // 確保儲存前為數字
+            onlinePrice: Number(this.newShoppingItem.onlinePrice) || null,
+            localPrice: Number(this.newShoppingItem.localPrice) || null,
+            quantity: Math.max(1, Number(this.newShoppingItem.quantity) || 1),
+            ...this.newShoppingItem 
+        }); 
+        
+        // 重置欄位
+        this.newShoppingItem = { name: '', onlinePrice: null, localPrice: null, quantity: 1, bought: false, image: '' };
         this.saveData();
       },
-      removeShoppingItem(idx) {
-        this.activeTrip.shoppingItems.splice(idx, 1);
-        this.saveData();
+      removeShoppingItem(itemId) {
+        if(confirm('確認刪除此購物項目嗎？')) {
+            const index = this.activeTrip.shoppingItems.findIndex(item => item.id === itemId);
+            if (index !== -1) {
+                this.activeTrip.shoppingItems.splice(index, 1);
+                this.saveData();
+            }
+        }
       },
 
-      // === 地圖/行程功能 (已修改) ===
-
-      // 1. 統一開啟 Google 地圖的方法
+      // === 地圖/行程功能 (保持不變) ===
       openGoogleMaps(item) { 
-          // 優先使用 mapLink
           if (item.mapLink && item.mapLink.trim()) {
               const url = item.mapLink.trim();
-              // 如果是完整的 URL，直接開啟
               if (url.startsWith('http')) {
                   window.open(url, '_blank');
               } else {
-                  // 如果貼上的不是 URL，可能仍是一個地點名稱，則按地點搜尋
                   this.searchGoogleMaps(url);
               }
           } 
-          // 如果沒有 mapLink，使用 location 進行地點搜尋
           else if (item.location && item.location.trim()) {
               this.searchGoogleMaps(item.location);
           } else {
@@ -1235,9 +1332,7 @@
           }
       },
       
-      // 2. 搜尋 Google 地圖的方法
       searchGoogleMaps(query) {
-          // 使用 Google Maps Search API
           window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank'); 
       },
 
@@ -1343,7 +1438,7 @@
               time: '10:00', 
               activity: '', 
               location: '',
-              mapLink: '' // **新增 mapLink 欄位**
+              mapLink: '' 
           }); 
           this.saveData(); 
           this.forceUpdateMap();
@@ -1371,7 +1466,7 @@
                 id: Date.now() + Math.random(), 
                 day: dayNum > this.totalDays ? this.totalDays : dayNum,
                 time: parts[1] ? parts[1].trim() : 'N/A',
-                mapLink: '', // 批次匯入不包含 mapLink，初始化為空
+                mapLink: '', 
                 activity: parts[2] ? parts[2].trim() : '活動',
                 location: parts[3] ? parts[3].trim() : ''
             };
@@ -1424,6 +1519,7 @@
             this.activeDay = 1;
             this.newExpense.day = 1; 
             this.newExpense.category = '飲食'; 
+            this.inputCurrency = this.activeTrip.currency;
             this.updateChart();
         });
       },
@@ -1442,6 +1538,7 @@
             this.activeDay = 1;
             this.newExpense.day = 1; 
             this.newExpense.category = '飲食'; 
+            this.inputCurrency = this.activeTrip.currency;
             this.updateChart();
         });
       },
