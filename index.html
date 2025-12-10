@@ -301,11 +301,11 @@
     </section>
 
     <section v-if="activeTab === 'budget' && activeTrip" class="animate-fade-in">
-       <div class="glass-card p-6 mb-6 text-center">
+      <div class="glass-card p-6 mb-6 text-center">
          <p class="text-xs text-slate-400 mb-1 uppercase tracking-wide">Exchange Rate</p>
          <div class="flex items-center justify-center gap-2 text-3xl font-bold text-slate-700">
            <span class="text-base text-slate-400 self-end mb-1">1 HKD ≈</span>
-           <input v-model.number="activeTrip.exchangeRate" type="number" step="0.1" class="w-24 text-center bg-transparent border-b-2 border-slate-200 focus:outline-none focus:border-primary">
+           <input v-model.number="activeTrip.exchangeRate" type="number" step="0.1" @change="saveData" class="w-24 text-center bg-transparent border-b-2 border-slate-200 focus:outline-none focus:border-primary">
            <span class="text-xl self-end mb-1">{{ activeTrip.currency }}</span>
          </div>
          <button @click="autoGeocode" class="text-xs bg-slate-100 text-slate-500 px-3 py-1 rounded-full mt-3 hover:bg-slate-200"><i class="ri-refresh-line"></i> 重新抓取即時匯率</button>
@@ -472,7 +472,7 @@
         showBatchImport: false,
         batchImportText: '',
         
-        // 給 expense 添加 ID, 便於刪除
+        // 確保 Expense 和 Itinerary 都有 ID
         newExpense: { id: null, name: '', amount: null, method: '現金', category: '飲食' },
         newShoppingItem: { name: '', onlinePrice: '', localPrice: '', bought: false, image: '' },
 
@@ -496,7 +496,7 @@
         }
         return result;
       },
-      // 總花費計算 (用於 info 頁面)
+      // 總花費計算 (用於 info/history 頁面)
       totalExpensesHKD() {
         if (!this.activeTrip) return 0;
         return this.calculateTripTotal(this.activeTrip);
@@ -526,8 +526,8 @@
       loadData() {
         const saved = localStorage.getItem('christine_diary_v4');
         if (saved) {
-          // 確保歷史數據也有 ID
           const parsedTrips = JSON.parse(saved).map(trip => {
+              // 確保所有行程和費用項目都有 ID
               if (trip.expenses && trip.expenses.every(exp => !exp.id)) {
                   trip.expenses = trip.expenses.map(exp => ({ id: Date.now() + Math.random(), ...exp }));
               }
@@ -555,13 +555,12 @@
         }
       },
       
-      // History 頁面新方法: 計算單個旅程的總花費
       calculateTripTotal(trip) {
         if (!trip.expenses) return 0;
         return trip.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       },
       
-      // === 核心 API 功能 (保留不變) ===
+      // === 核心 API 功能 (與上次提供給您的版本一致) ===
       async autoGeocode() {
         if (!this.tempTrip.city) return alert('請先輸入城市名稱 (City)');
         
@@ -665,13 +664,12 @@
         }
       },
 
-      // === 記帳功能新增: ID 與刪除方法 ===
+      // === 記帳功能 (與上次提供給您的版本一致) ===
       addExpense() {
         if(!this.newExpense.name || !this.newExpense.amount) return;
         const d = new Date();
-        // 為新項目添加 ID
         this.activeTrip.expenses.unshift({ 
-            id: Date.now() + Math.random(), // 新增唯一 ID
+            id: Date.now() + Math.random(), 
             ...this.newExpense, 
             date: `${d.getMonth()+1}/${d.getDate()}` 
         });
@@ -687,10 +685,8 @@
             }
         }
       },
-
-      // === 地圖/行程功能 (保留優化後的) ===
-      openGoogleMaps(loc) { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`); },
-      openDirections(loc) { window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc)}`); },
+      
+      // === 購物功能 (與上次提供給您的版本一致) ===
       handleImageUpload(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -701,7 +697,7 @@
       },
       addShoppingItem() {
         if(!this.newShoppingItem.name) return;
-        this.activeTrip.shoppingItems.unshift({ id: Date.now(), ...this.newShoppingItem }); 
+        this.activeTrip.shoppingItems.unshift({ id: Date.now() + Math.random(), ...this.newShoppingItem }); 
         this.newShoppingItem = { name: '', onlinePrice: '', localPrice: '', bought: false, image: '' };
         this.saveData();
       },
@@ -709,6 +705,11 @@
         this.activeTrip.shoppingItems.splice(idx, 1);
         this.saveData();
       },
+
+      // === 地圖/行程功能 (已新增/修正) ===
+      openGoogleMaps(loc) { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`); },
+      openDirections(loc) { window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc)}`); },
+
       mapMarkers: L.layerGroup(),
       forceUpdateMap() {
         if (this.activeTab !== 'itinerary-map') return;
@@ -729,6 +730,7 @@
           setTimeout(() => { this.map.invalidateSize(); }, 100);
         } catch (e) { console.error("Map init fail", e); }
       },
+      
       async geocodeLocation(location) {
           if (GeocodingCache[location]) return GeocodingCache[location];
 
@@ -748,6 +750,7 @@
               lng: this.activeTrip.center.lng + (Math.random() - 0.5) * 0.05,
           };
       },
+
       async updateMapMarkers() {
           if (!this.map || !this.activeTrip?.itinerary) return;
           this.mapMarkers.clearLayers();
@@ -777,19 +780,26 @@
              this.map.setView([this.activeTrip.center.lat, this.activeTrip.center.lng], 13);
           }
       },
+      
       addItineraryItem() { 
           this.activeTrip.itinerary.push({ id: Date.now() + Math.random(), time: '10:00', activity: '', location: '' }); 
           this.saveData(); 
           this.forceUpdateMap();
       },
+      
+      // 🎯 重新加入: 刪除行程項目
       removeItineraryItem(itemId) { 
-          const index = this.activeTrip.itinerary.findIndex(item => item.id === itemId);
-          if(index !== -1) {
-              this.activeTrip.itinerary.splice(index, 1);
-              this.saveData(); 
-              this.forceUpdateMap();
+          if(confirm('確認刪除此行程項目嗎？')) {
+              const index = this.activeTrip.itinerary.findIndex(item => item.id === itemId);
+              if(index !== -1) {
+                  this.activeTrip.itinerary.splice(index, 1);
+                  this.saveData(); 
+                  this.forceUpdateMap();
+              }
           }
       },
+      
+      // 🎯 重新加入: 批次匯入行程
       runBatchImport() {
         if(!this.batchImportText) return alert('請貼上內容');
         const lines = this.batchImportText.split('\n').filter(line => line.trim() !== '');
@@ -811,8 +821,9 @@
         this.forceUpdateMap(); 
         alert(`成功匯入 ${newItems.length} 條行程！`);
       },
-      
-      // === 旅程管理功能 (保留不變) ===
+
+
+      // === 旅程管理功能 (與上次提供給您的版本一致) ===
       openNewTripModal() { 
         this.editingTripId = null; 
         this.tempTrip = {
@@ -828,6 +839,7 @@
         if (!this.tempTrip.title) return;
         if (this.editingTripId) {
           const idx = this.trips.findIndex(t => t.id === this.editingTripId);
+          // 保留 itinerary/expenses/shoppingItems 的數據結構
           this.trips[idx] = { ...this.trips[idx], ...this.tempTrip };
         } else {
           const center = this.tempTrip.center || {lat:35.6, lng:139.6};
