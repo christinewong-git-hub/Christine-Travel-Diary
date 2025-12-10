@@ -461,7 +461,7 @@
       </div>
 
       <div class="glass-card p-5 mb-6">
-        <h3 class="font-bold mb-4 flex items-center gap-2"><i class="ri-shopping-bag-3-line text-primary"></i> 新增購物項目</h3>
+        <h3 class="font-bold mb-4 flex items-center gap-2"><i class="ri-heart-3-line text-primary"></i> 願望清單 (Wish List)</h3>
         
         <div class="flex gap-3 mb-3">
           <label class="w-20 h-20 flex-shrink-0 bg-slate-50 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:border-primary hover:text-primary transition relative overflow-hidden aspect-square">
@@ -498,45 +498,54 @@
           </div>
         </div>
         
-        <button @click="addShoppingItem" class="w-full bg-primary text-white py-2.5 rounded-xl font-bold shadow-md active:scale-95 transition">加入清單</button>
+        <button @click="addShoppingItem" class="w-full bg-primary text-white py-2.5 rounded-xl font-bold shadow-md active:scale-95 transition">加入願望清單</button>
       </div>
 
       <div class="grid grid-cols-2 gap-4 pb-20">
         <div v-for="(item, idx) in shoppingListWithSavings" :key="idx" 
-             :class="['glass-card p-3 shadow-md transition-all duration-300 relative overflow-hidden', 
-                      item.bought ? 'opacity-50 bg-slate-50 border-dashed border-slate-200' : '']">
+             :class="['glass-card p-3 shadow-lg transition-all duration-300 relative overflow-hidden', 
+                      item.bought ? 'opacity-70 bg-white/50 border-dashed border-slate-200' : '']">
           
-          <label class="absolute top-0 left-0 z-10 w-full h-full cursor-pointer p-3 flex justify-end">
-            <input type="checkbox" v-model="item.bought" @change="saveData" class="w-6 h-6 rounded-full text-primary border-slate-300 focus:ring-primary shadow-lg border-2">
-          </label>
-          
-          <div class="aspect-square bg-slate-100 rounded-xl overflow-hidden border mb-2 relative">
-             <img v-if="item.image" :src="item.image" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105">
+          <div class="aspect-square w-full bg-slate-100 rounded-xl overflow-hidden border mb-2 relative">
+             <img v-if="item.image" :src="item.image" class="w-full h-full object-cover transition-transform duration-300">
              <div v-else class="w-full h-full flex items-center justify-center text-slate-300"><i class="ri-image-line text-4xl"></i></div>
+             
+             <button @click="toggleBought(item)" 
+                     class="absolute top-2 right-2 w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center transition-colors duration-200 border-2 border-white"
+                     :class="item.bought ? 'bg-primary/90 text-white border-primary' : 'text-slate-400 hover:bg-slate-50'">
+                 <i :class="item.bought ? 'ri-check-line text-lg' : 'ri-check-line text-lg'"></i>
+             </button>
           </div>
           
-          <div class="relative">
-             <div class="flex justify-between items-start mb-1">
-                 <h4 class="font-bold text-slate-800 text-sm truncate pr-2" :class="{'line-through text-slate-400': item.bought}">{{ item.name }} (x{{ item.quantity }})</h4>
-                 <button @click="removeShoppingItem(item.id)" class="text-slate-300 hover:text-red-400 p-1 flex-shrink-0"><i class="ri-close-line"></i></button>
+          <div class="relative px-1 pb-1">
+             <h4 class="font-bold text-slate-800 text-base mb-1" 
+                 :class="{'line-through text-slate-500': item.bought}">
+                 {{ item.name }} (x{{ item.quantity }})
+             </h4>
+
+             <div class="mb-2">
+                 <span class="text-sm font-medium text-slate-500 block">當地價 (HKD)</span>
+                 <span class="text-xl font-black text-primary" 
+                       :class="{'text-slate-600': item.bought}">
+                     {{ item.localPriceHKD.toFixed(2) }}
+                 </span>
              </div>
 
-             <div class="text-xs text-slate-500 space-y-0.5">
-                 <div class="flex justify-between">
-                     <span class="font-medium text-slate-700">網上價 (HKD):</span> 
-                     <span :class="item.bought ? 'text-slate-400' : 'text-slate-700 font-bold'">{{ item.onlinePriceHKD.toFixed(2) }}</span>
+             <div class="flex justify-between items-center pt-2 border-t border-slate-100">
+                 <button @click="removeShoppingItem(item.id)" 
+                         class="text-slate-400 hover:text-red-500 transition p-1">
+                     <i class="ri-delete-bin-line text-xl"></i>
+                 </button>
+                 
+                 <div v-if="item.savingsHKD > 0" class="text-xs font-bold text-green-600">
+                     <i class="ri-arrow-down-line"></i> 節省 {{ item.savingsHKD.toFixed(2) }} HKD
                  </div>
-                 <div class="flex justify-between">
-                     <span class="font-medium">當地價 (HKD):</span> 
-                     <span :class="item.bought ? 'text-slate-400' : 'text-primary font-bold'">{{ item.localPriceHKD.toFixed(2) }}</span>
+                 <div v-else-if="item.savingsHKD < 0" class="text-xs font-bold text-red-600">
+                     <i class="ri-arrow-up-line"></i> 更貴 {{ Math.abs(item.savingsHKD).toFixed(2) }} HKD
                  </div>
-             </div>
-             
-             <div v-if="item.savingsHKD > 0" class="mt-2 text-center bg-green-100/70 p-1.5 rounded-lg border border-green-200">
-                 <span class="text-xs font-black text-green-600">節省: {{ item.savingsHKD.toFixed(2) }} HKD</span>
-             </div>
-             <div v-else-if="item.savingsHKD < 0" class="mt-2 text-center bg-red-100/70 p-1.5 rounded-lg border border-red-200">
-                 <span class="text-xs font-black text-red-600">更貴: {{ Math.abs(item.savingsHKD).toFixed(2) }} HKD</span>
+                 <div v-else class="text-xs text-slate-500">
+                     無價差
+                 </div>
              </div>
           </div>
           
@@ -668,12 +677,11 @@
         },
         inputCurrency: '', 
         
-        // **已修改**: 新增 quantity，localPrice 和 onlinePrice 變為數字
         newShoppingItem: { 
             name: '', 
             onlinePrice: null, // 預計為 HKD
             localPrice: null,  // 預計為當地幣別金額
-            quantity: 1,       // 新增數量欄位
+            quantity: 1,       // 數量欄位
             bought: false, 
             image: '' 
         },
@@ -841,7 +849,6 @@
           return result;
       },
 
-      // **已新增**: 包含價格換算和節省計算的購物清單
       shoppingListWithSavings() {
           if (!this.activeTrip || !this.activeTrip.shoppingItems) return [];
           const rate = this.activeTrip.exchangeRate || 1; // 1 HKD = X 外幣
@@ -881,7 +888,6 @@
           });
       },
 
-      // **已新增**: 總節省金額
       totalSavings() {
           return this.shoppingListWithSavings.reduce((sum, item) => sum + item.savingsHKD, 0);
       }
@@ -962,9 +968,10 @@
               if (trip.shoppingItems) {
                   trip.shoppingItems = trip.shoppingItems.map(item => ({
                       id: item.id || Date.now() + Math.random(),
-                      quantity: item.quantity || 1, // 確保 quantity 存在
+                      quantity: item.quantity || 1, 
                       localPrice: item.localPrice || null, 
                       onlinePrice: item.onlinePrice || null, 
+                      bought: item.bought || false, // 確保 bought 欄位存在
                       ...item
                   }));
               } else {
@@ -984,7 +991,6 @@
             flights: { outbound: { no: 'CX500', date: '2025-12-24' }, inbound: { no: 'CX501', date: '2025-12-28' } },
             itinerary: defaultItinerary, 
             expenses: [{ id: Date.now()+1, name: '機票', amount: 3500, method: '信用卡', category: '旅行前', date: '12/10', day: 0, localAmount: 67200 }], 
-            // **新增預設購物清單項目**
             shoppingItems: [
                 { id: Date.now()+2, name: '防曬霜', onlinePrice: 200, localPrice: 3000, quantity: 2, bought: false, image: '' },
                 { id: Date.now()+3, name: '手信餅乾', onlinePrice: 150, localPrice: 2500, quantity: 3, bought: true, image: '' },
@@ -1290,20 +1296,27 @@
         reader.readAsDataURL(file);
       },
       addShoppingItem() {
-        if(!this.newShoppingItem.name) return;
+        if(!this.newShoppingItem.name) return alert('請輸入品名');
+        if(!this.newShoppingItem.localPrice && !this.newShoppingItem.onlinePrice) return alert('請至少輸入網上價或當地價');
         
         this.activeTrip.shoppingItems.unshift({ 
             id: Date.now() + Math.random(), 
-            // 確保儲存前為數字
-            onlinePrice: Number(this.newShoppingItem.onlinePrice) || null,
-            localPrice: Number(this.newShoppingItem.localPrice) || null,
+            onlinePrice: Number(this.newShoppingItem.onlinePrice) || 0,
+            localPrice: Number(this.newShoppingItem.localPrice) || 0,
             quantity: Math.max(1, Number(this.newShoppingItem.quantity) || 1),
-            ...this.newShoppingItem 
+            bought: this.newShoppingItem.bought, 
+            name: this.newShoppingItem.name,
+            image: this.newShoppingItem.image
         }); 
         
         // 重置欄位
         this.newShoppingItem = { name: '', onlinePrice: null, localPrice: null, quantity: 1, bought: false, image: '' };
         this.saveData();
+      },
+      // **新增方法**: 點擊切換已買狀態
+      toggleBought(item) {
+          item.bought = !item.bought;
+          this.saveData();
       },
       removeShoppingItem(itemId) {
         if(confirm('確認刪除此購物項目嗎？')) {
