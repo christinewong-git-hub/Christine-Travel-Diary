@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
@@ -5,6 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Christine's Travel Diary</title>
   
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -28,10 +31,14 @@
     }
   </script>
   
+  <!-- Remix Icon -->
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   
+  <!-- Vue 3 -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
@@ -93,6 +100,7 @@
 
 <div id="app" class="min-h-screen">
   
+  <!-- Header -->
   <header class="fixed top-0 left-0 w-full p-6 z-50 flex items-center justify-between pointer-events-none">
     <div class="flex items-center gap-2 pointer-events-auto bg-white/30 backdrop-blur-sm pr-4 py-1 rounded-full">
       <div class="bg-primary/20 p-2 rounded-full"><i class="ri-plane-fill text-xl text-primary"></i></div>
@@ -103,12 +111,16 @@
     </button>
   </header>
 
+  <!-- Main Content -->
   <main class="pt-24 px-4 max-w-3xl mx-auto pb-8">
     
+    <!-- === Tab 1: Trip Info (獨立頁面) === -->
     <section v-if="activeTab === 'info' && activeTrip" class="animate-fade-in space-y-5">
       
+      <!-- Flight Card (粉淺藍天) -->
       <div class="glass-card overflow-hidden shadow-lg border-0">
         <div class="flight-sky p-6 relative">
+          <!-- 裝飾雲 -->
           <i class="ri-cloud-fill absolute top-4 right-8 text-white/60 text-5xl opacity-80"></i>
           <i class="ri-cloud-fill absolute bottom-6 left-6 text-white/40 text-3xl opacity-60"></i>
           
@@ -117,6 +129,7 @@
             航班資訊
           </h2>
           
+          <!-- Outbound -->
           <div class="bg-white/60 backdrop-blur-md rounded-2xl p-4 mb-3 relative z-10 shadow-sm">
             <div class="flex justify-between items-center mb-2">
               <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-white/50 px-2 py-0.5 rounded-full">去程 Outbound</span>
@@ -139,6 +152,7 @@
             </div>
           </div>
 
+          <!-- Inbound -->
           <div class="bg-white/60 backdrop-blur-md rounded-2xl p-4 relative z-10 shadow-sm">
             <div class="flex justify-between items-center mb-2">
               <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-white/50 px-2 py-0.5 rounded-full">回程 Inbound</span>
@@ -163,7 +177,9 @@
         </div>
       </div>
 
+      <!-- Weather & Stats -->
       <div class="grid grid-cols-2 gap-4">
+        <!-- Weather Card -->
         <div :class="['glass-card p-5 flex flex-col justify-between relative overflow-hidden h-40', `weather-${weatherTheme}`]">
           <div class="relative z-10 h-full flex flex-col justify-between">
             <div class="flex justify-between items-start">
@@ -180,6 +196,7 @@
           </div>
         </div>
         
+        <!-- Stats Card -->
         <div class="glass-card p-5 flex flex-col justify-center items-center h-40">
           <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mb-2">
             <i class="ri-wallet-3-line text-primary text-xl"></i>
@@ -193,8 +210,10 @@
       </div>
     </section>
 
+    <!-- === Tab 2: 行程 / 地圖 === -->
     <section v-if="activeTab === 'itinerary-map' && activeTrip" class="animate-fade-in">
       
+      <!-- Controls -->
       <div class="flex gap-3 mb-5 overflow-x-auto pb-2 scrollbar-hide">
         <button @click="addItineraryItem" class="flex-shrink-0 bg-primary text-white px-5 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-200 hover:shadow-xl transition active:scale-95 flex items-center gap-2">
           <i class="ri-add-circle-fill text-lg"></i>新增
@@ -212,6 +231,7 @@
         <button @click="runBatchImport" class="w-full bg-secondary text-white py-2 rounded-xl font-medium">開始匯入</button>
       </div>
 
+      <!-- Map -->
       <div class="glass-card p-2 mb-8 shadow-md relative z-0">
         <div id="map"></div>
         <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-slate-700 shadow-sm z-[400] border border-slate-200">
@@ -222,6 +242,7 @@
         </div>
       </div>
 
+      <!-- Day Cards Timeline -->
       <div class="pb-24 space-y-8">
         <div v-for="(group, dayIdx) in groupedItinerary" :key="dayIdx" class="glass-card p-1">
           <div class="bg-slate-50/50 p-4 rounded-t-[22px] border-b border-slate-100 flex justify-between items-center">
@@ -251,6 +272,7 @@
       </div>
     </section>
 
+    <!-- === Tab 3: Shopping === -->
     <section v-if="activeTab === 'shopping' && activeTrip" class="animate-fade-in">
       <div class="glass-card p-5 mb-6">
         <h3 class="font-bold mb-4 flex items-center gap-2"><i class="ri-shopping-bag-3-line text-primary"></i> 新增購物項目</h3>
@@ -297,6 +319,7 @@
       </div>
     </section>
 
+    <!-- === Tab 4: Budget === -->
     <section v-if="activeTab === 'budget' && activeTrip" class="animate-fade-in">
        <div class="glass-card p-6 mb-6 text-center">
          <p class="text-xs text-slate-400 mb-1 uppercase tracking-wide">Exchange Rate</p>
@@ -353,6 +376,7 @@
       </div>
     </section>
 
+    <!-- === Tab 5: History === -->
     <section v-if="activeTab === 'trips'" class="animate-fade-in pb-20">
       <div class="space-y-6">
         <div v-for="trip in trips" :key="trip.id" 
@@ -392,6 +416,7 @@
 
   </main>
 
+  <!-- Modal -->
   <div v-if="showTripModal" class="fixed inset-0 z-[200] flex items-end sm:items-center justify-center">
     <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" @click="showTripModal = false"></div>
     <div class="bg-white w-full sm:w-[400px] p-6 rounded-t-3xl sm:rounded-3xl relative z-10 animate-slide-up pb-10">
@@ -405,6 +430,7 @@
           <input v-model="tempTrip.destination" placeholder="國家 (可選)" class="flex-1 p-4 rounded-2xl bg-slate-50 border-0 text-sm">
         </div>
         
+        <!-- Smart Auto Fill Button -->
         <button @click="autoGeocode" type="button" class="w-full py-3 rounded-xl bg-blue-50 text-primary text-xs font-bold hover:bg-blue-100 transition flex items-center justify-center gap-2 border border-blue-100">
           <i class="ri-magic-line text-lg"></i>
           自動取得座標 + 貨幣 + 匯率 (One-Click)
@@ -427,6 +453,7 @@
     </div>
   </div>
 
+  <!-- Bottom Nav -->
   <nav class="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-[85%] max-w-sm capsule-tab rounded-full p-2 flex justify-between items-center z-[100]">
     <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
             class="w-14 h-14 rounded-full flex flex-col items-center justify-center transition-all duration-300 relative"
@@ -440,8 +467,7 @@
 
 <script>
   const { createApp } = Vue;
-  // **注意: 請將此替換為您實際的 AviationStack Key**
-  const AVIATIONSTACK_KEY = '5bxxxxxxxxx'; 
+  const AVIATIONSTACK_KEY = '5bxxxxxxxxx'; // 請換成您的 Key
 
   createApp({
     data() {
@@ -486,10 +512,9 @@
         return this.activeTrip.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       },
       weatherDesc() {
-        // OpenMeteo Weather Codes
         if (!this.weatherData) return 'Loading...';
         const code = this.weatherData.weathercode;
-        const map = { 0:'晴朗 Sunny', 1:'多雲 Cloudy', 2:'陰天 Overcast', 3:'毛毛雨 Drizzle', 45:'霧 Fog', 48:'霧淞 Rime fog', 51:'毛毛雨 Drizzle', 53:'小雨 Light Rain', 55:'大雨 Heavy Rain', 61:'陣雨 Rain', 63:'中雨 Moderate Rain', 65:'大雨 Heavy Rain', 80:'陣雨 Showers', 81:'中度陣雨 Moderate Showers', 82:'強烈陣雨 Violent Showers', 95:'雷暴 Thunderstorm' };
+        const map = { 0:'晴朗 Sunny', 1:'多雲 Cloudy', 2:'陰天 Overcast', 3:'毛毛雨 Drizzle', 61:'雨 Rain', 80:'陣雨 Showers' };
         return map[code] || '多雲 Cloudy';
       }
     },
@@ -501,7 +526,7 @@
       },
       activeTripId() {
         this.fetchWeather();
-        // this.fetchRate(); // Rate fetching now integrated into autoGeocode/saveTrip
+        this.fetchRate(); // Switch trip also refreshes rate
       }
     },
     mounted() {
@@ -517,26 +542,23 @@
           this.trips = [{
             id: Date.now(), title: 'Japan Trip', destination: 'Japan', city: 'Tokyo', currency: 'JPY',
             startDate: '2025-12-24', endDate: '2026-01-01',
-            // Default center for map, crucial for itinerary tab
             center: { lat: 35.6895, lng: 139.6917 }, exchangeRate: 19.2,
-            flights: { outbound: { no: 'CX500', date: '2025-12-24' }, inbound: { no: 'CX501', date: '2026-01-01' } },
-            itinerary: [{ time: '10:00', activity: '到達機場', location: 'Narita Airport' }], 
-            expenses: [], shoppingItems: []
+            flights: { outbound: {}, inbound: {} },
+            itinerary: [], expenses: [], shoppingItems: []
           }];
           this.saveData();
         }
-        this.activeTripId = this.trips.length > 0 ? this.trips[0].id : null;
-        if (this.activeTripId) {
-          this.fetchWeather();
-        }
+        this.activeTripId = this.trips[0].id;
+        this.fetchWeather();
       },
       
-      // === 核心功能 1: 自動抓取座標 + 貨幣 + 匯率 (使用公開 API) ===
+      // === Real-Time Magic: Coordinates + Currency + Rate ===
       async autoGeocode() {
         if (!this.tempTrip.city) return alert('請先輸入城市名稱 (City)');
         
         try {
-          // 1. 取得座標 & 國家代碼 (Nominatim)
+          // 1. Get Coordinates & Country Code (Nominatim)
+          // addressdetails=1 確保我們可以拿到 country_code (e.g., 'jp')
           const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${this.tempTrip.city},${this.tempTrip.destination || ''}&addressdetails=1&limit=1`);
           const geoData = await geoRes.json();
           
@@ -547,26 +569,29 @@
           const location = geoData[0];
           this.tempTrip.center = { lat: parseFloat(location.lat), lng: parseFloat(location.lon) };
           
+          // 如果使用者沒填國家，我們幫他填上
           if(location.address && location.address.country) {
              this.tempTrip.destination = location.address.country;
           }
 
-          let currencyCode = 'USD'; // 預設
-          const countryCode = location.address?.country_code?.toUpperCase(); 
+          let currencyCode = 'USD'; // Fallback
+          const countryCode = location.address?.country_code; // e.g., 'jp', 'gb', 'us'
 
-          // 2. 取得貨幣代碼 (RestCountries)
+          // 2. Get Currency Code (RestCountries via Alpha Code)
           if (countryCode) {
             try {
               const countryRes = await fetch(`https://restcountries.com/v3.1/alpha/${countryCode}`);
               const countryData = await countryRes.json();
               if (countryData[0]?.currencies) {
+                // e.g. { JPY: {...} } -> keys -> ['JPY']
                 currencyCode = Object.keys(countryData[0].currencies)[0];
                 this.tempTrip.currency = currencyCode;
               }
             } catch (err) { console.error("Currency fetch fail", err); }
           }
           
-          // 3. 取得匯率 (Open Exchange Rates) - Base HKD
+          // 3. Get Exchange Rate (Open Exchange Rates - Free)
+          // Base is HKD
           try {
              const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
              const rateData = await rateRes.json();
@@ -575,7 +600,7 @@
              }
           } catch (err) { console.error("Rate fetch fail", err); }
 
-          alert(`成功！\n座標: ${location.lat}, ${location.lon}\n國家: ${this.tempTrip.destination}\n貨幣: ${currencyCode}\n匯率: 1 HKD ≈ ${this.tempTrip.exchangeRate.toFixed(2)} ${currencyCode}`);
+          alert(`成功！\n座標: ${location.lat}, ${location.lon}\n國家: ${this.tempTrip.destination}\n貨幣: ${currencyCode}\n匯率: 1 HKD ≈ ${this.tempTrip.exchangeRate} ${currencyCode}`);
 
         } catch (e) {
           console.error(e);
@@ -583,19 +608,14 @@
         }
       },
 
-      // === 核心功能 2: 航班 API 呼叫 (使用 AviationStack) ===
       async fetchFlight(type) {
         const flight = this.activeTrip.flights[type];
         if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
-        if(AVIATIONSTACK_KEY === '5b729556e3ef80e18916fcecbcfd81ba') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
-        
         try {
-          // ** 這裡是實際 API 呼叫的邏輯 **
-          const res = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}&flight_date=${flight.date}`);
+          const res = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}`);
           const data = await res.json();
-          
           if (data.data && data.data.length > 0) {
-            const f = data.data[0]; 
+            const f = data.data.find(d => d.flight_date === flight.date) || data.data[0];
             flight.from = f.departure.iata;
             flight.to = f.arrival.iata;
             flight.depTime = f.departure.scheduled ? f.departure.scheduled.slice(11,16) : '--:--';
@@ -603,62 +623,23 @@
             this.saveData();
             alert(`已更新航班: ${flight.from} -> ${flight.to}`);
           } else {
-            alert('未找到航班資料，請確認 API Key、航班號與日期。');
-            // 如果 API 失敗，使用 Mocked 數據作為備案，確保 UI 有值
-             this.mockFlightData(type);
+            alert('未找到航班資料，請確認 API Key 或航班號');
           }
         } catch(e) {
           console.error(e);
-          alert('API 請求失敗，請檢查 Key 是否正確或網路連線。使用模擬數據。');
-          // 網路錯誤時使用 Mocked 數據
-          this.mockFlightData(type);
+          alert('API 請求失敗，請檢查 Key 是否正確');
         }
       },
-      mockFlightData(type) {
-          const flight = this.activeTrip.flights[type];
-          const isOutbound = type === 'outbound';
-          // 模擬數據
-          flight.from = isOutbound ? 'HKG' : 'NRT';
-          flight.to = isOutbound ? 'NRT' : 'HKG';
-          flight.depTime = isOutbound ? '09:00' : '16:00';
-          flight.arrTime = isOutbound ? '14:30' : '20:30';
-          this.saveData();
-      },
-
-      // === 核心功能 3: 天氣 API 呼叫 (使用 Open-Meteo) ===
       async fetchWeather() {
         if(!this.activeTrip?.center) return;
         try {
           const {lat,lng} = this.activeTrip.center;
-          // Open-Meteo 提供免費的 current_weather
-          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&timezone=auto`);
+          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
           const d = await res.json();
           this.weatherData = d.current_weather;
-          
-          // 根據 weathercode 判斷主題
-          const code = d.current_weather.weathercode;
-          if (code < 3) { this.weatherTheme = 'sunny'; } 
-          else if (code >= 51 && code < 80) { this.weatherTheme = 'rainy'; } // 雨類
-          else { this.weatherTheme = 'cloudy'; } // 雲類
-          
-        } catch(e){
-          console.error("Weather fetch failed", e);
-          // 失敗時使用預設值
-          this.weatherData = { temperature: 20 + Math.floor(Math.random()*5), weathercode: 1 };
-          this.weatherTheme = 'sunny';
-        }
+          this.weatherTheme = d.current_weather.weathercode < 3 ? 'sunny' : (d.current_weather.weathercode > 50 ? 'rainy' : 'cloudy');
+        } catch(e){}
       },
-
-      // === 其他功能 ===
-      fetchRate() { /* Optional standalone refresh, handled in autoGeocode primarily */ },
-      openGoogleMaps(loc) { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`); },
-      openDirections(dIdx, idx) { 
-        const realIdx = dIdx*5 + idx;
-        const loc = this.activeTrip.itinerary[realIdx].location;
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc)}`);
-      },
-      
-      // 購物
       handleImageUpload(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -669,8 +650,7 @@
       },
       addShoppingItem() {
         if(!this.newShoppingItem.name) return;
-        // 添加 ID 以便更容易刪除和追蹤
-        this.activeTrip.shoppingItems.unshift({ id: Date.now(), ...this.newShoppingItem }); 
+        this.activeTrip.shoppingItems.unshift({ ...this.newShoppingItem });
         this.newShoppingItem = { name: '', onlinePrice: '', localPrice: '', bought: false, image: '' };
         this.saveData();
       },
@@ -678,62 +658,19 @@
         this.activeTrip.shoppingItems.splice(idx, 1);
         this.saveData();
       },
-
-      // 地圖
-      mapMarkers: L.layerGroup(),
       forceUpdateMap() {
         if (this.activeTab !== 'itinerary-map') return;
         try {
           const container = document.getElementById('map');
           if (!container) return;
           if (this.map) { this.map.off(); this.map.remove(); }
-          
-          // 使用當前旅程的中心點，否則預設東京
-          const center = this.activeTrip.center ? [this.activeTrip.center.lat, this.activeTrip.center.lng] : [35.6895, 139.6917];
-          
+          const center = this.activeTrip.center || [35.6895, 139.6917];
           this.map = L.map('map', { zoomControl: false }).setView(center, 13);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(this.map);
-          this.mapMarkers.clearLayers();
-          this.mapMarkers.addTo(this.map);
-
-          this.updateMapMarkers();
-
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(this.map);
           setTimeout(() => { this.map.invalidateSize(); }, 100);
         } catch (e) { console.error("Map init fail", e); }
       },
-      updateMapMarkers() {
-          if (!this.map || !this.activeTrip?.itinerary) return;
-          this.mapMarkers.clearLayers();
-          
-          this.activeTrip.itinerary.forEach((item, index) => {
-              if (item.location) {
-                  // Mock Geocoding (實際應用需要 Geocoding 服務來轉換地址為座標)
-                  const mockLat = this.activeTrip.center.lat + (Math.random() - 0.5) * 0.05;
-                  const mockLng = this.activeTrip.center.lng + (Math.random() - 0.5) * 0.05;
-                  
-                  const marker = L.marker([mockLat, mockLng], {
-                      icon: L.divIcon({
-                          className: 'custom-div-icon',
-                          html: `<div style="background-color:#97CBFF; color:white; border-radius:50%; width:24px; height:24px; line-height:24px; text-align:center; font-weight:bold;">${index + 1}</div>`,
-                          iconSize: [24, 24],
-                          iconAnchor: [12, 12]
-                      })
-                  }).bindPopup(`<b>${item.location}</b><br>${item.activity}`);
-                  this.mapMarkers.addLayer(marker);
-              }
-          });
-          if (this.mapMarkers.getLayers().length > 0) {
-            this.map.fitBounds(this.mapMarkers.getBounds(), { padding: [50, 50] });
-          }
-      },
-
-
-      // 行程
-      addItineraryItem() { this.activeTrip.itinerary.push({ time: '10:00', activity: '', location: '' }); this.saveData(); },
-      removeItineraryItem(dIdx, idx) { this.activeTrip.itinerary.splice(dIdx*5+idx, 1); this.saveData(); },
-
-      // 旅程
-      openNewTripModal() { this.editingTripId = null; this.tempTrip = {title:'', city:'', destination:'', currency:'JPY', exchangeRate:19.2, center:{lat:35.6,lng:139.6}, startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0]}; this.showTripModal = true; },
+      openNewTripModal() { this.editingTripId = null; this.tempTrip = {currency:'', exchangeRate:0, center:{lat:35.6,lng:139.6}}; this.showTripModal = true; },
       openEditTripModal(trip) { this.editingTripId = trip.id; this.tempTrip = JSON.parse(JSON.stringify(trip)); this.showTripModal = true; },
       saveTrip() {
         if (!this.tempTrip.title) return;
@@ -743,7 +680,7 @@
         } else {
           const center = this.tempTrip.center || {lat:35.6, lng:139.6};
           const newTrip = { id: Date.now(), ...this.tempTrip, center: center, flights:{outbound:{},inbound:{}}, itinerary:[], expenses:[], shoppingItems:[] };
-          this.trips.unshift(newTrip); // 新增在最前面
+          this.trips.push(newTrip);
           this.activeTripId = newTrip.id;
         }
         this.saveData();
@@ -758,8 +695,8 @@
         }
       },
       switchTrip(id) { this.activeTripId = id; this.activeTab = 'info'; },
-      
-      // 記帳
+      addItineraryItem() { this.activeTrip.itinerary.push({ time: '10:00', activity: '', location: '' }); this.saveData(); },
+      removeItineraryItem(dIdx, idx) { this.activeTrip.itinerary.splice(dIdx*5+idx, 1); this.saveData(); },
       addExpense() {
         if(!this.newExpense.name || !this.newExpense.amount) return;
         const d = new Date();
@@ -767,25 +704,14 @@
         this.newExpense = { name:'', amount:null, method:'現金', category:'飲食' };
         this.saveData();
       },
-      runBatchImport() {
-        if(!this.batchImportText) return alert('請貼上內容');
-        const lines = this.batchImportText.split('\n').filter(line => line.trim() !== '');
-        
-        const newItems = lines.map(line => {
-            const parts = line.split(',');
-            return {
-                time: parts[0] ? parts[0].trim() : 'N/A',
-                activity: parts[1] ? parts[1].trim() : '活動',
-                location: parts[2] ? parts[2].trim() : ''
-            };
-        });
-        
-        this.activeTrip.itinerary.push(...newItems);
-        this.saveData();
-        this.showBatchImport = false;
-        this.batchImportText = '';
-        alert(`成功匯入 ${newItems.length} 條行程！`);
-      }
+      async fetchRate() { /* Optional standalone refresh, handled in autoGeocode primarily */ },
+      openGoogleMaps(loc) { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`); },
+      openDirections(dIdx, idx) { 
+        const realIdx = dIdx*5 + idx;
+        const loc = this.activeTrip.itinerary[realIdx].location;
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc)}`);
+      },
+      runBatchImport() { /* ... */ }
     }
   }).mount('#app');
 </script>
