@@ -87,6 +87,10 @@
     .weather-sunny { background: linear-gradient(135deg, #FFECF5 0%, #FFD9EC 40%, #ECECFF 100%); }
     .weather-cloudy { background: linear-gradient(135deg, #DDDDFF 0%, #E6E6F2 40%, #D8D8EB 100%); }
     .weather-rainy { background: linear-gradient(135deg, #D8D8EB 0%, #E6E6F2 35%, #C4E1FF 100%); }
+
+    /* For scrollbar-hide in Tailwind v2/v3 */
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
 <body>
@@ -196,19 +200,19 @@
     <section v-if="activeTab === 'itinerary-map' && activeTrip" class="animate-fade-in">
       
       <div class="flex gap-3 mb-5 overflow-x-auto pb-2 scrollbar-hide">
-        <button @click="addItineraryItem" class="flex-shrink-0 bg-primary text-white px-5 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-200 hover:shadow-xl transition active:scale-95 flex items-center gap-2">
-          <i class="ri-add-circle-fill text-lg"></i>新增
+        <button @click="addItineraryItem(1)" class="flex-shrink-0 bg-primary text-white px-5 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-200 hover:shadow-xl transition active:scale-95 flex items-center gap-2">
+          <i class="ri-add-circle-fill text-lg"></i>新增 Day 1
         </button>
         <button @click="showBatchImport = !showBatchImport" class="flex-shrink-0 bg-white text-slate-600 px-5 py-3 rounded-2xl text-sm font-bold shadow-sm border border-slate-100 flex items-center gap-2">
-          <i class="ri-file-list-3-line text-lg"></i>批次
+          <i class="ri-file-list-3-line text-lg"></i>批次匯入
         </button>
         <button @click="forceUpdateMap" class="flex-shrink-0 bg-white text-slate-600 px-5 py-3 rounded-2xl text-sm font-bold shadow-sm border border-slate-100 flex items-center gap-2">
-          <i class="ri-map-2-line text-lg"></i>刷新
+          <i class="ri-map-2-line text-lg"></i>刷新地圖
         </button>
       </div>
 
       <div v-if="showBatchImport" class="glass-card p-4 mb-4 animate-slide-up">
-        <textarea v-model="batchImportText" placeholder="貼上地點清單 (格式: 時間,活動,地點)..." class="w-full h-32 p-3 rounded-xl bg-slate-50 border-0 text-sm mb-3 focus:ring-2 ring-primary/50"></textarea>
+        <textarea v-model="batchImportText" placeholder="貼上地點清單 (格式: Day,時間,活動,地點)... 例如: 1,10:00,午餐,築地市場" class="w-full h-32 p-3 rounded-xl bg-slate-50 border-0 text-sm mb-3 focus:ring-2 ring-primary/50"></textarea>
         <button @click="runBatchImport" class="w-full bg-secondary text-white py-2 rounded-xl font-medium">開始匯入</button>
       </div>
 
@@ -223,20 +227,39 @@
       </div>
 
       <div class="pb-24 space-y-8">
-        <div v-for="(group, dayIdx) in groupedItinerary" :key="dayIdx" class="glass-card p-1">
-          <div class="bg-slate-50/50 p-4 rounded-t-[22px] border-b border-slate-100 flex justify-between items-center">
-             <span class="bg-primary text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md shadow-primary/30">Day {{ dayIdx + 1 }}</span>
-             <span class="text-xs text-slate-400 font-bold tracking-wider">{{ group.length }} 個景點</span>
+        <div v-for="(group, dayIndex) in groupedItinerary" :key="dayIndex" class="glass-card p-1">
+          <div 
+             @click="toggleDayCollapse(dayIndex)"
+             class="bg-slate-50/50 p-4 rounded-t-[22px] border-b border-slate-100 flex justify-between items-center cursor-pointer hover:bg-slate-100 transition">
+             <div class="flex items-center gap-3">
+                <span class="bg-primary text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md shadow-primary/30">
+                    Day {{ dayIndex + 1 }}
+                </span>
+                <span v-if="!isDayCollapsed[dayIndex]" class="text-xs text-primary font-bold">展開</span>
+                <span v-else class="text-xs text-slate-400 font-bold">收合</span>
+             </div>
+             <div class="text-right">
+                <span class="text-xs text-slate-400 font-bold tracking-wider">{{ group.items.length }} 個景點</span>
+                <i :class="['ri-arrow-down-s-line ml-2 text-lg transition-transform', {'rotate-180': !isDayCollapsed[dayIndex]}]"></i>
+             </div>
           </div>
-          <div class="p-4 space-y-6">
-            <div v-for="(item, idx) in group" :key="item.id" class="relative pl-6 border-l-2 border-slate-200">
+          
+          <div v-show="!isDayCollapsed[dayIndex]" class="p-4 space-y-6 animate-fade-in">
+            <div v-if="group.items.length === 0" class="text-center py-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <p class="text-sm text-slate-400 mb-3">此日暫無行程</p>
+                <button @click="addItineraryItem(dayIndex + 1)" class="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full hover:bg-primary/20 transition">
+                    <i class="ri-add-line"></i> 新增 Day {{ dayIndex + 1 }} 第一站
+                </button>
+            </div>
+
+            <div v-for="(item, idx) in group.items" :key="item.id" class="relative pl-6 border-l-2 border-slate-200">
               <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-4 border-slate-300"></div>
               <div class="flex justify-between items-start mb-1">
-                <input v-model="item.time" type="time" class="bg-transparent font-bold text-xl text-slate-700 w-24 p-0 border-0 focus:ring-0">
+                <input v-model="item.time" type="time" @change="saveData" class="bg-transparent font-bold text-xl text-slate-700 w-24 p-0 border-0 focus:ring-0">
                 <button @click="removeItineraryItem(item.id)" class="text-slate-300 hover:text-red-400"><i class="ri-close-circle-fill text-xl"></i></button>
               </div>
-              <input v-model="item.location" @change="updateMapMarkers" placeholder="地點名稱" class="w-full font-bold text-lg text-slate-800 bg-transparent mb-1 border-0 border-b border-transparent focus:border-primary focus:ring-0 placeholder-slate-300 p-0 transition">
-              <input v-model="item.activity" placeholder="備註 / 活動" class="w-full text-sm text-slate-500 bg-transparent mb-3 border-0 focus:ring-0 p-0">
+              <input v-model="item.location" @change="saveData(); updateMapMarkers();" placeholder="地點名稱" class="w-full font-bold text-lg text-slate-800 bg-transparent mb-1 border-0 border-b border-transparent focus:border-primary focus:ring-0 placeholder-slate-300 p-0 transition">
+              <input v-model="item.activity" @change="saveData" placeholder="備註 / 活動" class="w-full text-sm text-slate-500 bg-transparent mb-3 border-0 focus:ring-0 p-0">
               <div class="flex gap-2">
                 <button @click="openGoogleMaps(item.location)" class="flex-1 bg-white border border-slate-200 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition flex items-center justify-center gap-1">
                   <i class="ri-google-fill text-red-500"></i> Map
@@ -249,7 +272,7 @@
           </div>
         </div>
       </div>
-    </section>
+      </section>
 
     <section v-if="activeTab === 'shopping' && activeTrip" class="animate-fade-in">
       <div class="glass-card p-5 mb-6">
@@ -472,9 +495,11 @@
         showBatchImport: false,
         batchImportText: '',
         
-        // 確保 Expense 和 Itinerary 都有 ID
         newExpense: { id: null, name: '', amount: null, method: '現金', category: '飲食' },
         newShoppingItem: { name: '', onlinePrice: '', localPrice: '', bought: false, image: '' },
+        
+        // 🎯 新增: Day Collapse 狀態
+        isDayCollapsed: [], 
 
         tabs: [
           { id: 'info', label: 'Trip Info', icon: 'ri-information-line' },
@@ -487,16 +512,53 @@
     },
     computed: {
       activeTrip() { return this.trips.find(t => t.id === this.activeTripId) || null; },
+      
+      // 🎯 新增: 計算總天數
+      totalDays() {
+          if (!this.activeTrip || !this.activeTrip.startDate || !this.activeTrip.endDate) return 1;
+          const start = new Date(this.activeTrip.startDate);
+          const end = new Date(this.activeTrip.endDate);
+          // 加 1 是因為頭尾兩天都算在內
+          const diffTime = Math.abs(end - start);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+          return diffDays > 0 ? diffDays : 1;
+      },
+
+      // 🎯 關鍵修改: 依據天數分組行程
       groupedItinerary() {
         if (!this.activeTrip) return [];
-        const size = 5; 
-        const result = [];
-        for (let i = 0; i < this.activeTrip.itinerary.length; i += size) {
-          result.push(this.activeTrip.itinerary.slice(i, i + size));
+        
+        // 1. 初始化一個包含所有天數的陣列
+        const days = Array.from({ length: this.totalDays }, (_, i) => ({ day: i + 1, items: [] }));
+        
+        // 2. 將現有的行程項目按 Day 屬性分組
+        this.activeTrip.itinerary
+            .sort((a, b) => (a.day || 1) - (b.day || 1)) // 按 Day 排序
+            .forEach(item => {
+                const dayIndex = (item.day || 1) - 1; 
+                if (days[dayIndex]) {
+                    days[dayIndex].items.push(item);
+                }
+            });
+            
+        // 3. 確保每個 Day 內的項目按時間排序
+        days.forEach(day => {
+             day.items.sort((a, b) => {
+                 // 處理時間比較，將 time (e.g. "10:00") 轉為數字進行比較
+                 const timeA = a.time ? a.time.replace(':', '') : '9999';
+                 const timeB = b.time ? b.time.replace(':', '') : '9999';
+                 return timeA - timeB;
+             });
+        });
+        
+        // 🎯 確保 isDayCollapsed 陣列長度與天數一致，並設定 Day 1 預設展開
+        if (this.isDayCollapsed.length !== this.totalDays) {
+            this.isDayCollapsed = Array(this.totalDays).fill(true);
+            this.isDayCollapsed[0] = false; // Day 1 預設展開
         }
-        return result;
+
+        return days;
       },
-      // 總花費計算 (用於 info/history 頁面)
       totalExpensesHKD() {
         if (!this.activeTrip) return 0;
         return this.calculateTripTotal(this.activeTrip);
@@ -516,34 +578,46 @@
       },
       activeTripId() {
         this.fetchWeather();
+        // 重設收合狀態
+        this.isDayCollapsed = Array(this.totalDays).fill(true);
+        this.isDayCollapsed[0] = false;
       }
     },
     mounted() {
       this.loadData();
     },
     methods: {
+      // 🎯 新增: 切換 Day Collapse 狀態
+      toggleDayCollapse(dayIndex) {
+        // 使用 $set 或 Vue.set (在 Vue 2 中) 或直接替換陣列（在 Vue 3 中，如我們這裡）來確保響應性
+        const newCollapsed = [...this.isDayCollapsed];
+        newCollapsed[dayIndex] = !newCollapsed[dayIndex];
+        this.isDayCollapsed = newCollapsed;
+      },
+
       saveData() { localStorage.setItem('christine_diary_v4', JSON.stringify(this.trips)); },
       loadData() {
         const saved = localStorage.getItem('christine_diary_v4');
         if (saved) {
           const parsedTrips = JSON.parse(saved).map(trip => {
-              // 確保所有行程和費用項目都有 ID
               if (trip.expenses && trip.expenses.every(exp => !exp.id)) {
                   trip.expenses = trip.expenses.map(exp => ({ id: Date.now() + Math.random(), ...exp }));
               }
-              if (trip.itinerary && trip.itinerary.every(item => !item.id)) {
-                  trip.itinerary = trip.itinerary.map(item => ({ id: Date.now() + Math.random(), ...item }));
+              // 🎯 確保行程項目有 Day 屬性 (預設 Day 1)
+              if (trip.itinerary) {
+                  trip.itinerary = trip.itinerary.map(item => ({ id: Date.now() + Math.random(), day: 1, ...item }));
               }
               return trip;
           });
           this.trips = parsedTrips;
         } else {
-          const defaultItinerary = [{ id: Date.now(), time: '10:00', activity: '到達機場', location: 'Narita Airport' }];
+          // 🎯 初始化時加入 Day 屬性
+          const defaultItinerary = [{ id: Date.now(), day: 1, time: '10:00', activity: '到達機場', location: 'Narita Airport' }];
           this.trips = [{
             id: Date.now(), title: 'Japan Trip', destination: 'Japan', city: 'Tokyo', currency: 'JPY',
-            startDate: '2025-12-24', endDate: '2026-01-01',
+            startDate: '2025-12-24', endDate: '2025-12-28', // 設定為 5 天
             center: { lat: 35.6895, lng: 139.6917 }, exchangeRate: 19.2,
-            flights: { outbound: { no: 'CX500', date: '2025-12-24' }, inbound: { no: 'CX501', date: '2026-01-01' } },
+            flights: { outbound: { no: 'CX500', date: '2025-12-24' }, inbound: { no: 'CX501', date: '2025-12-28' } },
             itinerary: defaultItinerary, 
             expenses: [], shoppingItems: []
           }];
@@ -560,28 +634,23 @@
         return trip.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       },
       
-      // === 核心 API 功能 (與上次提供給您的版本一致) ===
+      // === API 功能 (保持不變) ===
       async autoGeocode() {
         if (!this.tempTrip.city) return alert('請先輸入城市名稱 (City)');
         
         try {
           const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${this.tempTrip.city},${this.tempTrip.destination || ''}&addressdetails=1&limit=1`);
           const geoData = await geoRes.json();
-          
           if (!geoData || geoData.length === 0) {
             return alert('找不到該城市，請檢查拼字。');
           }
-
           const location = geoData[0];
           this.tempTrip.center = { lat: parseFloat(location.lat), lng: parseFloat(location.lon) };
-          
           if(location.address && location.address.country) {
              this.tempTrip.destination = location.address.country;
           }
-
           let currencyCode = 'USD';
           const countryCode = location.address?.country_code?.toUpperCase(); 
-
           if (countryCode) {
             try {
               const countryRes = await fetch(`https://restcountries.com/v3.1/alpha/${countryCode}`);
@@ -592,7 +661,6 @@
               }
             } catch (err) { console.error("Currency fetch fail", err); }
           }
-          
           try {
              const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
              const rateData = await rateRes.json();
@@ -600,9 +668,7 @@
                 this.tempTrip.exchangeRate = rateData.rates[currencyCode];
              }
           } catch (err) { console.error("Rate fetch fail", err); }
-
           alert(`成功！\n座標: ${location.lat}, ${location.lon}\n國家: ${this.tempTrip.destination}\n貨幣: ${currencyCode}\n匯率: 1 HKD ≈ ${this.tempTrip.exchangeRate.toFixed(2)} ${currencyCode}`);
-
         } catch (e) {
           console.error(e);
           alert('自動取得失敗，請稍後再試。');
@@ -616,7 +682,6 @@
         try {
           const res = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}&flight_date=${flight.date}`);
           const data = await res.json();
-          
           if (data.data && data.data.length > 0) {
             const f = data.data[0]; 
             flight.from = f.departure.iata;
@@ -664,7 +729,7 @@
         }
       },
 
-      // === 記帳功能 (與上次提供給您的版本一致) ===
+      // === 記帳功能 (保持不變) ===
       addExpense() {
         if(!this.newExpense.name || !this.newExpense.amount) return;
         const d = new Date();
@@ -686,7 +751,7 @@
         }
       },
       
-      // === 購物功能 (與上次提供給您的版本一致) ===
+      // === 購物功能 (保持不變) ===
       handleImageUpload(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -706,7 +771,7 @@
         this.saveData();
       },
 
-      // === 地圖/行程功能 (已新增/修正) ===
+      // === 地圖/行程功能 (已更新/修正) ===
       openGoogleMaps(loc) { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`); },
       openDirections(loc) { window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc)}`); },
 
@@ -724,16 +789,13 @@
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(this.map);
           this.mapMarkers.clearLayers();
           this.mapMarkers.addTo(this.map);
-
           this.updateMapMarkers(); 
-
           setTimeout(() => { this.map.invalidateSize(); }, 100);
         } catch (e) { console.error("Map init fail", e); }
       },
       
       async geocodeLocation(location) {
           if (GeocodingCache[location]) return GeocodingCache[location];
-
           try {
               const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`);
               const data = await res.json();
@@ -755,7 +817,16 @@
           if (!this.map || !this.activeTrip?.itinerary) return;
           this.mapMarkers.clearLayers();
           
-          const markersPromises = this.activeTrip.itinerary
+          // 確保行程按 Day 和 Time 排序，以便地圖標記編號正確
+          const orderedItinerary = [...this.activeTrip.itinerary].sort((a, b) => {
+              const dayDiff = (a.day || 1) - (b.day || 1);
+              if (dayDiff !== 0) return dayDiff;
+              const timeA = a.time ? a.time.replace(':', '') : '9999';
+              const timeB = b.time ? b.time.replace(':', '') : '9999';
+              return timeA - timeB;
+          });
+          
+          const markersPromises = orderedItinerary
               .filter(item => item.location)
               .map(async (item, index) => {
                   const coords = await this.geocodeLocation(item.location + ', ' + this.activeTrip.city);
@@ -763,11 +834,12 @@
                   const marker = L.marker([coords.lat, coords.lng], {
                       icon: L.divIcon({
                           className: 'custom-div-icon',
+                          // 🎯 這裡的 index 是總順序，不是 Day 內的順序
                           html: `<div style="background-color:#97CBFF; color:white; border-radius:50%; width:24px; height:24px; line-height:24px; text-align:center; font-weight:bold;">${index + 1}</div>`,
                           iconSize: [24, 24],
                           iconAnchor: [12, 12]
                       })
-                  }).bindPopup(`<b>${item.location}</b><br>${item.activity}`);
+                  }).bindPopup(`<b>Day ${item.day || 1} - ${item.location}</b><br>${item.activity}`);
                   return marker;
               });
 
@@ -781,13 +853,19 @@
           }
       },
       
-      addItineraryItem() { 
-          this.activeTrip.itinerary.push({ id: Date.now() + Math.random(), time: '10:00', activity: '', location: '' }); 
+      // 🎯 更新: addItineraryItem 接受 Day 參數
+      addItineraryItem(day) { 
+          this.activeTrip.itinerary.push({ 
+              id: Date.now() + Math.random(), 
+              day: day, // 指定 Day
+              time: '10:00', 
+              activity: '', 
+              location: '' 
+          }); 
           this.saveData(); 
           this.forceUpdateMap();
       },
       
-      // 🎯 重新加入: 刪除行程項目
       removeItineraryItem(itemId) { 
           if(confirm('確認刪除此行程項目嗎？')) {
               const index = this.activeTrip.itinerary.findIndex(item => item.id === itemId);
@@ -799,18 +877,20 @@
           }
       },
       
-      // 🎯 重新加入: 批次匯入行程
+      // 🎯 更新: runBatchImport 處理 Day 屬性
       runBatchImport() {
         if(!this.batchImportText) return alert('請貼上內容');
         const lines = this.batchImportText.split('\n').filter(line => line.trim() !== '');
         
         const newItems = lines.map(line => {
             const parts = line.split(',');
+            const dayNum = parseInt(parts[0]) || 1; // 確保 Day 屬性
             return {
                 id: Date.now() + Math.random(), 
-                time: parts[0] ? parts[0].trim() : 'N/A',
-                activity: parts[1] ? parts[1].trim() : '活動',
-                location: parts[2] ? parts[2].trim() : ''
+                day: dayNum > this.totalDays ? this.totalDays : dayNum, // 限制 Day 數
+                time: parts[1] ? parts[1].trim() : 'N/A',
+                activity: parts[2] ? parts[2].trim() : '活動',
+                location: parts[3] ? parts[3].trim() : ''
             };
         });
         
@@ -823,7 +903,7 @@
       },
 
 
-      // === 旅程管理功能 (與上次提供給您的版本一致) ===
+      // === 旅程管理功能 (保持不變) ===
       openNewTripModal() { 
         this.editingTripId = null; 
         this.tempTrip = {
@@ -839,7 +919,6 @@
         if (!this.tempTrip.title) return;
         if (this.editingTripId) {
           const idx = this.trips.findIndex(t => t.id === this.editingTripId);
-          // 保留 itinerary/expenses/shoppingItems 的數據結構
           this.trips[idx] = { ...this.trips[idx], ...this.tempTrip };
         } else {
           const center = this.tempTrip.center || {lat:35.6, lng:139.6};
@@ -857,6 +936,10 @@
         }
         this.saveData();
         this.showTripModal = false;
+        
+        // 🎯 重新計算天數和收合狀態
+        this.isDayCollapsed = Array(this.totalDays).fill(true);
+        this.isDayCollapsed[0] = false;
       },
       deleteTrip(id) {
         if(this.trips.length<=1) return alert('不能刪除最後一個旅程');
@@ -866,7 +949,15 @@
           this.saveData();
         }
       },
-      switchTrip(id) { this.activeTripId = id; this.activeTab = 'info'; },
+      switchTrip(id) { 
+        this.activeTripId = id; 
+        this.activeTab = 'info'; 
+        // 🎯 切換旅程時，重設收合狀態
+        this.$nextTick(() => {
+            this.isDayCollapsed = Array(this.totalDays).fill(true);
+            this.isDayCollapsed[0] = false;
+        });
+      },
     }
   }).mount('#app');
 </script>
