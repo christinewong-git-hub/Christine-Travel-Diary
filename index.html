@@ -309,8 +309,7 @@
                         activeBudgetDay === dayIndex 
                           ? 'bg-primary text-white shadow-primary/30' 
                           : 'bg-white text-slate-600 border border-slate-100']">
-                Day {{ dayIndex }} ({{ calculateDayTotal(dayIndex).toFixed(0) }} HKD)
-              </button>
+                Day {{ dayIndex }} </button>
           </div>
       </div>
       <div class="glass-card p-6 mb-6 text-center">
@@ -356,7 +355,7 @@
         </div>
 
         <select v-model="newExpense.category" class="w-full p-3 rounded-xl bg-slate-50 border-0 mb-4 text-sm text-slate-600">
-            <option>飲食</option>
+            <option>旅行前</option> <option>飲食</option>
             <option>購物</option>
             <option>交通</option>
             <option>娛樂</option>
@@ -387,7 +386,7 @@
         <div v-for="(exp, idx) in filteredExpenses" :key="exp.id" class="glass-card p-4 mb-3 flex justify-between items-center animate-fade-in">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xl">
-              <i v-if="exp.category === '飲食'" class="ri-restaurant-line text-orange-400"></i>
+              <i v-if="exp.category === '旅行前'" class="ri-luggage-cart-line text-purple-400"></i> <i v-else-if="exp.category === '飲食'" class="ri-restaurant-line text-orange-400"></i>
               <i v-else-if="exp.category === '購物'" class="ri-shopping-bag-line text-pink-400"></i>
               <i v-else-if="exp.category === '交通'" class="ri-bus-line text-blue-400"></i>
               <i v-else class="ri-money-dollar-circle-line text-green-400"></i>
@@ -582,7 +581,7 @@
           localAmount: null, 
           amount: null,      
           method: '現金', 
-          category: '飲食',
+          category: '旅行前', // ✨ 預設為旅行前
           day: 1, 
         },
         inputCurrency: '', 
@@ -715,6 +714,7 @@
         if (this.activeTrip) {
             this.inputCurrency = this.activeTrip.currency; 
             this.newExpense.day = 1; 
+            this.newExpense.category = '旅行前'; // ✨ 切換旅程時，重設分類預設值
         }
         this.updateChart(); 
       },
@@ -738,6 +738,7 @@
       if (this.activeTrip) {
           this.inputCurrency = this.activeTrip.currency;
           this.newExpense.day = 1;
+          this.newExpense.category = '旅行前'; // ✨ 初始化分類預設值
       }
     },
     methods: {
@@ -780,7 +781,7 @@
             center: { lat: 35.6895, lng: 139.6917 }, exchangeRate: 19.2,
             flights: { outbound: { no: 'CX500', date: '2025-12-24' }, inbound: { no: 'CX501', date: '2025-12-28' } },
             itinerary: defaultItinerary, 
-            expenses: [{ id: Date.now()+1, name: '機票', amount: 3500, method: '信用卡', category: '其他', date: '12/10', day: 1, localAmount: 67200 }], // 預設 Day 1
+            expenses: [{ id: Date.now()+1, name: '機票', amount: 3500, method: '信用卡', category: '旅行前', date: '12/10', day: 1, localAmount: 67200 }], // ✨ 預設 Day 1, 類別為「旅行前」
             shoppingItems: []
           }];
           this.saveData();
@@ -797,7 +798,7 @@
         return trip.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       },
       
-      // 🎯 計算特定 Day 的總花費 (用於 Day 篩選按鈕)
+      // 🎯 計算特定 Day 的總花費 (用於 Day 篩選按鈕，但現在 Day X 按鈕已不顯示此值)
       calculateDayTotal(dayIndex) {
           if (!this.activeTrip || !this.activeTrip.expenses) return 0;
           return this.activeTrip.expenses
@@ -900,13 +901,18 @@
         }
       },
 
-      // === 記帳功能 (已更新 Day X 邏輯) ===
+      // === 記帳功能 (已更新 Day X 邏輯和分類) ===
       addExpense() {
         if(!this.newExpense.name || !this.newExpense.localAmount || this.finalHKDAmount === 0) {
             return alert('請輸入消費項目和有效的金額');
         }
-        if(!this.newExpense.day || this.newExpense.day > this.totalDays || this.newExpense.day < 1) {
+        
+        // 只有非「旅行前」的消費需要設定 Day
+        if(this.newExpense.category !== '旅行前' && 
+           (!this.newExpense.day || this.newExpense.day > this.totalDays || this.newExpense.day < 1)) {
             this.newExpense.day = this.activeDay;
+        } else if (this.newExpense.category === '旅行前') {
+            this.newExpense.day = 0; // 旅行前消費 Day 設為 0
         }
 
         const d = new Date();
@@ -921,7 +927,7 @@
             category: this.newExpense.category,
             localAmount: this.newExpense.localAmount, 
             date: `${d.getMonth()+1}/${d.getDate()}`,
-            day: this.newExpense.day, // 儲存 Day X
+            day: this.newExpense.day, // 儲存 Day X 或 0
         });
         
         // 重置輸入欄位
@@ -930,8 +936,8 @@
             localAmount:null, 
             amount:null, 
             method:'現金', 
-            category:'飲食',
-            day: this.activeDay // 重置時，預設為行程頁面的 activeDay
+            category:'旅行前', // ✨ 重置時，預設為「旅行前」
+            day: this.activeDay // 重置時，預設 Day X
         };
         this.inputCurrency = this.activeTrip.currency; 
         this.saveData();
@@ -964,7 +970,7 @@
           
           // 2. 轉換資料
           const rows = expensesToExport.map(exp => [
-              exp.day || 1, // Day X
+              exp.day === 0 ? '旅行前' : exp.day || 1, // 顯示 Day X 或 旅行前
               exp.date || '',
               exp.name || '',
               exp.category || '',
@@ -1007,6 +1013,7 @@
           if (!ctx) return;
 
           const colors = [
+              '#8A2BE2', // ✨ 紫色 - 旅行前
               '#97CBFF', // primary
               '#FFD9EC', // Pinkish
               '#C7C7E2', // Secondary
@@ -1014,12 +1021,27 @@
               '#F5E6CC', // Light Yellow
               '#DDDDFF', // Light Purple
           ];
+          
+          // 調整顏色映射，確保「旅行前」使用指定的顏色
+          const categoryColors = {
+              '旅行前': '#8A2BE2', 
+              '飲食': '#FFD9EC', 
+              '購物': '#C7C7E2', 
+              '交通': '#97CBFF',
+              '娛樂': '#A4D8B9', 
+              '其他': '#F5E6CC',
+          };
+          
+          const backgroundColors = summary.labels.map(label => 
+              categoryColors[label] || colors[summary.labels.indexOf(label) % colors.length]
+          );
+
 
           const chartData = {
               labels: summary.labels,
               datasets: [{
                   data: summary.data,
-                  backgroundColor: summary.labels.map((_, i) => colors[i % colors.length]),
+                  backgroundColor: backgroundColors,
                   hoverOffset: 10,
                   borderWidth: 0,
               }]
@@ -1272,6 +1294,7 @@
         this.$nextTick(() => {
             this.activeDay = 1;
             this.newExpense.day = 1; 
+            this.newExpense.category = '旅行前'; // ✨ 新旅程預設分類
             this.activeBudgetDay = 0; // 新旅程，預設 Budget Day 為 All
             this.updateChart();
         });
@@ -1290,6 +1313,7 @@
         this.$nextTick(() => {
             this.activeDay = 1;
             this.newExpense.day = 1; 
+            this.newExpense.category = '旅行前'; // ✨ 切換旅程預設分類
             this.activeBudgetDay = 0; // 切換旅程，預設 Budget Day 為 All
             this.updateChart();
         });
