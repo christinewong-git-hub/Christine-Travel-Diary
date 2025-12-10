@@ -72,7 +72,6 @@
       border: 2px solid #B0E0E6;
     }
 
-    /* 隱藏地圖和航班相關樣式以簡化 */
     .flight-sky { background: linear-gradient(180deg, #C4E1FF 0%, #D6EFFF 100%); position: relative; overflow: hidden; }
     #map { height: 350px; width: 100%; border-radius: 16px; z-index: 0; position: relative; }
     .capsule-tab { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); box-shadow: 0 -10px 40px rgba(0,0,0,0.1); z-index: 999; }
@@ -96,12 +95,76 @@
   <main class="pt-24 px-4 max-w-3xl mx-auto pb-8">
     
     <section v-if="activeTab === 'info' && activeTrip" class="animate-fade-in space-y-5">
-        <div class="glass-card p-6 shadow-xl flight-sky">
-            <h2 class="text-2xl font-black text-slate-700 mb-2">{{ activeTrip.title }}</h2>
-            <p class="text-sm text-slate-500 mb-4">{{ activeTrip.startDate }} ~ {{ activeTrip.endDate }}</p>
-            <div class="flex items-center justify-between p-4 bg-white/70 rounded-xl shadow-md backdrop-blur">
-                <p class="font-bold text-lg text-primary">Info Section Placeholder</p>
-                <i class="ri-heart-line text-2xl text-red-400"></i>
+        
+        <div :class="['glass-card p-6 shadow-xl relative overflow-hidden transition-all duration-700', 'weather-' + weatherTheme]">
+          
+          <div class="absolute top-0 right-0 p-4 text-center">
+            <i v-if="weatherTheme === 'sunny'" class="ri-sun-fill text-yellow-500 text-5xl"></i>
+            <i v-else-if="weatherTheme === 'cloudy'" class="ri-cloudy-2-fill text-slate-500 text-5xl"></i>
+            <i v-else class="ri-rainy-line text-blue-500 text-5xl"></i>
+            <p class="font-bold text-lg mt-1 text-slate-700">{{ weatherData?.temperature || '--' }}°C</p>
+          </div>
+
+          <h2 class="text-2xl font-black text-slate-700 mb-2">{{ activeTrip.title }}</h2>
+          <p class="text-sm text-slate-500 mb-4">{{ activeTrip.startDate }} ~ {{ activeTrip.endDate }}</p>
+          
+          <div class="p-4 bg-white/70 rounded-xl shadow-md backdrop-blur">
+            <p class="text-xs text-slate-400 mb-1 uppercase tracking-widest">當前天氣</p>
+            <div class="flex items-center justify-between">
+              <span class="text-lg font-bold text-slate-700">{{ activeTrip.city || 'N/A' }}：{{ weatherDesc }}</span>
+              <button @click="fetchWeather" class="text-xs text-primary font-bold hover:underline">
+                <i class="ri-refresh-line"></i> 更新
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="glass-card p-6 space-y-5">
+          <h3 class="font-bold mb-4 text-slate-700 flex items-center gap-2"><i class="ri-plane-line text-primary"></i> 航班</h3>
+          
+          <div class="space-y-3">
+            <p class="font-bold text-md text-slate-600 border-b pb-1">去程航班</p>
+            <div v-if="activeTrip.flights?.outbound?.number" class="space-y-2">
+                <div class="flex gap-2">
+                    <input v-model="activeTrip.flights.outbound.number" placeholder="航班號 (e.g., CX500)" class="flex-1 p-2 rounded-lg bg-slate-50 text-sm">
+                    <button @click="fetchFlight('outbound')" class="bg-primary text-white px-4 py-2 rounded-lg text-sm hover:opacity-80">查詢</button>
+                </div>
+                <div class="text-sm text-slate-600">
+                    <p class="font-medium">起飛: {{ activeTrip.flights.outbound.departure ? activeTrip.flights.outbound.departure.split('T')[1].slice(0, 5) : '--' }}</p>
+                    <p class="font-medium">抵達: {{ activeTrip.flights.outbound.arrival ? activeTrip.flights.outbound.arrival.split('T')[1].slice(0, 5) : '--' }}</p>
+                    <span class="text-xs text-primary font-bold">狀態: {{ activeTrip.flights.outbound.status || 'N/A' }}</span>
+                </div>
+            </div>
+            <div v-else>
+                <button @click="addFlight('outbound')" class="w-full text-center text-slate-400 border border-dashed py-2 rounded-lg hover:bg-slate-50">新增去程航班</button>
+            </div>
+          </div>
+
+          <div class="space-y-3 pt-4 border-t">
+            <p class="font-bold text-md text-slate-600 border-b pb-1">回程航班</p>
+             <div v-if="activeTrip.flights?.inbound?.number" class="space-y-2">
+                <div class="flex gap-2">
+                    <input v-model="activeTrip.flights.inbound.number" placeholder="航班號 (e.g., CX501)" class="flex-1 p-2 rounded-lg bg-slate-50 text-sm">
+                    <button @click="fetchFlight('inbound')" class="bg-primary text-white px-4 py-2 rounded-lg text-sm hover:opacity-80">查詢</button>
+                </div>
+                <div class="text-sm text-slate-600">
+                    <p class="font-medium">起飛: {{ activeTrip.flights.inbound.departure ? activeTrip.flights.inbound.departure.split('T')[1].slice(0, 5) : '--' }}</p>
+                    <p class="font-medium">抵達: {{ activeTrip.flights.inbound.arrival ? activeTrip.flights.inbound.arrival.split('T')[1].slice(0, 5) : '--' }}</p>
+                    <span class="text-xs text-primary font-bold">狀態: {{ activeTrip.flights.inbound.status || 'N/A' }}</span>
+                </div>
+            </div>
+             <div v-else>
+                <button @click="addFlight('inbound')" class="w-full text-center text-slate-400 border border-dashed py-2 rounded-lg hover:bg-slate-50">新增回程航班</button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="glass-card p-4 text-center">
+            <p class="text-xs text-slate-400 mb-1 uppercase tracking-wide">實時匯率</p>
+            <div class="flex items-center justify-center gap-2 text-2xl font-bold text-slate-700">
+                <span class="text-base text-slate-400 self-end mb-1">1 HKD ≈</span>
+                <span class="text-primary">{{ activeTrip.exchangeRate || '--' }}</span>
+                <span class="text-xl self-end mb-1">{{ activeTrip.currency }}</span>
             </div>
         </div>
     </section>
@@ -328,6 +391,7 @@
 
 <script>
   const { createApp } = Vue;
+  // 注意：此 API Key 僅為範例，且在真實環境中不應公開。
   const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; 
   
   const app = createApp({
@@ -384,6 +448,7 @@
       weatherDesc() {
         if (!this.weatherData) return 'Loading...';
         const code = this.weatherData.weathercode;
+        // 簡易天氣代碼映射
         const map = { 0:'晴朗 Sunny', 1:'多雲 Cloudy', 2:'陰天 Overcast', 3:'毛毛雨 Drizzle', 61:'雨 Rain', 80:'陣雨 Showers' };
         return map[code] || '多雲 Cloudy';
       },
@@ -421,7 +486,6 @@
     watch: {
       activeTab(newTab) {
         if (newTab === 'itinerary-map') {
-          // Leaflet Map requires a delay after its container is made visible
           setTimeout(() => this.forceUpdateMap(), 300);
         } else if (newTab === 'budget') {
           this.$nextTick(() => { this.initExpenseChart(); });
@@ -457,7 +521,7 @@
             id: Date.now(), title: 'Japan Trip 2026', destination: 'Japan', city: 'Tokyo', currency: 'JPY',
             startDate: '2026-01-01', endDate: '2026-01-08',
             center: { lat: 35.6895, lng: 139.6917 }, exchangeRate: 19.2,
-            flights: { outbound: {}, inbound: {} },
+            flights: { outbound: { number: 'CX500', departure: '2026-01-01T09:00:00Z', arrival: '2026-01-01T14:30:00Z', status: 'ON TIME' }, inbound: {} },
             itinerary: [], expenses: [{ name: 'Lunch', amount: 50, method: '現金', category: '飲食' }], shoppingItems: [{name: 'Souvenir', bought: false, id: Date.now()}]
           }];
           this.saveData();
@@ -466,33 +530,79 @@
             if (trip.shoppingItems) {
                 trip.shoppingItems = trip.shoppingItems.map(item => ({ ...item, id: item.id || Date.now() + Math.random() }));
             }
+            if (!trip.flights) {
+                trip.flights = { outbound: {}, inbound: {} };
+            }
         });
 
         this.activeTripId = this.trips[0].id;
         this.fetchWeather();
       },
       
-      // 🚨 CRITICAL: Placeholder methods to prevent 'undefined' errors 🚨
+      // 🛫 航班相關方法
+      addFlight(type) {
+        // 確保 flights 結構存在
+        if (!this.activeTrip.flights) {
+             this.activeTrip.flights = { outbound: {}, inbound: {} };
+        }
+        if (type === 'outbound') {
+            this.activeTrip.flights.outbound = { number: '', departure: '', arrival: '', gate: '', status: '' };
+        } else {
+            this.activeTrip.flights.inbound = { number: '', departure: '', 'arrival': '', gate: '', status: '' };
+        }
+        this.saveData();
+      },
+
+      async fetchFlight(type) {
+          const flightNumber = this.activeTrip.flights[type]?.number;
+          if (!flightNumber) return;
+
+          try {
+              // 由於 AviationStack API 限制，這裡使用 mock 數據以確保功能不崩潰
+              console.log(`Attempting to fetch flight ${flightNumber}...`);
+              
+              const mockFlight = {
+                  number: flightNumber,
+                  departure: '2026-01-01T09:00:00Z',
+                  arrival: '2026-01-01T14:30:00Z',
+                  gate: 'A15',
+                  status: 'ON TIME',
+              };
+
+              this.activeTrip.flights[type] = mockFlight;
+              this.saveData();
+              alert(`${type === 'outbound' ? '去程' : '回程'}航班資訊更新成功 (Mock Data)!`);
+          } catch (e) {
+              console.error("Flight fetch failed:", e);
+              alert('獲取航班資訊失敗 (Using Mock Logic)。');
+          }
+      },
+
+      // ☀️ 天氣和匯率方法
       async fetchWeather() { 
-        // Actual API call logic omitted for simplicity, but defined to avoid crash
-        console.log(`Fetching weather for ${this.activeTrip?.city}...`); 
-        this.weatherData = { temperature: 20, weathercode: 1 }; // Mock data
-        this.weatherTheme = 'cloudy';
+          // 這裡應該是調用真實的天氣 API
+          console.log(`Fetching weather for ${this.activeTrip?.city}...`); 
+          // 模擬數據
+          const weathercode = 1; // 1:多雲
+          this.weatherData = { temperature: 20, weathercode: weathercode, current: { time: Date.now() } }; 
+          
+          if (weathercode === 0) { this.weatherTheme = 'sunny'; } 
+          else if (weathercode <= 3) { this.weatherTheme = 'cloudy'; } 
+          else { this.weatherTheme = 'rainy'; }
       },
       async fetchRate() { 
-        // Actual API call logic omitted for simplicity
-        console.log("Fetching exchange rate..."); 
-        // No change to activeTrip.exchangeRate, just preventing crash
+          // 這裡應該是調用真實的匯率 API
+          console.log("Fetching exchange rate..."); 
       },
       autoGeocode() { 
-        // Placeholder for API call to determine currency/center/rate from city name
-        console.log("Running auto geocode (API calls would go here)..."); 
-        // Mock success
-        this.activeTrip.currency = this.activeTrip.currency || 'JPY';
-        this.activeTrip.exchangeRate = this.activeTrip.exchangeRate || 19.2;
+          // Placeholder for API call to determine currency/center/rate from city name
+          console.log("Running auto geocode (API calls would go here)..."); 
+          this.activeTrip.currency = this.activeTrip.currency || 'JPY';
+          this.activeTrip.exchangeRate = this.activeTrip.exchangeRate || 19.2;
+          this.saveData();
       },
       
-      // Leaflet Map Initialization
+      // 🗺️ 地圖初始化
       forceUpdateMap() {
           if (this.activeTab !== 'itinerary-map') return;
           try {
@@ -503,22 +613,20 @@
               
               const center = this.activeTrip.center ? [this.activeTrip.center.lat, this.activeTrip.center.lng] : [35.6895, 139.6917];
               
-              // Only create map if the container exists
+              // Only create map if the container is ready
               if (container._leaflet_id === undefined) {
                   this.map = L.map('map', { zoomControl: false }).setView(center, 13);
                   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(this.map);
                   L.marker(center).addTo(this.map).bindPopup(this.activeTrip.city).openPopup();
                   
-                  // Invalidate size is critical after v-if makes the container visible
                   setTimeout(() => { this.map.invalidateSize(); }, 50); 
               }
           } catch (e) { 
               console.error("Map initialization failed:", e); 
           }
       },
-      // openGoogleMaps, openDirections, runBatchImport, fetchFlight are also required but omitted for brevity.
       
-      // 購物相關方法
+      // 🛍️ 購物相關方法
       handleImageUpload(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -569,7 +677,6 @@
       switchTrip(id) { this.activeTripId = id; this.activeTab = 'info'; },
       addItineraryItem() { this.activeTrip.itinerary.push({ time: '10:00', activity: '', location: '' }); this.saveData(); },
       removeItineraryItem(dIdx, idx) { 
-        // This indexing logic is complex based on groupedItinerary, but kept for completeness
         this.activeTrip.itinerary.splice(dIdx*5+idx, 1); 
         this.saveData(); 
       },
@@ -586,7 +693,7 @@
          this.saveData();
       },
 
-      // Chart 和 Excel 方法
+      // 📊 Chart 和 Excel 方法
       initExpenseChart() {
         const ctx = document.getElementById('expenseChart')?.getContext('2d');
         if (!ctx) return;
