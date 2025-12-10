@@ -436,7 +436,8 @@
         </div>
       </div>
       </section>
-<section v-if="activeTab === 'shopping' && activeTrip" class="animate-fade-in">
+
+    <section v-if="activeTab === 'shopping' && activeTrip" class="animate-fade-in">
       <div class="glass-card p-5 mb-6">
         <h3 class="font-bold mb-4 flex items-center gap-2"><i class="ri-shopping-bag-3-line text-primary"></i> 新增購物項目</h3>
         <div class="flex gap-3 mb-3">
@@ -611,7 +612,7 @@
         newShoppingItem: { name: '', onlinePrice: '', localPrice: '', bought: false, image: '' },
         
         activeDay: 1, // 行程頁面專用
-        activeBudgetDay: null, // 🎯 修正點：預設為 null (所有消費)
+        activeBudgetDay: null, // 修正點：預設為 null (所有消費)
 
         tabs: [
           { id: 'info', label: 'Trip Info', icon: 'ri-information-line' },
@@ -659,7 +660,7 @@
         return days;
       },
       
-      // 🎯 已修復的 filteredExpenses 邏輯：確保篩選正確
+      // 🎯 最終修復的 filteredExpenses 邏輯：確保篩選正確
       filteredExpenses() {
           if (!this.activeTrip || !this.activeTrip.expenses) {
               return [];
@@ -678,7 +679,8 @@
           
           // Day X (1, 2, 3...) - 確保嚴格的數值比較
           if (typeof this.activeBudgetDay === 'number' && this.activeBudgetDay > 0) {
-              return expenses.filter(exp => exp.day === this.activeBudgetDay);
+              // 修正：使用 Number() 確保 exp.day 的數值正確性，再做嚴格比較
+              return expenses.filter(exp => (Number(exp.day) || 1) === this.activeBudgetDay);
           }
           
           return expenses; 
@@ -1003,14 +1005,14 @@
         });
         
         // 重置輸入欄位
+        // 🎯 修正後的重設邏輯：確保下次記帳的 Day 預設正確
         this.newExpense = { 
             name:'', 
             localAmount:null, 
             amount:null, 
             method:'現金', 
             category:'飲食', 
-            // 🎯 重置時，預設 Day 應跟隨當前篩選 Day，但如果篩選是 null，則預設為 Day 1
-            day: this.activeBudgetDay === null ? 1 : (this.activeBudgetDay === 0 ? 1 : this.activeBudgetDay) 
+            day: this.activeBudgetDay > 0 && this.activeBudgetDay <= this.totalDays ? this.activeBudgetDay : 1
         };
         this.inputCurrency = this.activeTrip.currency; 
         this.saveData();
