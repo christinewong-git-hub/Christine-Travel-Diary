@@ -260,12 +260,12 @@
                   </div>
                   <input v-model="item.location" @change="saveData(); updateMapMarkers();" placeholder="地點名稱" class="w-full font-bold text-lg text-slate-800 bg-transparent mb-1 border-0 border-b border-transparent focus:border-primary focus:ring-0 placeholder-slate-300 p-0 transition">
                   <input v-model="item.activity" @change="saveData" placeholder="備註 / 活動" class="w-full text-sm text-slate-500 bg-transparent mb-3 border-0 focus:ring-0 p-0">
+                  
+                  <input v-model="item.mapLink" @change="saveData" placeholder="貼上 Google Map URL (可選)" class="w-full text-xs text-slate-500 bg-slate-50 border-0 p-2 rounded-lg mb-2 focus:ring-1 ring-primary/50">
+
                   <div class="flex gap-2">
-                    <button @click="openGoogleMaps(item.location)" class="flex-1 bg-pink-50 border border-pink-100 py-2 rounded-xl text-xs font-bold text-pink-600 hover:bg-pink-100 transition flex items-center justify-center gap-1">
-                      <i class="ri-google-fill text-pink-500"></i> Map
-                    </button>
-                    <button @click="openDirections(item.location)" class="flex-1 bg-primary/10 py-2 rounded-xl text-xs font-bold text-primary hover:bg-primary/20 transition flex items-center justify-center gap-1">
-                      <i class="ri-direction-fill"></i> Route
+                    <button @click="openGoogleMaps(item)" class="flex-1 bg-primary/10 py-2 rounded-xl text-xs font-bold text-primary hover:bg-primary/20 transition flex items-center justify-center gap-1">
+                      <i class="ri-map-pin-line text-lg"></i> 前往地圖 (Map / Route)
                     </button>
                   </div>
                 </div>
@@ -358,7 +358,8 @@
             <select v-model="newExpense.method" class="w-1/3 p-3 rounded-xl bg-slate-50 border-0 text-sm text-slate-600">
               <option>現金</option>
               <option>信用卡</option>
-              <option>其他</option> </select>
+              <option>其他</option> 
+            </select>
         </div>
         
         <div v-if="finalHKDAmount > 0" class="text-sm text-slate-500 bg-blue-50/70 p-3 rounded-xl mb-3 flex justify-between items-center animate-fade-in border border-blue-100">
@@ -650,7 +651,7 @@
             .sort((a, b) => (a.day || 1) - (b.day || 1)) 
             .forEach(item => {
                 const dayIndex = (item.day || 1) - 1; 
-                if (days[dayIndex]) {
+                if (dayIndex >= 0 && dayIndex < days.length) { // 確保索引在範圍內
                     days[dayIndex].items.push(item);
                 }
             });
@@ -856,7 +857,12 @@
                   trip.expenses = [];
               }
               if (trip.itinerary) {
-                  trip.itinerary = trip.itinerary.map(item => ({ id: item.id || Date.now() + Math.random(), day: item.day || 1, ...item }));
+                  trip.itinerary = trip.itinerary.map(item => ({ 
+                      id: item.id || Date.now() + Math.random(), 
+                      day: item.day || 1, 
+                      mapLink: item.mapLink || '', // 確保 mapLink 存在
+                      ...item 
+                  }));
               } else {
                   trip.itinerary = [];
               }
@@ -865,7 +871,7 @@
           this.trips = parsedTrips;
         } else {
           // 初始數據
-          const defaultItinerary = [{ id: Date.now(), day: 1, time: '10:00', activity: '到達機場', location: 'Narita Airport' }];
+          const defaultItinerary = [{ id: Date.now(), day: 1, time: '10:00', activity: '到達機場', location: 'Narita Airport', mapLink: '' }];
           this.trips = [{
             id: Date.now(), title: 'Japan Trip', destination: 'Japan', city: 'Tokyo', currency: 'JPY',
             startDate: '2025-12-24', endDate: '2025-12-28',
@@ -994,7 +1000,7 @@
         }
       },
 
-      // === 記帳功能 ===
+      // === 記帳功能 (保持不變) ===
       addExpense() {
         if(!this.newExpense.name || !this.newExpense.localAmount || this.finalHKDAmount === 0) {
             return alert('請輸入消費項目和有效的金額');
@@ -1047,7 +1053,7 @@
         }
       },
 
-      // CSV 匯出功能 (保持匯出所有記錄)
+      // CSV 匯出功能 (保持不變)
       exportExpensesToCSV() {
           if (!this.activeTrip || !this.activeTrip.expenses.length) {
               return alert('目前沒有消費記錄可以匯出！');
@@ -1104,7 +1110,7 @@
           alert(`「${fileName}」匯出成功！`);
       },
 
-      // 圓餅圖更新方法 (使用 filteredExpenses 和 categorySummary，即所有消費)
+      // 圓餅圖更新方法 (保持不變)
       updateChart() {
           if (this.activeTab !== 'budget') return;
           
@@ -1206,12 +1212,33 @@
         this.saveData();
       },
 
-      // === 地圖/行程功能 (保持不變) ===
-      openGoogleMaps(loc) { 
-        window.open(`http://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(loc)}`, '_blank'); 
+      // === 地圖/行程功能 (已修改) ===
+
+      // 1. 統一開啟 Google 地圖的方法
+      openGoogleMaps(item) { 
+          // 優先使用 mapLink
+          if (item.mapLink && item.mapLink.trim()) {
+              const url = item.mapLink.trim();
+              // 如果是完整的 URL，直接開啟
+              if (url.startsWith('http')) {
+                  window.open(url, '_blank');
+              } else {
+                  // 如果貼上的不是 URL，可能仍是一個地點名稱，則按地點搜尋
+                  this.searchGoogleMaps(url);
+              }
+          } 
+          // 如果沒有 mapLink，使用 location 進行地點搜尋
+          else if (item.location && item.location.trim()) {
+              this.searchGoogleMaps(item.location);
+          } else {
+              alert('請輸入地點名稱或貼上 Google Map 連結。');
+          }
       },
-      openDirections(loc) { 
-        window.open(`http://googleusercontent.com/maps.google.com/dir//${encodeURIComponent(loc)}`, '_blank'); 
+      
+      // 2. 搜尋 Google 地圖的方法
+      searchGoogleMaps(query) {
+          // 使用 Google Maps Search API
+          window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank'); 
       },
 
       mapMarkers: L.layerGroup(),
@@ -1315,7 +1342,8 @@
               day: day, 
               time: '10:00', 
               activity: '', 
-              location: '' 
+              location: '',
+              mapLink: '' // **新增 mapLink 欄位**
           }); 
           this.saveData(); 
           this.forceUpdateMap();
@@ -1343,6 +1371,7 @@
                 id: Date.now() + Math.random(), 
                 day: dayNum > this.totalDays ? this.totalDays : dayNum,
                 time: parts[1] ? parts[1].trim() : 'N/A',
+                mapLink: '', // 批次匯入不包含 mapLink，初始化為空
                 activity: parts[2] ? parts[2].trim() : '活動',
                 location: parts[3] ? parts[3].trim() : ''
             };
