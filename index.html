@@ -17,14 +17,11 @@
           },
           animation: {
             'fade-in': 'fadeIn 0.5s ease-out',
-            'slide-up': 'slideUp 0.3s ease-out',
-            'slide-down-quick': 'slideDown 0.3s ease-out' 
+            'slide-up': 'slideUp 0.3s ease-out'
           },
           keyframes: {
             fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-            slideUp: { '0%': { transform: 'translateY(20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
-            // 🎯 新增的 Keyframe
-            slideDown: { '0%': { opacity: '0', transform: 'translateY(-10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
+            slideUp: { '0%': { transform: 'translateY(20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } }
           }
         }
       }
@@ -90,10 +87,6 @@
     .weather-sunny { background: linear-gradient(135deg, #FFECF5 0%, #FFD9EC 40%, #ECECFF 100%); }
     .weather-cloudy { background: linear-gradient(135deg, #DDDDFF 0%, #E6E6F2 40%, #D8D8EB 100%); }
     .weather-rainy { background: linear-gradient(135deg, #D8D8EB 0%, #E6E6F2 35%, #C4E1FF 100%); }
-    
-    /* Hide Scrollbar for Demo */
-    .scrollbar-hide::-webkit-scrollbar { display: none; }
-    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
 <body>
@@ -113,6 +106,7 @@
   <main class="pt-24 px-4 max-w-3xl mx-auto pb-8">
     
     <section v-if="activeTab === 'info' && activeTrip" class="animate-fade-in space-y-5">
+      
       <div class="glass-card overflow-hidden shadow-lg border-0">
         <div class="flight-sky p-6 relative">
           <i class="ri-cloud-fill absolute top-4 right-8 text-white/60 text-5xl opacity-80"></i>
@@ -201,22 +195,8 @@
 
     <section v-if="activeTab === 'itinerary-map' && activeTrip" class="animate-fade-in">
       
-      <div class="glass-card p-4 mb-5 flex items-center justify-between shadow-md">
-          <label for="total-days" class="text-sm font-semibold text-slate-600 flex items-center gap-2">
-              <i class="ri-calendar-2-line text-lg text-primary"></i>旅行總日數 (Day 1 - Day X)
-          </label>
-          <input 
-              id="total-days"
-              v-model.number="totalTripDays" 
-              type="number" 
-              min="1" 
-              @change="saveData" 
-              class="w-20 text-center font-bold text-lg bg-slate-50 border-0 rounded-xl focus:ring-primary/50"
-          >
-      </div>
-
       <div class="flex gap-3 mb-5 overflow-x-auto pb-2 scrollbar-hide">
-        <button @click="addItineraryItem(1)" class="flex-shrink-0 bg-primary text-white px-5 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-200 hover:shadow-xl transition active:scale-95 flex items-center gap-2">
+        <button @click="addItineraryItem" class="flex-shrink-0 bg-primary text-white px-5 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-200 hover:shadow-xl transition active:scale-95 flex items-center gap-2">
           <i class="ri-add-circle-fill text-lg"></i>新增
         </button>
         <button @click="showBatchImport = !showBatchImport" class="flex-shrink-0 bg-white text-slate-600 px-5 py-3 rounded-2xl text-sm font-bold shadow-sm border border-slate-100 flex items-center gap-2">
@@ -243,54 +223,28 @@
       </div>
 
       <div class="pb-24 space-y-8">
-        <div v-for="(dayItems, dayIdx) in groupedItinerary" :key="dayIdx" class="glass-card p-1">
-          
-          <button @click="toggleDayVisibility(dayIdx)" class="w-full text-left p-4 rounded-t-[22px] border-b border-slate-100 flex justify-between items-center transition bg-slate-50/50 hover:bg-slate-100 active:bg-slate-200">
-             <span class="bg-primary text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md shadow-primary/30 flex items-center gap-2">
-                 <i :class="dayVisibility[dayIdx] ? 'ri-arrow-down-s-line' : 'ri-arrow-right-s-line'" class="text-lg"></i>
-                 Day {{ dayIdx + 1 }}
-             </span>
-             <span class="text-xs text-slate-400 font-bold tracking-wider">{{ dayItems.length }} 個景點</span>
-          </button>
-          
-          <div v-show="dayVisibility[dayIdx]" class="animate-slide-down-quick">
-            <div class="p-4 space-y-6">
-                <div v-if="dayItems.length === 0" class="text-center text-slate-400 py-4 text-sm">
-                    本天尚無行程，點擊下方按鈕新增。
-                </div>
-              
-              <div v-for="(item, idx) in dayItems" :key="item.id" class="relative pl-6 border-l-2 border-slate-200">
-                <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-4 border-slate-300"></div>
-                
-                <div class="flex justify-between items-start mb-1">
-                  <input v-model="item.time" type="time" @change="saveData" class="bg-transparent font-bold text-xl text-slate-700 w-24 p-0 border-0 focus:ring-0">
-                  <button @click="removeItineraryItem(item.id)" class="text-slate-300 hover:text-red-400"><i class="ri-close-circle-fill text-xl"></i></button>
-                </div>
-                
-                <div class="flex items-center gap-2 mb-2">
-                     <i class="ri-sun-line text-sm text-secondary"></i>
-                     <span class="text-xs text-slate-500">所屬 Day：</span>
-                     <select v-model.number="item.day" @change="saveData" class="text-sm font-medium border-0 bg-slate-100 rounded-lg py-1 px-2 focus:ring-0">
-                         <option v-for="d in totalTripDays" :key="d" :value="d">Day {{ d }}</option>
-                     </select>
-                </div>
-
-                <input v-model="item.location" placeholder="地點名稱" @change="saveData" class="w-full font-bold text-lg text-slate-800 bg-transparent mb-1 border-0 border-b border-transparent focus:border-primary focus:ring-0 placeholder-slate-300 p-0 transition">
-                <input v-model="item.activity" placeholder="備註 / 活動" @change="saveData" class="w-full text-sm text-slate-500 bg-transparent mb-3 border-0 focus:ring-0 p-0">
-                
-                <div class="flex gap-2">
-                  <button @click="openGoogleMaps(item.location)" class="flex-1 bg-white border border-slate-200 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition flex items-center justify-center gap-1">
-                    <i class="ri-google-fill text-red-500"></i> Map
-                  </button>
-                  <button @click="openDirections(item.location)" class="flex-1 bg-primary/10 py-2 rounded-xl text-xs font-bold text-primary hover:bg-primary/20 transition flex items-center justify-center gap-1">
-                    <i class="ri-direction-fill"></i> Route
-                  </button>
-                </div>
+        <div v-for="(group, dayIdx) in groupedItinerary" :key="dayIdx" class="glass-card p-1">
+          <div class="bg-slate-50/50 p-4 rounded-t-[22px] border-b border-slate-100 flex justify-between items-center">
+             <span class="bg-primary text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md shadow-primary/30">Day {{ dayIdx + 1 }}</span>
+             <span class="text-xs text-slate-400 font-bold tracking-wider">{{ group.length }} 個景點</span>
+          </div>
+          <div class="p-4 space-y-6">
+            <div v-for="(item, idx) in group" :key="idx" class="relative pl-6 border-l-2 border-slate-200">
+              <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-4 border-slate-300"></div>
+              <div class="flex justify-between items-start mb-1">
+                <input v-model="item.time" type="time" class="bg-transparent font-bold text-xl text-slate-700 w-24 p-0 border-0 focus:ring-0">
+                <button @click="removeItineraryItem(dayIdx, idx)" class="text-slate-300 hover:text-red-400"><i class="ri-close-circle-fill text-xl"></i></button>
               </div>
-              
-              <button @click="addItineraryItem(dayIdx + 1)" class="w-full mt-4 bg-slate-100 text-slate-500 py-2 rounded-xl text-sm font-medium hover:bg-slate-200 transition">
-                 <i class="ri-add-line"></i> 新增 Day {{ dayIdx + 1 }} 行程
-             </button>
+              <input v-model="item.location" placeholder="地點名稱" class="w-full font-bold text-lg text-slate-800 bg-transparent mb-1 border-0 border-b border-transparent focus:border-primary focus:ring-0 placeholder-slate-300 p-0 transition">
+              <input v-model="item.activity" placeholder="備註 / 活動" class="w-full text-sm text-slate-500 bg-transparent mb-3 border-0 focus:ring-0 p-0">
+              <div class="flex gap-2">
+                <button @click="openGoogleMaps(item.location)" class="flex-1 bg-white border border-slate-200 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition flex items-center justify-center gap-1">
+                  <i class="ri-google-fill text-red-500"></i> Map
+                </button>
+                <button @click="openDirections(dayIdx, idx)" class="flex-1 bg-primary/10 py-2 rounded-xl text-xs font-bold text-primary hover:bg-primary/20 transition flex items-center justify-center gap-1">
+                  <i class="ri-direction-fill"></i> Route
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -304,7 +258,7 @@
           <label class="w-20 h-20 flex-shrink-0 bg-slate-50 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:border-primary hover:text-primary transition relative overflow-hidden">
             <input type="file" accept="image/*" class="hidden" @change="handleImageUpload">
             <img v-if="newShoppingItem.image" :src="newShoppingItem.image" class="absolute inset-0 w-full h-full object-cover">
-            <div v-else class="w-full h-full flex items-center justify-center text-slate-400"><i class="ri-camera-line text-2xl"></i></div>
+            <i v-else class="ri-camera-line text-2xl"></i>
           </label>
           <div class="flex-1 space-y-2">
             <input v-model="newShoppingItem.name" placeholder="品名" class="w-full p-2 rounded-lg bg-slate-50 border-0 text-sm">
@@ -485,11 +439,9 @@
 </div>
 
 <script>
-  // 設置全局變量
-  let nextItineraryId = 1;
-
-  const { createApp, nextTick } = Vue;
-  const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; 
+  const { createApp } = Vue;
+  // **注意: 請將此替換為您實際的 AviationStack Key**
+  const AVIATIONSTACK_KEY = '5bxxxxxxxxx'; 
 
   createApp({
     data() {
@@ -509,10 +461,6 @@
         newExpense: { name: '', amount: null, method: '現金', category: '飲食' },
         newShoppingItem: { name: '', onlinePrice: '', localPrice: '', bought: false, image: '' },
 
-        // 🎯 Day X 邏輯 Data
-        totalTripDays: 3, 
-        dayVisibility: { 0: true }, 
-
         tabs: [
           { id: 'info', label: 'Trip Info', icon: 'ri-information-line' },
           { id: 'itinerary-map', label: '行程', icon: 'ri-map-pin-user-line' },
@@ -524,79 +472,36 @@
     },
     computed: {
       activeTrip() { return this.trips.find(t => t.id === this.activeTripId) || null; },
-      
-      // 🎯 Day X 分組和排序邏輯 (已更新)
       groupedItinerary() {
-        if (!this.activeTrip || !this.activeTrip.itinerary || this.totalTripDays < 1) {
-          return Array.from({ length: this.totalTripDays }, () => []);
+        if (!this.activeTrip) return [];
+        const size = 5; 
+        const result = [];
+        for (let i = 0; i < this.activeTrip.itinerary.length; i += size) {
+          result.push(this.activeTrip.itinerary.slice(i, i + size));
         }
-        
-        const dayGroups = Array.from({ length: this.totalTripDays }, () => []);
-
-        this.activeTrip.itinerary.forEach(item => {
-            const dayIndex = (item.day || 1) - 1; 
-            if (dayIndex >= 0 && dayIndex < this.totalTripDays) {
-                dayGroups[dayIndex].push(item);
-            } else {
-                dayGroups[0].push(item); 
-            }
-        });
-        
-        dayGroups.forEach(dayItems => {
-            dayItems.sort((a, b) => {
-                if (a.time && b.time) {
-                    if (a.time < b.time) return -1;
-                    if (a.time > b.time) return 1;
-                }
-                return 0; 
-            });
-        });
-
-        return dayGroups;
+        return result;
       },
-      
       totalExpensesHKD() {
         if (!this.activeTrip) return 0;
         return this.activeTrip.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       },
       weatherDesc() {
+        // OpenMeteo Weather Codes
         if (!this.weatherData) return 'Loading...';
         const code = this.weatherData.weathercode;
-        const map = { 0:'晴朗 Sunny', 1:'多雲 Cloudy', 2:'陰天 Overcast', 3:'毛毛雨 Drizzle', 61:'雨 Rain', 80:'陣雨 Showers' };
+        const map = { 0:'晴朗 Sunny', 1:'多雲 Cloudy', 2:'陰天 Overcast', 3:'毛毛雨 Drizzle', 45:'霧 Fog', 48:'霧淞 Rime fog', 51:'毛毛雨 Drizzle', 53:'小雨 Light Rain', 55:'大雨 Heavy Rain', 61:'陣雨 Rain', 63:'中雨 Moderate Rain', 65:'大雨 Heavy Rain', 80:'陣雨 Showers', 81:'中度陣雨 Moderate Showers', 82:'強烈陣雨 Violent Showers', 95:'雷暴 Thunderstorm' };
         return map[code] || '多雲 Cloudy';
       }
     },
     watch: {
       activeTab(newTab) {
         if (newTab === 'itinerary-map') {
-          setTimeout(() => this.forceUpdateMap(), 300); 
+          setTimeout(() => this.forceUpdateMap(), 300);
         }
       },
       activeTripId() {
         this.fetchWeather();
-        this.fetchRate(); 
-        // 🎯 切換旅程時，同步 totalTripDays
-        if (this.activeTrip) {
-            this.totalTripDays = this.activeTrip.totalTripDays || 3;
-            // 確保切換旅程後 Day 1 預設展開
-            this.dayVisibility = { 0: true }; 
-        }
-      },
-      // 🎯 監聽總日數變更
-      totalTripDays(newVal) {
-          newVal = Math.max(1, Math.min(30, newVal)); // 限制在 1-30 天
-          this.totalTripDays = newVal; 
-          if (this.activeTrip) {
-              this.activeTrip.totalTripDays = newVal;
-          }
-          
-          Object.keys(this.dayVisibility).forEach(key => {
-              if (parseInt(key) >= newVal) {
-                  delete this.dayVisibility[key];
-              }
-          });
-          this.saveData();
-          this.forceUpdateMap();
+        // this.fetchRate(); // Rate fetching now integrated into autoGeocode/saveTrip
       }
     },
     mounted() {
@@ -609,132 +514,226 @@
         if (saved) {
           this.trips = JSON.parse(saved);
         } else {
-          // 預設行程
           this.trips = [{
             id: Date.now(), title: 'Japan Trip', destination: 'Japan', city: 'Tokyo', currency: 'JPY',
             startDate: '2025-12-24', endDate: '2026-01-01',
+            // Default center for map, crucial for itinerary tab
             center: { lat: 35.6895, lng: 139.6917 }, exchangeRate: 19.2,
-            flights: { outbound: {}, inbound: {} },
-            itinerary: [
-                { id: nextItineraryId++, day: 1, time: '10:00', activity: '抵達機場', location: '成田國際機場' },
-                { id: nextItineraryId++, day: 2, time: '14:00', activity: '淺草寺', location: '淺草寺' },
-            ], 
-            expenses: [], shoppingItems: [],
-            totalTripDays: 3 // 🎯 新增預設天數
+            flights: { outbound: { no: 'CX500', date: '2025-12-24' }, inbound: { no: 'CX501', date: '2026-01-01' } },
+            itinerary: [{ time: '10:00', activity: '到達機場', location: 'Narita Airport' }], 
+            expenses: [], shoppingItems: []
           }];
           this.saveData();
         }
-        this.activeTripId = this.trips[0].id;
-        // 確保所有現有的行程項目都有 id 和 day
-        this.trips.forEach(trip => {
-            if (!trip.itinerary) trip.itinerary = [];
-            trip.itinerary.forEach(item => {
-                if (!item.id) item.id = nextItineraryId++;
-                if (!item.day) item.day = 1;
-            });
-            // 🎯 確保旅程物件有 totalTripDays 屬性
-            if (!trip.totalTripDays) trip.totalTripDays = 3;
-        });
-        
-        // 🎯 初始化 totalTripDays
-        if (this.activeTrip) {
-            this.totalTripDays = this.activeTrip.totalTripDays;
+        this.activeTripId = this.trips.length > 0 ? this.trips[0].id : null;
+        if (this.activeTripId) {
+          this.fetchWeather();
         }
-
-        this.fetchWeather();
       },
       
-      // === Real-Time Magic: Coordinates + Currency + Rate (保持不變) ===
+      // === 核心功能 1: 自動抓取座標 + 貨幣 + 匯率 (使用公開 API) ===
       async autoGeocode() {
-        // ... (保持不變) ...
-      },
-
-      // === 其他功能 (保持不變) ===
-      async fetchFlight(type) { /* 保持不變 */ },
-      async fetchWeather() { 
-        // 模擬天氣 API
-        const codes = [0, 1, 2, 3, 61, 80];
-        const randomCode = codes[Math.floor(Math.random() * codes.length)];
-        this.weatherData = { temperature: 15 + Math.random() * 10, weathercode: randomCode };
+        if (!this.tempTrip.city) return alert('請先輸入城市名稱 (City)');
         
-        if (randomCode <= 1) this.weatherTheme = 'sunny';
-        else if (randomCode <= 3) this.weatherTheme = 'cloudy';
-        else this.weatherTheme = 'rainy';
-      },
-      handleImageUpload(e) { 
-          const file = e.target.files[0];
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onload = (event) => {
-              this.newShoppingItem.image = event.target.result;
-          };
-          reader.readAsDataURL(file);
-      },
-      addShoppingItem() { 
-          if (!this.newShoppingItem.name) return;
-          this.activeTrip.shoppingItems.push({
-              name: this.newShoppingItem.name,
-              onlinePrice: this.newShoppingItem.onlinePrice,
-              localPrice: this.newShoppingItem.localPrice,
-              bought: this.newShoppingItem.bought,
-              image: this.newShoppingItem.image,
-          });
-          this.newShoppingItem = { name: '', onlinePrice: '', localPrice: '', bought: false, image: '' };
-          this.saveData();
-      },
-      removeShoppingItem(idx) { 
-          if(confirm('確認刪除此購物項目嗎？')) {
-              this.activeTrip.shoppingItems.splice(idx, 1);
-              this.saveData();
+        try {
+          // 1. 取得座標 & 國家代碼 (Nominatim)
+          const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${this.tempTrip.city},${this.tempTrip.destination || ''}&addressdetails=1&limit=1`);
+          const geoData = await geoRes.json();
+          
+          if (!geoData || geoData.length === 0) {
+            return alert('找不到該城市，請檢查拼字。');
           }
-      },
-      addExpense() { 
-          if (!this.newExpense.name || !this.newExpense.amount) return;
-          this.activeTrip.expenses.unshift({
-              ...this.newExpense,
-              amount: Number(this.newExpense.amount),
-              date: new Date().toLocaleDateString('zh-HK'),
-          });
-          this.newExpense = { name: '', amount: null, method: '現金', category: '飲食' };
-          this.saveData();
-      },
-      async fetchRate() { 
-          const currencyCode = this.activeTrip.currency;
-          if (!currencyCode || currencyCode === 'HKD') return;
 
+          const location = geoData[0];
+          this.tempTrip.center = { lat: parseFloat(location.lat), lng: parseFloat(location.lon) };
+          
+          if(location.address && location.address.country) {
+             this.tempTrip.destination = location.address.country;
+          }
+
+          let currencyCode = 'USD'; // 預設
+          const countryCode = location.address?.country_code?.toUpperCase(); 
+
+          // 2. 取得貨幣代碼 (RestCountries)
+          if (countryCode) {
+            try {
+              const countryRes = await fetch(`https://restcountries.com/v3.1/alpha/${countryCode}`);
+              const countryData = await countryRes.json();
+              if (countryData[0]?.currencies) {
+                currencyCode = Object.keys(countryData[0].currencies)[0];
+                this.tempTrip.currency = currencyCode;
+              }
+            } catch (err) { console.error("Currency fetch fail", err); }
+          }
+          
+          // 3. 取得匯率 (Open Exchange Rates) - Base HKD
           try {
              const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
              const rateData = await rateRes.json();
              if (rateData.rates && rateData.rates[currencyCode]) {
-                this.activeTrip.exchangeRate = rateData.rates[currencyCode];
-                this.saveData();
+                this.tempTrip.exchangeRate = rateData.rates[currencyCode];
              }
           } catch (err) { console.error("Rate fetch fail", err); }
-      },
-      openGoogleMaps(loc) { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`); },
-      openDirections(loc) { window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc)}`); },
-      runBatchImport() { 
-          if (!this.batchImportText) return;
-          const lines = this.batchImportText.split('\n').filter(line => line.trim() !== '');
-          const newItems = lines.map(line => {
-              const parts = line.split(',');
-              return {
-                  id: nextItineraryId++,
-                  day: 1, // 預設 Day 1
-                  time: '',
-                  activity: parts[1] ? parts[1].trim() : '',
-                  location: parts[0] ? parts[0].trim() : line.trim()
-              };
-          });
-          this.activeTrip.itinerary.push(...newItems);
-          this.batchImportText = '';
-          this.showBatchImport = false;
-          this.saveData();
-          this.forceUpdateMap();
-          alert(`成功匯入 ${newItems.length} 個項目！`);
+
+          alert(`成功！\n座標: ${location.lat}, ${location.lon}\n國家: ${this.tempTrip.destination}\n貨幣: ${currencyCode}\n匯率: 1 HKD ≈ ${this.tempTrip.exchangeRate.toFixed(2)} ${currencyCode}`);
+
+        } catch (e) {
+          console.error(e);
+          alert('自動取得失敗，請稍後再試。');
+        }
       },
 
-      openNewTripModal() { this.editingTripId = null; this.tempTrip = {title: '', city: '', destination: '', currency:'TWD', exchangeRate:4, startDate: '', endDate: '', center:{lat:35.6,lng:139.6}, flights:{outbound:{},inbound:{}}, itinerary:[], expenses:[], shoppingItems:[], totalTripDays: 3}; this.showTripModal = true; },
+      // === 核心功能 2: 航班 API 呼叫 (使用 AviationStack) ===
+      async fetchFlight(type) {
+        const flight = this.activeTrip.flights[type];
+        if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
+        if(AVIATIONSTACK_KEY === '5b729556e3ef80e18916fcecbcfd81ba') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
+        
+        try {
+          // ** 這裡是實際 API 呼叫的邏輯 **
+          const res = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}&flight_date=${flight.date}`);
+          const data = await res.json();
+          
+          if (data.data && data.data.length > 0) {
+            const f = data.data[0]; 
+            flight.from = f.departure.iata;
+            flight.to = f.arrival.iata;
+            flight.depTime = f.departure.scheduled ? f.departure.scheduled.slice(11,16) : '--:--';
+            flight.arrTime = f.arrival.scheduled ? f.arrival.scheduled.slice(11,16) : '--:--';
+            this.saveData();
+            alert(`已更新航班: ${flight.from} -> ${flight.to}`);
+          } else {
+            alert('未找到航班資料，請確認 API Key、航班號與日期。');
+            // 如果 API 失敗，使用 Mocked 數據作為備案，確保 UI 有值
+             this.mockFlightData(type);
+          }
+        } catch(e) {
+          console.error(e);
+          alert('API 請求失敗，請檢查 Key 是否正確或網路連線。使用模擬數據。');
+          // 網路錯誤時使用 Mocked 數據
+          this.mockFlightData(type);
+        }
+      },
+      mockFlightData(type) {
+          const flight = this.activeTrip.flights[type];
+          const isOutbound = type === 'outbound';
+          // 模擬數據
+          flight.from = isOutbound ? 'HKG' : 'NRT';
+          flight.to = isOutbound ? 'NRT' : 'HKG';
+          flight.depTime = isOutbound ? '09:00' : '16:00';
+          flight.arrTime = isOutbound ? '14:30' : '20:30';
+          this.saveData();
+      },
+
+      // === 核心功能 3: 天氣 API 呼叫 (使用 Open-Meteo) ===
+      async fetchWeather() {
+        if(!this.activeTrip?.center) return;
+        try {
+          const {lat,lng} = this.activeTrip.center;
+          // Open-Meteo 提供免費的 current_weather
+          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&timezone=auto`);
+          const d = await res.json();
+          this.weatherData = d.current_weather;
+          
+          // 根據 weathercode 判斷主題
+          const code = d.current_weather.weathercode;
+          if (code < 3) { this.weatherTheme = 'sunny'; } 
+          else if (code >= 51 && code < 80) { this.weatherTheme = 'rainy'; } // 雨類
+          else { this.weatherTheme = 'cloudy'; } // 雲類
+          
+        } catch(e){
+          console.error("Weather fetch failed", e);
+          // 失敗時使用預設值
+          this.weatherData = { temperature: 20 + Math.floor(Math.random()*5), weathercode: 1 };
+          this.weatherTheme = 'sunny';
+        }
+      },
+
+      // === 其他功能 ===
+      fetchRate() { /* Optional standalone refresh, handled in autoGeocode primarily */ },
+      openGoogleMaps(loc) { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`); },
+      openDirections(dIdx, idx) { 
+        const realIdx = dIdx*5 + idx;
+        const loc = this.activeTrip.itinerary[realIdx].location;
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc)}`);
+      },
+      
+      // 購物
+      handleImageUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 1024 * 1024) return alert('圖片請小於 1MB');
+        const reader = new FileReader();
+        reader.onload = (evt) => { this.newShoppingItem.image = evt.target.result; };
+        reader.readAsDataURL(file);
+      },
+      addShoppingItem() {
+        if(!this.newShoppingItem.name) return;
+        // 添加 ID 以便更容易刪除和追蹤
+        this.activeTrip.shoppingItems.unshift({ id: Date.now(), ...this.newShoppingItem }); 
+        this.newShoppingItem = { name: '', onlinePrice: '', localPrice: '', bought: false, image: '' };
+        this.saveData();
+      },
+      removeShoppingItem(idx) {
+        this.activeTrip.shoppingItems.splice(idx, 1);
+        this.saveData();
+      },
+
+      // 地圖
+      mapMarkers: L.layerGroup(),
+      forceUpdateMap() {
+        if (this.activeTab !== 'itinerary-map') return;
+        try {
+          const container = document.getElementById('map');
+          if (!container) return;
+          if (this.map) { this.map.off(); this.map.remove(); }
+          
+          // 使用當前旅程的中心點，否則預設東京
+          const center = this.activeTrip.center ? [this.activeTrip.center.lat, this.activeTrip.center.lng] : [35.6895, 139.6917];
+          
+          this.map = L.map('map', { zoomControl: false }).setView(center, 13);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(this.map);
+          this.mapMarkers.clearLayers();
+          this.mapMarkers.addTo(this.map);
+
+          this.updateMapMarkers();
+
+          setTimeout(() => { this.map.invalidateSize(); }, 100);
+        } catch (e) { console.error("Map init fail", e); }
+      },
+      updateMapMarkers() {
+          if (!this.map || !this.activeTrip?.itinerary) return;
+          this.mapMarkers.clearLayers();
+          
+          this.activeTrip.itinerary.forEach((item, index) => {
+              if (item.location) {
+                  // Mock Geocoding (實際應用需要 Geocoding 服務來轉換地址為座標)
+                  const mockLat = this.activeTrip.center.lat + (Math.random() - 0.5) * 0.05;
+                  const mockLng = this.activeTrip.center.lng + (Math.random() - 0.5) * 0.05;
+                  
+                  const marker = L.marker([mockLat, mockLng], {
+                      icon: L.divIcon({
+                          className: 'custom-div-icon',
+                          html: `<div style="background-color:#97CBFF; color:white; border-radius:50%; width:24px; height:24px; line-height:24px; text-align:center; font-weight:bold;">${index + 1}</div>`,
+                          iconSize: [24, 24],
+                          iconAnchor: [12, 12]
+                      })
+                  }).bindPopup(`<b>${item.location}</b><br>${item.activity}`);
+                  this.mapMarkers.addLayer(marker);
+              }
+          });
+          if (this.mapMarkers.getLayers().length > 0) {
+            this.map.fitBounds(this.mapMarkers.getBounds(), { padding: [50, 50] });
+          }
+      },
+
+
+      // 行程
+      addItineraryItem() { this.activeTrip.itinerary.push({ time: '10:00', activity: '', location: '' }); this.saveData(); },
+      removeItineraryItem(dIdx, idx) { this.activeTrip.itinerary.splice(dIdx*5+idx, 1); this.saveData(); },
+
+      // 旅程
+      openNewTripModal() { this.editingTripId = null; this.tempTrip = {title:'', city:'', destination:'', currency:'JPY', exchangeRate:19.2, center:{lat:35.6,lng:139.6}, startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0]}; this.showTripModal = true; },
       openEditTripModal(trip) { this.editingTripId = trip.id; this.tempTrip = JSON.parse(JSON.stringify(trip)); this.showTripModal = true; },
       saveTrip() {
         if (!this.tempTrip.title) return;
@@ -743,88 +742,50 @@
           this.trips[idx] = { ...this.trips[idx], ...this.tempTrip };
         } else {
           const center = this.tempTrip.center || {lat:35.6, lng:139.6};
-          const newTrip = { id: Date.now(), ...this.tempTrip, totalTripDays: 3, center: center, flights:{outbound:{},inbound:{}}, itinerary:[], expenses:[], shoppingItems:[] };
-          this.trips.push(newTrip);
+          const newTrip = { id: Date.now(), ...this.tempTrip, center: center, flights:{outbound:{},inbound:{}}, itinerary:[], expenses:[], shoppingItems:[] };
+          this.trips.unshift(newTrip); // 新增在最前面
           this.activeTripId = newTrip.id;
         }
         this.saveData();
         this.showTripModal = false;
       },
-      deleteTrip(id) { 
-        if(confirm('確認刪除此旅程嗎？此操作無法復原！')) {
-          this.trips = this.trips.filter(t => t.id !== id);
-          if (this.trips.length > 0) {
-            this.activeTripId = this.trips[0].id;
-          } else {
-            this.activeTripId = null;
-          }
+      deleteTrip(id) {
+        if(this.trips.length<=1) return alert('不能刪除最後一個旅程');
+        if(confirm('確認刪除?')) {
+          this.trips = this.trips.filter(t=>t.id!==id);
+          this.activeTripId = this.trips[0].id;
           this.saveData();
         }
       },
-      switchTrip(id) { 
-          this.activeTripId = id; 
-          this.activeTab = 'info'; 
-          // 確保切換後總日數和 Day 1 狀態正確
-          const trip = this.trips.find(t => t.id === id);
-          if (trip) {
-              this.totalTripDays = trip.totalTripDays || 3;
-              this.dayVisibility = { 0: true }; 
-          }
-      },
+      switchTrip(id) { this.activeTripId = id; this.activeTab = 'info'; },
       
-      // 🎯 行程管理 (使用 Day X 邏輯)
-      addItineraryItem(dayNumber = 1) { 
-        this.activeTrip.itinerary.push({ 
-            id: nextItineraryId++, 
-            day: dayNumber, 
-            time: '', 
-            activity: '', 
-            location: '' 
-        }); 
-        this.saveData(); 
-        this.forceUpdateMap(); 
-        // 確保新增行程的 Day 是展開的
-        this.$set(this.dayVisibility, dayNumber - 1, true);
+      // 記帳
+      addExpense() {
+        if(!this.newExpense.name || !this.newExpense.amount) return;
+        const d = new Date();
+        this.activeTrip.expenses.unshift({ ...this.newExpense, date: `${d.getMonth()+1}/${d.getDate()}` });
+        this.newExpense = { name:'', amount:null, method:'現金', category:'飲食' };
+        this.saveData();
       },
-      removeItineraryItem(itemId) { 
-        if(confirm('確認刪除此行程項目嗎？')) {
-          this.activeTrip.itinerary = this.activeTrip.itinerary.filter(item => item.id !== itemId); 
-          this.saveData(); 
-          this.forceUpdateMap(); 
-        }
-      },
-
-      // 🎯 折疊功能 (新增)
-      toggleDayVisibility(dayIndex) {
-          const current = this.dayVisibility[dayIndex] === undefined ? false : this.dayVisibility[dayIndex];
-          this.$set(this.dayVisibility, dayIndex, !current); 
-          if (!current) {
-              nextTick(() => { this.forceUpdateMap(); });
-          }
-      },
-
-      // 🎯 地圖邏輯 (更新以適應新的 groupedItinerary)
-      forceUpdateMap() {
-        if (this.activeTab !== 'itinerary-map' || !this.activeTrip) return;
-        try {
-          const container = document.getElementById('map');
-          if (!container) return;
-          if (this.map) { this.map.off(); this.map.remove(); }
-          
-          let center = this.activeTrip.center || [35.6895, 139.6917];
-          
-          this.map = L.map('map', { zoomControl: false }).setView(center, 13);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(this.map);
-          
-          // 繪製所有行程點 (由於沒有真實經緯度，這裡只繪製中心點)
-          L.marker(center).addTo(this.map).bindPopup(this.activeTrip.city || '中心點').openPopup();
-
-          // 由於沒有 Geocoding 服務，實際繪製標記需要經緯度
-          // 這裡只是簡單地讓地圖重新初始化和居中
-          
-          setTimeout(() => { this.map.invalidateSize(); }, 100);
-        } catch (e) { console.error("Map init fail", e); }
-      },
+      runBatchImport() {
+        if(!this.batchImportText) return alert('請貼上內容');
+        const lines = this.batchImportText.split('\n').filter(line => line.trim() !== '');
+        
+        const newItems = lines.map(line => {
+            const parts = line.split(',');
+            return {
+                time: parts[0] ? parts[0].trim() : 'N/A',
+                activity: parts[1] ? parts[1].trim() : '活動',
+                location: parts[2] ? parts[2].trim() : ''
+            };
+        });
+        
+        this.activeTrip.itinerary.push(...newItems);
+        this.saveData();
+        this.showBatchImport = false;
+        this.batchImportText = '';
+        alert(`成功匯入 ${newItems.length} 條行程！`);
+      }
     }
   }).mount('#app');
 </script>
