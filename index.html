@@ -369,26 +369,6 @@
         </select>
         <button @click="addExpense" class="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-md">新增</button>
       </div>
-
-      <div class="glass-card p-5">
-          <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
-             <i class="ri-calendar-line text-pink-400 text-xl"></i>每日支出明細 (HKD)
-          </h3>
-          <div class="space-y-3">
-              <div class="flex justify-between items-center bg-slate-50/70 p-3 rounded-xl border border-slate-100 font-bold">
-                  <span class="text-sm text-slate-600">旅行前 (Day 0)</span>
-                  <span class="text-base text-red-500">{{ calculateDayTotal(0).toLocaleString() }} HKD</span>
-              </div>
-              <div v-for="dayIndex in totalDays" :key="'day_total_' + dayIndex" class="flex justify-between items-center bg-slate-50/70 p-3 rounded-xl border border-slate-100 font-bold">
-                  <span class="text-sm text-slate-600">Day {{ dayIndex }}</span>
-                  <span class="text-base text-slate-800">{{ calculateDayTotal(dayIndex).toLocaleString() }} HKD</span>
-              </div>
-              <div class="flex justify-between items-center bg-primary/20 p-3 rounded-xl border border-primary font-black">
-                  <span class="text-sm text-primary">總計</span>
-                  <span class="text-lg text-primary">{{ totalExpensesHKD.toLocaleString() }} HKD</span>
-              </div>
-          </div>
-      </div>
       
       <div v-if="categorySummary.data && categorySummary.data.length > 0" class="glass-card p-5 animate-fade-in">
           <h3 class="font-bold mb-4 flex items-center gap-2 text-primary"><i class="ri-pie-chart-line"></i> 消費類別分析 (HKD)</h3>
@@ -401,45 +381,60 @@
           </div>
       </div>
       
-      <div class="glass-card p-4 flex justify-between items-center animate-fade-in">
-          <h3 class="font-bold text-slate-700">
-             每筆記帳記錄
-          </h3>
-          <button @click="exportExpensesToCSV" class="bg-primary text-white py-2 px-4 rounded-xl text-sm font-bold shadow-md hover:bg-primary/90 transition active:scale-95 flex items-center gap-2">
-              <i class="ri-file-excel-2-line"></i> 下載 CSV
-          </button>
-      </div>
-
       <div class="pb-20">
-        <div v-for="(exp, idx) in filteredExpenses" :key="exp.id" class="glass-card p-4 mb-3 flex justify-between items-center animate-fade-in">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xl">
-              <i v-if="exp.category === '旅行前'" class="ri-luggage-cart-line text-purple-400"></i>
-              <i v-else-if="exp.category === '飲食'" class="ri-restaurant-line text-orange-400"></i>
-              <i v-else-if="exp.category === '購物'" class="ri-shopping-bag-line text-pink-400"></i>
-              <i v-else-if="exp.category === '交通'" class="ri-bus-line text-blue-400"></i>
-              <i v-else class="ri-money-dollar-circle-line text-green-400"></i>
-            </div>
-            <div>
-              <p class="font-bold text-slate-700">{{ exp.name }}</p>
-              <p class="text-xs text-slate-400">{{ exp.day === 0 ? '旅行前' : `Day ${exp.day || 1}` }} · {{ exp.method }}</p> 
-            </div>
-          </div>
-          <div class="text-right flex items-center gap-3">
-            <div>
-                <p class="font-bold text-slate-800">-{{ exp.amount.toFixed(2) }} HKD</p>
-                <p class="text-[10px] text-slate-400">≈ {{ Math.round(exp.localAmount) }} {{ activeTrip.currency }}</p>
-            </div>
-            <button @click="removeExpense(exp.id)" class="text-slate-300 hover:text-red-500 p-1 active:scale-90 transition">
-                <i class="ri-delete-bin-line text-lg"></i>
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-slate-700 flex items-center gap-2">
+                <i class="ri-list-check-2-line text-secondary"></i>
+                每筆記帳記錄
+            </h3>
+            <button @click="exportExpensesToCSV" class="bg-primary text-white py-2 px-4 rounded-xl text-sm font-bold shadow-md hover:bg-primary/90 transition active:scale-95 flex items-center gap-2">
+                <i class="ri-file-excel-2-line"></i> 下載 CSV
             </button>
-          </div>
         </div>
-        <div v-if="filteredExpenses.length === 0" class="text-center py-8 bg-white/70 rounded-2xl text-slate-400">
+
+        <div v-if="groupedAndSortedExpenses.length === 0" class="text-center py-8 bg-white/70 rounded-2xl text-slate-400">
             <i class="ri-money-dollar-circle-line text-4xl mb-2"></i>
             <p class="text-sm font-medium">目前暫無消費記錄。</p>
         </div>
+
+        <div v-for="(item, index) in groupedAndSortedExpenses" :key="item.id || index" class="animate-fade-in">
+            <div v-if="item.isHeader" class="glass-card bg-primary/20 p-4 mb-3 mt-4 flex justify-between items-center border border-primary font-black shadow-lg">
+                <span class="text-sm text-primary">{{ item.dayLabel }} 總計</span>
+                <span class="text-lg text-primary">{{ item.total.toLocaleString() }} HKD</span>
+            </div>
+            
+            <div v-else class="glass-card p-4 mb-3 flex justify-between items-center border border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xl">
+                        <i v-if="item.category === '旅行前'" class="ri-luggage-cart-line text-purple-400"></i>
+                        <i v-else-if="item.category === '飲食'" class="ri-restaurant-line text-orange-400"></i>
+                        <i v-else-if="item.category === '購物'" class="ri-shopping-bag-line text-pink-400"></i>
+                        <i v-else-if="item.category === '交通'" class="ri-bus-line text-blue-400"></i>
+                        <i v-else class="ri-money-dollar-circle-line text-green-400"></i>
+                    </div>
+                    <div>
+                        <p class="font-bold text-slate-700">{{ item.name }}</p>
+                        <p class="text-xs text-slate-400">{{ item.day === 0 ? '旅行前' : `Day ${item.day || 1}` }} · {{ item.method }}</p> 
+                    </div>
+                </div>
+                <div class="text-right flex items-center gap-3">
+                    <div>
+                        <p class="font-bold text-slate-800">-{{ item.amount.toFixed(2) }} HKD</p>
+                        <p class="text-[10px] text-slate-400">≈ {{ Math.round(item.localAmount) }} {{ activeTrip.currency }}</p>
+                    </div>
+                    <button @click="removeExpense(item.id)" class="text-slate-300 hover:text-red-500 p-1 active:scale-90 transition">
+                        <i class="ri-delete-bin-line text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="totalExpensesHKD > 0" class="glass-card bg-primary/20 p-4 mb-3 mt-4 flex justify-between items-center border border-primary font-black shadow-lg">
+            <span class="text-sm text-primary">旅程總花費</span>
+            <span class="text-xl text-primary">{{ totalExpensesHKD.toLocaleString() }} HKD</span>
+        </div>
       </div>
+      
       </section>
 
     <section v-if="activeTab === 'shopping' && activeTrip" class="animate-fade-in">
@@ -742,6 +737,51 @@
       activeBudgetDayText() {
           return '所有'; 
       },
+
+      // **新增的 Computed Property**：用於按 Day 分組並插入每日總計
+      groupedAndSortedExpenses() {
+          if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return [];
+
+          const expenses = this.activeTrip.expenses.slice() 
+              // 1. 確保 Day 欄位存在，並依 Day 排序 (0, 1, 2, ...)
+              .sort((a, b) => (a.day === undefined ? 1 : a.day) - (b.day === undefined ? 1 : b.day));
+
+          const result = [];
+          let currentDay = null;
+          let currentDayTotal = 0;
+
+          const daysGrouped = expenses.reduce((acc, exp) => {
+              const day = exp.day === undefined ? 1 : exp.day;
+              if (!acc[day]) {
+                  acc[day] = [];
+              }
+              acc[day].push(exp);
+              return acc;
+          }, {});
+
+          const sortedDays = Object.keys(daysGrouped).map(Number).sort((a, b) => a - b);
+          
+          for (const day of sortedDays) {
+              const dayExpenses = daysGrouped[day];
+              
+              // 計算該日總計
+              const total = dayExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+              
+              // 插入每日總計標頭
+              result.push({
+                  isHeader: true,
+                  day: day,
+                  dayLabel: day === 0 ? '旅行前 (Day 0)' : `Day ${day}`,
+                  total: parseFloat(total.toFixed(2)),
+                  id: `header-${day}`
+              });
+
+              // 插入該日的所有交易記錄
+              result.push(...dayExpenses);
+          }
+
+          return result;
+      }
     },
     watch: {
       activeTab(newTab) {
@@ -878,9 +918,9 @@
           }
           try {
              const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
-             const rateData = await rateRes.json();
-             if (rateData.rates && rateData.rates[currencyCode]) {
-                this.tempTrip.exchangeRate = rateData.rates[currencyCode];
+             const rateData = await rateRes.rates;
+             if (rateData && rateData[currencyCode]) {
+                this.tempTrip.exchangeRate = rateData[currencyCode];
              }
           } catch (err) { console.error("Rate fetch fail", err); }
           alert(`成功！\n座標: ${location.lat}, ${location.lon}\n國家: ${this.tempTrip.destination}\n貨幣: ${currencyCode}\n匯率: 1 HKD ≈ ${this.tempTrip.exchangeRate.toFixed(2)} ${currencyCode}`);
