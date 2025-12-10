@@ -436,8 +436,7 @@
         </div>
       </div>
       </section>
-
-    <section v-if="activeTab === 'shopping' && activeTrip" class="animate-fade-in">
+<section v-if="activeTab === 'shopping' && activeTrip" class="animate-fade-in">
       <div class="glass-card p-5 mb-6">
         <h3 class="font-bold mb-4 flex items-center gap-2"><i class="ri-shopping-bag-3-line text-primary"></i> 新增購物項目</h3>
         <div class="flex gap-3 mb-3">
@@ -612,7 +611,7 @@
         newShoppingItem: { name: '', onlinePrice: '', localPrice: '', bought: false, image: '' },
         
         activeDay: 1, // 行程頁面專用
-        activeBudgetDay: null, // 🎯 記帳頁面專用篩選: null = 所有消費, 0 = 旅行前, 1+ = Day X
+        activeBudgetDay: null, // 🎯 修正點：預設為 null (所有消費)
 
         tabs: [
           { id: 'info', label: 'Trip Info', icon: 'ri-information-line' },
@@ -660,7 +659,7 @@
         return days;
       },
       
-      // 🎯 根據 activeBudgetDay 篩選後的消費列表 (已更新篩選邏輯)
+      // 🎯 已修復的 filteredExpenses 邏輯：確保篩選正確
       filteredExpenses() {
           if (!this.activeTrip || !this.activeTrip.expenses) {
               return [];
@@ -677,45 +676,19 @@
               return expenses.filter(exp => exp.day === 0);
           }
           
-          // Day X (1, 2, 3...)
-          return expenses.filter(exp => (exp.day || 1) === this.activeBudgetDay);
+          // Day X (1, 2, 3...) - 確保嚴格的數值比較
+          if (typeof this.activeBudgetDay === 'number' && this.activeBudgetDay > 0) {
+              return expenses.filter(exp => exp.day === this.activeBudgetDay);
+          }
+          
+          return expenses; 
       },
 
-      // 🎯 總花費 (只計算篩選後的結果)
+      // 🎯 總花費 (依賴 filteredExpenses)
       totalExpensesHKD() {
         if (!this.activeTrip) return 0;
+        // 確保 totalExpensesHKD 依賴 filteredExpenses，這樣篩選改變時會重新計算
         return this.filteredExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-      },
-
-      // 🎯 顯示篩選狀態的文字
-      activeBudgetDayText() {
-          if (this.activeBudgetDay === null) {
-              return '所有';
-          } else if (this.activeBudgetDay === 0) {
-              return '旅行前 (Day 0)';
-          } else {
-              return `Day ${this.activeBudgetDay}`;
-          }
-      },
-
-      // 🎯 計算按支付方式劃分的總結
-      paymentSummary() {
-          const summary = { '現金': 0, '信用卡': 0 };
-          if (!this.activeTrip) return summary;
-
-          this.filteredExpenses.forEach(exp => {
-              const method = exp.method || '現金'; 
-              const amount = Number(exp.amount) || 0;
-              if (summary.hasOwnProperty(method)) {
-                  summary[method] += amount;
-              }
-          });
-
-          // 確保只顯示兩位小數 (但這裡用 toLocaleString() 顯示，所以直接用 parseFloat 處理精度)
-          summary['現金'] = parseFloat(summary['現金'].toFixed(2));
-          summary['信用卡'] = parseFloat(summary['信用卡'].toFixed(2));
-
-          return summary;
       },
 
       weatherDesc() {
@@ -741,7 +714,7 @@
           return (amount / rate);
       },
       
-      // 計算各類別總花費 (使用 filteredExpenses)
+      // 🎯 計算各類別總花費 (使用 filteredExpenses)
       categorySummary() {
           if (!this.activeTrip || !this.filteredExpenses) {
               return { labels: [], data: [] };
@@ -758,19 +731,54 @@
           
           return { labels, data };
       },
+
+      // 🎯 計算按支付方式劃分的總結 (依賴 filteredExpenses)
+      paymentSummary() {
+          const summary = { '現金': 0, '信用卡': 0 };
+          if (!this.activeTrip) return summary;
+
+          this.filteredExpenses.forEach(exp => {
+              const method = exp.method || '現金'; 
+              const amount = Number(exp.amount) || 0;
+              if (summary.hasOwnProperty(method)) {
+                  summary[method] += amount;
+              }
+          });
+
+          // 確保只顯示兩位小數
+          summary['現金'] = parseFloat(summary['現金'].toFixed(2));
+          summary['信用卡'] = parseFloat(summary['信用卡'].toFixed(2));
+
+          return summary;
+      },
+      
+      // 🎯 總結篩選 Day 文本
+      activeBudgetDayText() {
+          if (this.activeBudgetDay === null) {
+              return '所有';
+          } else if (this.activeBudgetDay === 0) {
+              return '旅行前 (Day 0)';
+          } else {
+              return `Day ${this.activeBudgetDay}`;
+          }
+      },
     },
     watch: {
       activeTab(newTab) {
         if (newTab === 'itinerary-map') {
           setTimeout(() => this.forceUpdateMap(), 500);
         } else if (newTab === 'budget') { 
+          // 切換到記帳頁籤時，如果當前 Day 大於總天數 (例如 Day 5/4)，重設為 null (所有)
+          if (this.activeBudgetDay !== null && this.activeBudgetDay > this.totalDays) {
+              this.activeBudgetDay = null;
+          }
           this.$nextTick(() => this.updateChart());
         }
       },
       activeTripId() {
         this.fetchWeather();
         this.activeDay = 1; 
-        this.activeBudgetDay = null; // 🎯 切換旅程時，重設 Budget Day 為 null (所有消費)
+        this.activeBudgetDay = null; // 🎯 切換旅程時，重設 Budget Day 為 '所有消費'
         if (this.activeTrip) {
             this.inputCurrency = this.activeTrip.currency; 
             this.newExpense.day = 1; 
@@ -797,9 +805,10 @@
       this.loadData();
       if (this.activeTrip) {
           this.inputCurrency = this.activeTrip.currency;
+          // 初始化 newExpense.day 和 category
           this.newExpense.day = 1;
           this.newExpense.category = '飲食'; 
-          this.activeBudgetDay = null; // 設置預設篩選為所有消費
+          this.activeBudgetDay = null; // 設置預設篩選 '所有消費'
       }
     },
     methods: {
@@ -850,7 +859,7 @@
         this.activeTripId = this.trips.length > 0 ? this.trips[0].id : null;
         if (this.activeTripId) {
           this.fetchWeather();
-          this.activeBudgetDay = null; // 初始化篩選為所有
+          this.activeBudgetDay = null; 
           this.newExpense.day = 1;
         }
       },
@@ -859,6 +868,14 @@
         if (!trip.expenses) return 0;
         // 計算整個旅程的總和 (包含 Day 0 旅行前)
         return trip.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+      },
+      
+      // 🎯 計算特定 Day 的總花費 (用於 Day 篩選按鈕，但現在 Day X 按鈕已不顯示此值)
+      calculateDayTotal(dayIndex) {
+          if (!this.activeTrip || !this.activeTrip.expenses) return 0;
+          return this.activeTrip.expenses
+                     .filter(exp => (exp.day || 1) === dayIndex)
+                     .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       },
       
       // === API 功能 (保持不變) ===
@@ -992,7 +1009,8 @@
             amount:null, 
             method:'現金', 
             category:'飲食', 
-            day: this.newExpense.day === 0 ? 1 : this.newExpense.day // 重置時，如果上次是 Day 0，則新輸入預設為 Day 1，否則保持上次的 Day X
+            // 🎯 重置時，預設 Day 應跟隨當前篩選 Day，但如果篩選是 null，則預設為 Day 1
+            day: this.activeBudgetDay === null ? 1 : (this.activeBudgetDay === 0 ? 1 : this.activeBudgetDay) 
         };
         this.inputCurrency = this.activeTrip.currency; 
         this.saveData();
@@ -1007,7 +1025,7 @@
         }
       },
 
-      // 🎯 CSV 匯出功能
+      // 🎯 CSV 匯出功能 (已修改為匯出所有記錄，不再根據 Day 篩選)
       exportExpensesToCSV() {
           if (!this.activeTrip || !this.activeTrip.expenses.length) {
               return alert('目前沒有消費記錄可以匯出！');
@@ -1015,9 +1033,9 @@
           
           const trip = this.activeTrip;
           
-          // 匯出所有消費記錄，並按 Day 排序
+          // ✨ 修改點 1: 匯出所有消費記錄，並按 Day 排序
           const expensesToExport = this.activeTrip.expenses
-              .slice() // 建立副本
+              .slice() // 建立副本以避免修改原始數據
               .sort((a, b) => (a.day || 1) - (b.day || 1)); 
 
           if (expensesToExport.length === 0) {
@@ -1033,7 +1051,7 @@
           
           // 3. 轉換資料
           const rows = expensesToExport.map(exp => [
-              // 處理 Day 0 顯示
+              // ✨ 修改點 2: 處理 Day 0 顯示
               exp.day === 0 ? '旅行前' : exp.day || 1, 
               exp.date || '',
               exp.name || '',
@@ -1054,6 +1072,7 @@
           const encodedUri = encodeURI("data:text/csv;charset=utf-8,\uFEFF" + csvContent);
           const link = document.createElement("a");
           
+          // ✨ 修改點 3: 檔案名稱不再包含 Day X
           const fileName = `${trip.title}_All_Expenses_${new Date().toISOString().split('T')[0]}.csv`;
           
           link.setAttribute("href", encodedUri);
@@ -1357,7 +1376,7 @@
             this.activeDay = 1;
             this.newExpense.day = 1; 
             this.newExpense.category = '飲食'; 
-            this.activeBudgetDay = null; // 新增旅程後篩選為所有
+            this.activeBudgetDay = null; // 修正重設為 null
             this.updateChart();
         });
       },
@@ -1376,7 +1395,7 @@
             this.activeDay = 1;
             this.newExpense.day = 1; 
             this.newExpense.category = '飲食'; 
-            this.activeBudgetDay = null; // 切換旅程後篩選為所有
+            this.activeBudgetDay = null; // 修正重設為 null
             this.updateChart();
         });
       },
