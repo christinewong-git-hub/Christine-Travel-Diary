@@ -464,7 +464,7 @@
         editingTripId: null,
         tempTrip: {},
         map: null,
-        weatherData: { temperature: 20, weathercode: 1 }, // 修正: 確保默認有溫度
+        weatherData: { temperature: 20, weathercode: 1 }, 
         weatherTheme: 'sunny',
         showBatchImport: false,
         batchImportText: '', 
@@ -478,7 +478,7 @@
           { id: 'itinerary-map', label: '行程', icon: 'ri-map-pin-user-line' },
           { id: 'budget', label: '記帳', icon: 'ri-wallet-3-line' },
           { id: 'shopping', label: '購物', icon: 'ri-shopping-bag-3-line' },
-          { id: 'trips', label: 'History', icon: 'ri-suitcase-line' }, // History 頁面
+          { id: 'trips', label: 'History', icon: 'ri-suitcase-line' }, 
         ]
       };
     },
@@ -679,15 +679,16 @@
                 'Narita Airport': [35.7647, 140.3863],
                 'Shinjuku': [35.6909, 139.7004],
                 '淺草寺': [35.7147, 139.7967],
-                // 如果是 Google Maps 連結，我們假設無法直接解析，使用中心點
             };
-            // 嘗試從 mock 數據中獲取，否則使用中心點
+            // 忽略完整的 URL 連結，只處理地標名稱
+            if (location.startsWith('http')) return null;
+            
             return locations[location] || [this.activeTrip.center.lat, this.activeTrip.center.lng]; 
         };
 
         this.activeTrip.itinerary.forEach((item, index) => {
-            if (item.location && !item.location.includes('http')) { // 忽略完整的 URL 連結
-                const latlng = mockGeocode(item.location);
+            const latlng = mockGeocode(item.location);
+            if (latlng) { 
                 L.marker(latlng)
                     .addTo(this.mapMarkers)
                     .bindPopup(`**${item.time}**: ${item.activity}<br>${item.location}`)
@@ -703,24 +704,27 @@
         }
       },
 
-      // 修正: 確保點擊可以導航
+      // **** 關鍵修正在這裡 ****
       openGoogleMaps(location) {
           if (!location) return;
-          let url = location;
-          
+
+          // 1. 檢查是否為一個 URL
           if (location.startsWith('http')) {
-              // 如果是完整的 URL，直接使用
-              // 為了安全，確保是 Google Maps 連結
-              if (location.includes('google.com/maps')) {
-                   window.open(location, '_system');
+              // 只需要確保它是地圖相關的連結，然後直接開啟
+              if (location.includes('maps') || location.includes('google.com/place') || location.includes('goo.gl/maps')) {
+                   // 使用 _blank 確保在瀏覽器中開啟
+                   window.open(location, '_blank'); 
               } else {
-                   alert('請輸入有效的 Google Maps 連結或地址/地標名稱。');
+                   alert('您貼上的連結似乎不是有效的 Google Maps 連結。請檢查。');
               }
           } else {
-              // 如果是地址/地標名稱，則編碼後導向搜尋
-              window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`, '_system');
+              // 2. 如果是地址/地標名稱，則編碼後導向 Google Maps 搜尋
+              // 使用標準的 Google Maps 查詢格式
+              const searchUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+              window.open(searchUrl, '_blank');
           }
       },
+      // **** 修正結束 ****
 
       addItineraryItem() { 
           this.activeTrip.itinerary.push({ time: '10:00', activity: '新的活動', location: '', date: new Date().toISOString().split('T')[0] }); 
@@ -733,17 +737,45 @@
           this.saveData(); 
           this.updateMapMarkers();
       },
-      exportItinerary() { /* ... */ },
-      runBatchImport() { /* ... */ },
+      exportItinerary() { 
+          alert('功能尚未實現：導出行程'); 
+      },
+      runBatchImport() { 
+          alert('功能尚未實現：批次導入行程'); 
+      },
 
       // 🛍️ 購物相關方法 (保持不變)
-      handleImageUpload(e) { /* ... */ },
-      addShoppingItem() { /* ... */ this.saveData(); },
-      removeShoppingItem(id) { /* ... */ this.saveData(); },
+      handleImageUpload(e) { 
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.newShoppingItem.image = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+      },
+      addShoppingItem() { 
+          if (!this.newShoppingItem.name) return;
+          this.activeTrip.shoppingItems.push({ 
+              id: Date.now(), 
+              name: this.newShoppingItem.name, 
+              onlinePrice: this.newShoppingItem.onlinePrice, 
+              localPrice: this.newShoppingItem.localPrice, 
+              bought: false, 
+              image: this.newShoppingItem.image 
+          });
+          this.newShoppingItem = { name: '', onlinePrice: '', localPrice: '', bought: false, image: '' };
+          this.saveData();
+      },
+      removeShoppingItem(id) { 
+          this.activeTrip.shoppingItems = this.activeTrip.shoppingItems.filter(item => item.id !== id);
+          this.saveData();
+      },
       handleShoppingItemCheck() { this.saveData(); },
       
       // 記帳/Trip 相關方法 (保持不變)
-      openNewTripModal() { this.editingTripId = null; this.tempTrip = {title:'', city:'', currency:'', exchangeRate:0, center:{lat:35.6,lng:139.6}}; this.showTripModal = true; },
+      openNewTripModal() { this.editingTripId = null; this.tempTrip = {title:'', city:'', currency:'JPY', exchangeRate:19.2, center:{lat:35.6,lng:139.6}, startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0]}; this.showTripModal = true; },
       openEditTripModal(trip) { this.editingTripId = trip.id; this.tempTrip = JSON.parse(JSON.stringify(trip)); this.showTripModal = true; },
       saveTrip() {
         if (!this.tempTrip.title) return;
@@ -772,14 +804,60 @@
         this.activeTab = 'info'; 
         this.fetchWeather();
       },
-      addExpense() { /* ... */ this.saveData(); },
+      addExpense() { 
+          if (!this.newExpense.name || !this.newExpense.amount) return;
+          this.activeTrip.expenses.push({ 
+              name: this.newExpense.name, 
+              amount: Number(this.newExpense.amount), 
+              method: this.newExpense.method, 
+              category: this.newExpense.category,
+              date: new Date().toLocaleDateString('zh-HK')
+          });
+          this.newExpense = { name: '', amount: null, method: '現金', category: '飲食' };
+          this.saveData();
+      },
       removeExpense(idx) { this.activeTrip.expenses.splice(idx, 1); this.saveData(); },
 
       // 📊 Chart 和 Excel 方法 (保持不變)
-      initExpenseChart() { /* ... */ },
-      getCategoryColor(cat) { /* ... */ },
-      updateChart() { /* ... */ },
-      exportToExcel() { /* ... */ }
+      initExpenseChart() {
+        if (this.chart) {
+            this.chart.destroy();
+        }
+        const ctx = document.getElementById('expenseChart');
+        if (!ctx) return; 
+
+        const dataPoints = this.categorySummary.map(c => c.total);
+        const labels = this.categorySummary.map(c => c.category);
+        const colors = this.categorySummary.map(c => c.color);
+
+        this.chart = new Chart(ctx, {
+            type: 'doughnut',
+            data: { labels: labels, datasets: [{ data: dataPoints, backgroundColor: colors }] },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'right' } }
+            }
+        });
+      },
+      getCategoryColor(cat) { 
+        const colorMap = { '飲食': '#FFC0CB', '購物': '#FFD700', '交通': '#87CEEB', '娛樂': '#98FB98', '其他': '#D3D3D3' };
+        return colorMap[cat] || '#D3D3D3'; 
+      },
+      updateChart() {
+          if (this.chart) {
+              this.chart.data.labels = this.categorySummary.map(c => c.category);
+              this.chart.data.datasets[0].data = this.categorySummary.map(c => c.total);
+              this.chart.data.datasets[0].backgroundColor = this.categorySummary.map(c => c.color);
+              this.chart.update();
+          }
+      },
+      exportToExcel() { 
+        const ws = XLSX.utils.json_to_sheet(this.activeTrip.expenses);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Expense Log");
+        XLSX.writeFile(wb, `${this.activeTrip.title} - 記帳明細.xlsx`);
+      }
     }
   }).mount('#app');
 </script>
