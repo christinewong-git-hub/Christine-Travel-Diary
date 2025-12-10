@@ -290,25 +290,44 @@
     <section v-if="activeTab === 'budget' && activeTrip" class="animate-fade-in">
       
       <div class="glass-card p-4 mb-4 animate-fade-in">
-          <div class="day-selector-scroll flex gap-3 overflow-x-auto pb-1">
-              <button 
-                v-for="dayIndex in totalDays" :key="dayIndex"
-                @click="activeBudgetDay = dayIndex"
-                :class="['flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-all active:scale-95', 
-                        activeBudgetDay === dayIndex 
-                          ? 'bg-primary text-white shadow-primary/30' 
-                          : 'bg-white text-slate-600 border border-slate-100']">
-                Day {{ dayIndex }}
-              </button>
+          <label for="budget-filter" class="text-xs font-bold text-slate-500 block mb-2 uppercase">選擇日期範圍</label>
+          <select 
+              id="budget-filter"
+              v-model.number="activeBudgetDay" 
+              class="w-full p-3 rounded-xl bg-slate-50 border-0 text-sm text-slate-600 font-bold text-center">
               
-              <button 
-                  @click="activeBudgetDay = 0"
-                  :class="['flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-all active:scale-95', 
-                          activeBudgetDay === 0
-                            ? 'bg-purple-500 text-white shadow-purple-300' 
-                            : 'bg-white text-slate-600 border border-slate-100']">
-                  旅行前 (Day 0)
-              </button>
+              <option :value="null">所有消費 (包含旅行前)</option>
+              <option :value="0">旅行前消費 (Day 0)</option>
+              <option v-for="day in totalDays" :value="day" :key="day">
+                  Day {{ day }}
+              </option>
+          </select>
+      </div>
+
+      <div class="glass-card p-6 mb-6 animate-fade-in border border-primary/20">
+          <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
+              <i class="ri-wallet-3-line text-primary text-xl"></i>
+              {{ activeBudgetDayText }} 總花費 (HKD)
+          </h3>
+          
+          <div class="flex justify-between items-end border-b border-dashed border-slate-200 pb-3 mb-3">
+              <span class="text-sm font-bold text-slate-500 uppercase">總計</span>
+              <span class="text-4xl font-black text-primary">{{ totalExpensesHKD.toLocaleString() }}</span>
+          </div>
+
+          <div class="flex justify-between text-sm text-slate-600 font-medium">
+              <div class="flex items-center gap-2">
+                  <i class="ri-bank-card-line text-lg text-red-400"></i>
+                  信用卡
+              </div>
+              <span class="font-bold">{{ paymentSummary.信用卡.toLocaleString() }} HKD</span>
+          </div>
+          <div class="flex justify-between text-sm text-slate-600 font-medium mt-1">
+              <div class="flex items-center gap-2">
+                  <i class="ri-money-cny-box-line text-lg text-green-400"></i>
+                  現金
+              </div>
+              <span class="font-bold">{{ paymentSummary.現金.toLocaleString() }} HKD</span>
           </div>
       </div>
       
@@ -326,9 +345,10 @@
         <h3 class="font-bold mb-4">記一筆</h3>
         
         <select v-model.number="newExpense.day" class="w-full p-3 rounded-xl bg-slate-50 border-0 mb-3 text-sm text-slate-600 font-bold text-center">
-            <option :value="0">旅行前</option> <option v-for="day in totalDays" :value="day" :key="day">
+            <option v-for="day in totalDays" :value="day" :key="day">
                 Day {{ day }}
             </option>
+            <option :value="0">旅行前</option> 
         </select>
 
         <input v-model="newExpense.name" placeholder="消費項目" class="w-full p-3 rounded-xl bg-slate-50 border-0 mb-3 text-sm">
@@ -367,7 +387,7 @@
       
       <div class="glass-card p-4 mb-6 flex justify-between items-center animate-fade-in">
           <h3 class="font-bold text-slate-700">
-             {{ activeBudgetDay === 0 ? '旅行前消費記錄' : `Day ${activeBudgetDay} 消費記錄` }}
+             {{ activeBudgetDayText }} 消費記錄列表
           </h3>
           <button @click="exportExpensesToCSV" class="bg-primary text-white py-2 px-4 rounded-xl text-sm font-bold shadow-md hover:bg-primary/90 transition active:scale-95 flex items-center gap-2">
               <i class="ri-file-excel-2-line"></i> 匯出 CSV
@@ -412,11 +432,12 @@
         </div>
         <div v-if="filteredExpenses.length === 0" class="text-center py-8 bg-white/70 rounded-2xl text-slate-400">
             <i class="ri-money-dollar-circle-line text-4xl mb-2"></i>
-            <p class="text-sm font-medium">{{ activeBudgetDay === 0 ? '旅行前' : `Day ${activeBudgetDay}` }} 暫無消費記錄。</p>
+            <p class="text-sm font-medium">{{ activeBudgetDayText }} 暫無消費記錄。</p>
         </div>
       </div>
       </section>
-<section v-if="activeTab === 'shopping' && activeTrip" class="animate-fade-in">
+
+    <section v-if="activeTab === 'shopping' && activeTrip" class="animate-fade-in">
       <div class="glass-card p-5 mb-6">
         <h3 class="font-bold mb-4 flex items-center gap-2"><i class="ri-shopping-bag-3-line text-primary"></i> 新增購物項目</h3>
         <div class="flex gap-3 mb-3">
@@ -591,7 +612,7 @@
         newShoppingItem: { name: '', onlinePrice: '', localPrice: '', bought: false, image: '' },
         
         activeDay: 1, // 行程頁面專用
-        activeBudgetDay: 1, // 🎯 記帳頁面專用篩選 (預設 Day 1，因為移除了 '全部' 按鈕)
+        activeBudgetDay: null, // 🎯 記帳頁面專用篩選: null = 所有消費, 0 = 旅行前, 1+ = Day X
 
         tabs: [
           { id: 'info', label: 'Trip Info', icon: 'ri-information-line' },
@@ -639,19 +660,24 @@
         return days;
       },
       
-      // 🎯 根據 activeBudgetDay 篩選後的消費列表 (影響圓餅圖和列表顯示)
+      // 🎯 根據 activeBudgetDay 篩選後的消費列表 (已更新篩選邏輯)
       filteredExpenses() {
           if (!this.activeTrip || !this.activeTrip.expenses) {
               return [];
           }
           const expenses = this.activeTrip.expenses;
           
+          if (this.activeBudgetDay === null) {
+              // null 表示顯示所有消費 (包含 Day 0)
+              return expenses;
+          }
+          
           if (this.activeBudgetDay === 0) {
               // Day 0 用於旅行前消費
               return expenses.filter(exp => exp.day === 0);
           }
           
-          // 如果 activeBudgetDay > 0，則只顯示該天的消費。
+          // Day X (1, 2, 3...)
           return expenses.filter(exp => (exp.day || 1) === this.activeBudgetDay);
       },
 
@@ -659,6 +685,37 @@
       totalExpensesHKD() {
         if (!this.activeTrip) return 0;
         return this.filteredExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+      },
+
+      // 🎯 顯示篩選狀態的文字
+      activeBudgetDayText() {
+          if (this.activeBudgetDay === null) {
+              return '所有';
+          } else if (this.activeBudgetDay === 0) {
+              return '旅行前 (Day 0)';
+          } else {
+              return `Day ${this.activeBudgetDay}`;
+          }
+      },
+
+      // 🎯 計算按支付方式劃分的總結
+      paymentSummary() {
+          const summary = { '現金': 0, '信用卡': 0 };
+          if (!this.activeTrip) return summary;
+
+          this.filteredExpenses.forEach(exp => {
+              const method = exp.method || '現金'; 
+              const amount = Number(exp.amount) || 0;
+              if (summary.hasOwnProperty(method)) {
+                  summary[method] += amount;
+              }
+          });
+
+          // 確保只顯示兩位小數 (但這裡用 toLocaleString() 顯示，所以直接用 parseFloat 處理精度)
+          summary['現金'] = parseFloat(summary['現金'].toFixed(2));
+          summary['信用卡'] = parseFloat(summary['信用卡'].toFixed(2));
+
+          return summary;
       },
 
       weatherDesc() {
@@ -684,7 +741,7 @@
           return (amount / rate);
       },
       
-      // 🎯 計算各類別總花費 (使用 filteredExpenses)
+      // 計算各類別總花費 (使用 filteredExpenses)
       categorySummary() {
           if (!this.activeTrip || !this.filteredExpenses) {
               return { labels: [], data: [] };
@@ -707,17 +764,13 @@
         if (newTab === 'itinerary-map') {
           setTimeout(() => this.forceUpdateMap(), 500);
         } else if (newTab === 'budget') { 
-          // 切換到記帳頁籤時，如果當前 Day 大於總天數 (例如 Day 5/4)，重設為 Day 1
-          if (this.activeBudgetDay > this.totalDays) {
-              this.activeBudgetDay = 1;
-          }
           this.$nextTick(() => this.updateChart());
         }
       },
       activeTripId() {
         this.fetchWeather();
         this.activeDay = 1; 
-        this.activeBudgetDay = 1; // 🎯 切換旅程時，重設 Budget Day 為 Day 1
+        this.activeBudgetDay = null; // 🎯 切換旅程時，重設 Budget Day 為 null (所有消費)
         if (this.activeTrip) {
             this.inputCurrency = this.activeTrip.currency; 
             this.newExpense.day = 1; 
@@ -744,12 +797,9 @@
       this.loadData();
       if (this.activeTrip) {
           this.inputCurrency = this.activeTrip.currency;
-          // 初始化 newExpense.day 和 category
           this.newExpense.day = 1;
           this.newExpense.category = '飲食'; 
-          if (this.totalDays > 0) {
-             this.activeBudgetDay = 1; // 設置預設篩選 Day 1
-          }
+          this.activeBudgetDay = null; // 設置預設篩選為所有消費
       }
     },
     methods: {
@@ -800,9 +850,7 @@
         this.activeTripId = this.trips.length > 0 ? this.trips[0].id : null;
         if (this.activeTripId) {
           this.fetchWeather();
-          // 如果當前旅程沒有 Day 1 以外的記錄， activeBudgetDay 保持為 1。
-          // 如果只有 Day 0 的記錄，我們會希望用戶能看到 Day 0 的選項。
-          this.activeBudgetDay = 1; 
+          this.activeBudgetDay = null; // 初始化篩選為所有
           this.newExpense.day = 1;
         }
       },
@@ -811,14 +859,6 @@
         if (!trip.expenses) return 0;
         // 計算整個旅程的總和 (包含 Day 0 旅行前)
         return trip.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-      },
-      
-      // 🎯 計算特定 Day 的總花費 (用於 Day 篩選按鈕，但現在 Day X 按鈕已不顯示此值)
-      calculateDayTotal(dayIndex) {
-          if (!this.activeTrip || !this.activeTrip.expenses) return 0;
-          return this.activeTrip.expenses
-                     .filter(exp => (exp.day || 1) === dayIndex)
-                     .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       },
       
       // === API 功能 (保持不變) ===
@@ -951,8 +991,8 @@
             localAmount:null, 
             amount:null, 
             method:'現金', 
-            category:'飲食', // 重置時，預設為「飲食」
-            day: this.activeBudgetDay === 0 ? 1 : this.activeBudgetDay // 重置時，如果篩選在 Day 0，則新輸入預設為 Day 1
+            category:'飲食', 
+            day: this.newExpense.day === 0 ? 1 : this.newExpense.day // 重置時，如果上次是 Day 0，則新輸入預設為 Day 1，否則保持上次的 Day X
         };
         this.inputCurrency = this.activeTrip.currency; 
         this.saveData();
@@ -967,7 +1007,7 @@
         }
       },
 
-      // 🎯 CSV 匯出功能 (已修改為匯出所有記錄，不再根據 Day 篩選)
+      // 🎯 CSV 匯出功能
       exportExpensesToCSV() {
           if (!this.activeTrip || !this.activeTrip.expenses.length) {
               return alert('目前沒有消費記錄可以匯出！');
@@ -975,9 +1015,9 @@
           
           const trip = this.activeTrip;
           
-          // ✨ 修改點 1: 匯出所有消費記錄，並按 Day 排序
+          // 匯出所有消費記錄，並按 Day 排序
           const expensesToExport = this.activeTrip.expenses
-              .slice() // 建立副本以避免修改原始數據
+              .slice() // 建立副本
               .sort((a, b) => (a.day || 1) - (b.day || 1)); 
 
           if (expensesToExport.length === 0) {
@@ -993,7 +1033,7 @@
           
           // 3. 轉換資料
           const rows = expensesToExport.map(exp => [
-              // ✨ 修改點 2: 處理 Day 0 顯示
+              // 處理 Day 0 顯示
               exp.day === 0 ? '旅行前' : exp.day || 1, 
               exp.date || '',
               exp.name || '',
@@ -1014,7 +1054,6 @@
           const encodedUri = encodeURI("data:text/csv;charset=utf-8,\uFEFF" + csvContent);
           const link = document.createElement("a");
           
-          // ✨ 修改點 3: 檔案名稱不再包含 Day X
           const fileName = `${trip.title}_All_Expenses_${new Date().toISOString().split('T')[0]}.csv`;
           
           link.setAttribute("href", encodedUri);
@@ -1318,7 +1357,7 @@
             this.activeDay = 1;
             this.newExpense.day = 1; 
             this.newExpense.category = '飲食'; 
-            this.activeBudgetDay = 1; 
+            this.activeBudgetDay = null; // 新增旅程後篩選為所有
             this.updateChart();
         });
       },
@@ -1337,7 +1376,7 @@
             this.activeDay = 1;
             this.newExpense.day = 1; 
             this.newExpense.category = '飲食'; 
-            this.activeBudgetDay = 1; 
+            this.activeBudgetDay = null; // 切換旅程後篩選為所有
             this.updateChart();
         });
       },
