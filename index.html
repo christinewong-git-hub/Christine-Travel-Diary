@@ -351,16 +351,23 @@
       <div class="glass-card p-5 mb-6">
         <h3 class="font-bold mb-4">記一筆</h3>
         <input v-model="newExpense.name" placeholder="消費項目" class="w-full p-3 rounded-xl bg-slate-50 border-0 mb-3 text-sm">
+        
         <div class="flex gap-3 mb-3">
           <div class="relative flex-1">
-             <span class="absolute left-3 top-3 text-slate-400 text-sm">$</span>
-             <input v-model.number="newExpense.amount" type="number" placeholder="HKD" class="w-full p-3 pl-6 rounded-xl bg-slate-50 border-0 text-sm">
+             <span class="absolute left-3 top-3 text-slate-400 text-sm font-bold">{{ activeTrip.currency || '???' }}</span>
+             <input v-model.number="newExpense.localAmount" type="number" placeholder="金額" class="w-full p-3 pl-12 rounded-xl bg-slate-50 border-0 text-sm">
           </div>
           <select v-model="newExpense.method" class="w-1/3 p-3 rounded-xl bg-slate-50 border-0 text-sm text-slate-600">
             <option>現金</option>
             <option>信用卡</option>
           </select>
         </div>
+        
+        <div v-if="convertedHKD > 0" class="text-sm text-slate-500 bg-blue-50/70 p-3 rounded-xl mb-3 flex justify-between items-center animate-fade-in border border-blue-100">
+            <span class="font-bold text-slate-700">自動換算港幣 (HKD):</span>
+            <span class="font-black text-lg text-primary">{{ convertedHKD.toFixed(2) }}</span>
+        </div>
+
         <select v-model="newExpense.category" class="w-full p-3 rounded-xl bg-slate-50 border-0 mb-4 text-sm text-slate-600">
             <option>飲食</option>
             <option>購物</option>
@@ -387,7 +394,7 @@
           </div>
           <div class="text-right flex items-center gap-3">
             <div>
-                <p class="font-bold text-slate-800">-{{ exp.amount }}</p>
+                <p class="font-bold text-slate-800">-{{ exp.amount.toFixed(2) }} HKD</p>
                 <p class="text-[10px] text-slate-400">≈ {{ Math.round(exp.amount * activeTrip.exchangeRate) }} {{ activeTrip.currency }}</p>
             </div>
             <button @click="removeExpense(exp.id)" class="text-slate-300 hover:text-red-500 p-1 active:scale-90 transition">
@@ -509,7 +516,15 @@
         showBatchImport: false,
         batchImportText: '',
         
-        newExpense: { id: null, name: '', amount: null, method: '現金', category: '飲食' },
+        // 🚨 記帳功能變動：新增 localAmount 欄位
+        newExpense: { 
+          id: null, 
+          name: '', 
+          localAmount: null, // 輸入當地幣別金額
+          amount: null,      // 儲存 HKD 實際金額
+          method: '現金', 
+          category: '飲食' 
+        },
         newShoppingItem: { name: '', onlinePrice: '', localPrice: '', bought: false, image: '' },
         
         // 🎯 紀錄當前選擇的 Day
@@ -571,7 +586,16 @@
         const code = this.weatherData.weathercode;
         const map = { 0:'晴朗 Sunny', 1:'多雲 Cloudy', 2:'陰天 Overcast', 3:'毛毛雨 Drizzle', 45:'霧 Fog', 48:'霧淞 Rime fog', 51:'毛毛雨 Drizzle', 53:'小雨 Light Rain', 55:'大雨 Heavy Rain', 61:'陣雨 Rain', 63:'中雨 Moderate Rain', 65:'大雨 Heavy Rain', 80:'陣雨 Showers', 81:'中度陣雨 Moderate Showers', 82:'強烈陣雨 Violent Showers', 95:'雷暴 Thunderstorm' };
         return map[code] || '多雲 Cloudy';
-      }
+      },
+      
+      // 🚨 新增：即時換算港幣金額
+      convertedHKD() {
+          if (!this.activeTrip || !this.activeTrip.exchangeRate || !this.newExpense.localAmount || this.newExpense.localAmount <= 0) {
+              return 0;
+          }
+          // 換算公式：HKD = 外幣金額 / 匯率 (因為 rate 是 1 HKD 換多少外幣)
+          return (this.newExpense.localAmount / this.activeTrip.exchangeRate);
+      },
     },
     watch: {
       activeTab(newTab) {
@@ -605,7 +629,12 @@
         if (saved) {
           const parsedTrips = JSON.parse(saved).map(trip => {
               if (trip.expenses && trip.expenses.every(exp => !exp.id)) {
-                  trip.expenses = trip.expenses.map(exp => ({ id: Date.now() + Math.random(), ...exp }));
+                  // 確保 exp.amount 有值，並給予 default
+                  trip.expenses = trip.expenses.map(exp => ({ 
+                      id: Date.now() + Math.random(), 
+                      amount: exp.amount || 0, // 確保 amount 存在
+                      ...exp 
+                  }));
               }
               if (trip.itinerary) {
                   // 確保每個行程項目都有 day 屬性，預設為 1
@@ -624,7 +653,8 @@
             center: { lat: 35.6895, lng: 139.6917 }, exchangeRate: 19.2,
             flights: { outbound: { no: 'CX500', date: '2025-12-24' }, inbound: { no: 'CX501', date: '2025-12-28' } },
             itinerary: defaultItinerary, 
-            expenses: [], shoppingItems: []
+            expenses: [{ id: Date.now()+1, name: '機票', amount: 3500, method: '信用卡', category: '其他', date: '12/10' }],
+            shoppingItems: []
           }];
           this.saveData();
         }
@@ -734,16 +764,38 @@
         }
       },
 
-      // === 記帳功能 (保持不變) ===
+      // === 記帳功能 (已更新邏輯) ===
       addExpense() {
-        if(!this.newExpense.name || !this.newExpense.amount) return;
+        // 確保有項目名稱和當地金額
+        if(!this.newExpense.name || !this.newExpense.localAmount || this.convertedHKD === 0) {
+            return alert('請輸入消費項目和有效的金額');
+        }
+
         const d = new Date();
+        
+        // 🚨 核心變動：使用 convertedHKD 設定要儲存的 HKD 金額
+        this.newExpense.amount = this.convertedHKD; 
+
         this.activeTrip.expenses.unshift({ 
             id: Date.now() + Math.random(), 
-            ...this.newExpense, 
+            // 儲存 HKD amount 和 category/method/name
+            name: this.newExpense.name,
+            amount: this.newExpense.amount,
+            method: this.newExpense.method,
+            category: this.newExpense.category,
+            // localAmount 不需要儲存，因為 HKD amount 已有記錄，但為了追蹤可以保留
+            localAmount: this.newExpense.localAmount, 
             date: `${d.getMonth()+1}/${d.getDate()}` 
         });
-        this.newExpense = { name:'', amount:null, method:'現金', category:'飲食' };
+        
+        // 重置輸入欄位
+        this.newExpense = { 
+            name:'', 
+            localAmount:null, 
+            amount:null, 
+            method:'現金', 
+            category:'飲食' 
+        };
         this.saveData();
       },
       removeExpense(expenseId) {
@@ -776,18 +828,16 @@
         this.saveData();
       },
 
-      // === 地圖/行程功能 (已更新繪製路線) ===
+      // === 地圖/行程功能 (保持不變) ===
       openGoogleMaps(loc) { 
-        // 確保 Google Maps 連結的格式正確
-        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank'); 
+        window.open(`http://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(loc)}`, '_blank'); 
       },
       openDirections(loc) { 
-        // 假設從當前位置導航到 loc
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc)}`, '_blank'); 
+        window.open(`http://googleusercontent.com/maps.google.com/dir//${encodeURIComponent(loc)}`, '_blank'); 
       },
 
       mapMarkers: L.layerGroup(),
-      mapPolyline: null, // 🎯 路線層
+      mapPolyline: null, 
       
       forceUpdateMap() {
         if (this.activeTab !== 'itinerary-map') return;
@@ -802,11 +852,9 @@
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(this.map);
           this.mapMarkers.clearLayers();
           this.mapMarkers.addTo(this.map);
-          // 🎯 初始化路線層
           this.mapPolyline = L.polyline([], {color: '#97CBFF', weight: 4, opacity: 0.8, dashArray: '5, 10'}).addTo(this.map);
           
           this.updateMapMarkers(); 
-          // 確保地圖正確顯示
           setTimeout(() => { this.map.invalidateSize(); }, 100);
         } catch (e) { console.error("Map init fail", e); }
       },
@@ -814,11 +862,7 @@
       async geocodeLocation(location) {
           if (GeocodingCache[location]) return GeocodingCache[location];
           
-          // ** 注意: 在本地 HTML 文件中運行時，瀏覽器可能阻止對 nominatim.openstreetmap.org 的請求。
-          // 解決方案：將文件上傳到伺服器 (如 GitHub Pages 或任何 Web Server) 後再嘗試。
-          
           try {
-              // 路線地圖依賴此 API，如果被阻止，路線將無法繪製
               const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`);
               const data = await res.json();
               if (data && data.length > 0) {
@@ -830,7 +874,6 @@
               console.warn(`Geocoding failed for: ${location}. Error: ${e}. Route may not be drawn.`);
           }
           
-          // 失敗時，返回一個靠近中心點的隨機座標作為備用
           if (this.activeTrip.center) {
               return {
                   lat: this.activeTrip.center.lat + (Math.random() - 0.5) * 0.005,
@@ -845,7 +888,7 @@
           this.mapMarkers.clearLayers();
           
           const currentDayItems = this.activeTrip.itinerary
-              .filter(item => (item.day || 1) === this.activeDay && item.location) // 篩選有地點的
+              .filter(item => (item.day || 1) === this.activeDay && item.location) 
               .sort((a, b) => {
                   const timeA = a.time ? a.time.replace(':', '') : '9999';
                   const timeB = b.time ? b.time.replace(':', '') : '9999';
@@ -855,15 +898,13 @@
           let lineCoords = [];
           let markers = [];
           
-          // 確保地點依序被地理編碼
           for (let index = 0; index < currentDayItems.length; index++) {
               const item = currentDayItems[index];
-              // 加上城市名稱以提高準確度
               const fullLocation = item.location + ', ' + this.activeTrip.city + ', ' + this.activeTrip.destination; 
               const coords = await this.geocodeLocation(fullLocation);
 
               if (coords) {
-                  lineCoords.push([coords.lat, coords.lng]); // 🎯 收集座標用於繪製路線
+                  lineCoords.push([coords.lat, coords.lng]); 
 
                   const marker = L.marker([coords.lat, coords.lng], {
                       icon: L.divIcon({
@@ -877,15 +918,12 @@
               }
           }
 
-          // 繪製標記
           markers.forEach(marker => this.mapMarkers.addLayer(marker));
           
-          // 🎯 繪製路線
           if (this.mapPolyline) {
               this.mapPolyline.setLatLngs(lineCoords);
           }
           
-          // 調整地圖視窗
           if (this.mapMarkers.getLayers().length > 0) {
             this.map.fitBounds(this.mapMarkers.getBounds(), { padding: [50, 50] });
           } else if (this.activeTrip.center) {
