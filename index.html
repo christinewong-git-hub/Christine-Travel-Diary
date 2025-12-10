@@ -512,7 +512,7 @@
         newExpense: { id: null, name: '', amount: null, method: '現金', category: '飲食' },
         newShoppingItem: { name: '', onlinePrice: '', localPrice: '', bought: false, image: '' },
         
-        // 🎯 新增: 紀錄當前選擇的 Day
+        // 🎯 紀錄當前選擇的 Day
         activeDay: 1,
 
         tabs: [
@@ -608,7 +608,10 @@
                   trip.expenses = trip.expenses.map(exp => ({ id: Date.now() + Math.random(), ...exp }));
               }
               if (trip.itinerary) {
+                  // 確保每個行程項目都有 day 屬性，預設為 1
                   trip.itinerary = trip.itinerary.map(item => ({ id: Date.now() + Math.random(), day: 1, ...item }));
+              } else {
+                  trip.itinerary = [];
               }
               return trip;
           });
@@ -773,11 +776,17 @@
         this.saveData();
       },
 
-      // === 地圖/行程功能 (已更新) ===
-      openGoogleMaps(loc) { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`); },
-      openDirections(loc) { window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc)}`); },
+      // === 地圖/行程功能 (已更新繪製路線) ===
+      openGoogleMaps(loc) { 
+        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank'); 
+      },
+      openDirections(loc) { 
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc)}`, '_blank'); 
+      },
 
       mapMarkers: L.layerGroup(),
+      mapPolyline: null, // 🎯 新增: 路線層
+      
       forceUpdateMap() {
         if (this.activeTab !== 'itinerary-map') return;
         try {
@@ -791,6 +800,9 @@
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(this.map);
           this.mapMarkers.clearLayers();
           this.mapMarkers.addTo(this.map);
+          // 🎯 初始化路線層
+          this.mapPolyline = L.polyline([], {color: '#97CBFF', weight: 4, opacity: 0.8, dashArray: '5, 10'}).addTo(this.map);
+          
           this.updateMapMarkers(); 
           setTimeout(() => { this.map.invalidateSize(); }, 100);
         } catch (e) { console.error("Map init fail", e); }
@@ -809,17 +821,20 @@
           } catch (e) {
               console.warn(`Geocoding failed for: ${location}`, e);
           }
-          return {
-              lat: this.activeTrip.center.lat + (Math.random() - 0.5) * 0.05,
-              lng: this.activeTrip.center.lng + (Math.random() - 0.5) * 0.05,
-          };
+          // Fallback to a random point near the trip center if geocoding fails
+          if (this.activeTrip.center) {
+              return {
+                  lat: this.activeTrip.center.lat + (Math.random() - 0.5) * 0.05,
+                  lng: this.activeTrip.center.lng + (Math.random() - 0.5) * 0.05,
+              };
+          }
+          return null; 
       },
 
       async updateMapMarkers() {
           if (!this.map || !this.activeTrip?.itinerary) return;
           this.mapMarkers.clearLayers();
           
-          // 🎯 篩選出當前 activeDay 的行程項目
           const currentDayItems = this.activeTrip.itinerary
               .filter(item => (item.day || 1) === this.activeDay)
               .sort((a, b) => {
@@ -828,29 +843,40 @@
                   return timeA - timeB;
               });
           
+          let lineCoords = [];
+          
           const markersPromises = currentDayItems
               .filter(item => item.location)
               .map(async (item, index) => {
                   const coords = await this.geocodeLocation(item.location + ', ' + this.activeTrip.city);
 
-                  const marker = L.marker([coords.lat, coords.lng], {
-                      icon: L.divIcon({
-                          className: 'custom-div-icon',
-                          // 🎯 使用 Day 內的順序
-                          html: `<div style="background-color:#97CBFF; color:white; border-radius:50%; width:24px; height:24px; line-height:24px; text-align:center; font-weight:bold;">${index + 1}</div>`,
-                          iconSize: [24, 24],
-                          iconAnchor: [12, 12]
-                      })
-                  }).bindPopup(`<b>Day ${item.day || 1} - ${item.location}</b><br>${item.activity}`);
-                  return marker;
+                  if (coords) {
+                      lineCoords.push([coords.lat, coords.lng]); // 🎯 收集座標用於繪製路線
+
+                      const marker = L.marker([coords.lat, coords.lng], {
+                          icon: L.divIcon({
+                              className: 'custom-div-icon',
+                              html: `<div style="background-color:#97CBFF; color:white; border-radius:50%; width:24px; height:24px; line-height:24px; text-align:center; font-weight:bold;">${index + 1}</div>`,
+                              iconSize: [24, 24],
+                              iconAnchor: [12, 12]
+                          })
+                      }).bindPopup(`<b>Day ${item.day || 1} - ${item.location}</b><br>${item.activity}`);
+                      return marker;
+                  }
+                  return null;
               });
 
-          const markers = await Promise.all(markersPromises);
+          const markers = (await Promise.all(markersPromises)).filter(m => m !== null);
           markers.forEach(marker => this.mapMarkers.addLayer(marker));
+          
+          // 🎯 繪製路線
+          if (this.mapPolyline) {
+              this.mapPolyline.setLatLngs(lineCoords);
+          }
           
           if (this.mapMarkers.getLayers().length > 0) {
             this.map.fitBounds(this.mapMarkers.getBounds(), { padding: [50, 50] });
-          } else {
+          } else if (this.activeTrip.center) {
              this.map.setView([this.activeTrip.center.lat, this.activeTrip.center.lng], 13);
           }
       },
