@@ -169,7 +169,7 @@
              <div class="flex justify-between text-sm font-bold text-slate-800 px-4 py-1">
                <div class="text-center">
                  <div class="text-2xl font-black text-slate-700">{{ activeTrip.flights.inbound.from || 'NRT' }}</div>
-                 <div class="text-xs text-slate-500 mt-1">{{ activeTrip.flights.inbound.depTime || '--:--' }}</div>
+                 <div class="text-xs text-slate-500 mt-1">{{ activeTrip.flights.inbound.arrTime || '--:--' }}</div>
                </div>
                <i class="ri-flight-land-line text-slate-400 text-xl self-center mx-2"></i>
                <div class="text-center">
@@ -511,8 +511,8 @@
              <div v-else class="w-full h-full flex items-center justify-center text-slate-300"><i class="ri-image-line text-4xl"></i></div>
              
              <button @click="toggleBought(item)" 
-                     class="absolute top-2 right-2 w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center transition-colors duration-200 border-2 border-white"
-                     :class="item.bought ? 'bg-primary/90 text-white border-primary' : 'text-slate-400 hover:bg-slate-50'">
+                     class="absolute top-2 right-2 w-8 h-8 rounded-full shadow-md flex items-center justify-center transition-colors duration-200"
+                     :class="item.bought ? 'bg-primary/90 text-white shadow-primary/30' : 'bg-white/50 text-slate-400 hover:bg-white'">
                  <i :class="item.bought ? 'ri-check-line text-lg' : 'ri-check-line text-lg'"></i>
              </button>
           </div>
@@ -537,14 +537,10 @@
                      <i class="ri-delete-bin-line text-xl"></i>
                  </button>
                  
-                 <div v-if="item.savingsHKD > 0" class="text-xs font-bold text-green-600">
-                     <i class="ri-arrow-down-line"></i> 節省 {{ item.savingsHKD.toFixed(2) }} HKD
-                 </div>
-                 <div v-else-if="item.savingsHKD < 0" class="text-xs font-bold text-red-600">
-                     <i class="ri-arrow-up-line"></i> 更貴 {{ Math.abs(item.savingsHKD).toFixed(2) }} HKD
-                 </div>
-                 <div v-else class="text-xs text-slate-500">
-                     無價差
+                 <div class="text-xs text-slate-400">
+                    <span v-if="item.savingsHKD > 0">更便宜!</span>
+                    <span v-else-if="item.savingsHKD < 0">更貴!</span>
+                    <span v-else>價差零</span>
                  </div>
              </div>
           </div>
@@ -1048,9 +1044,9 @@
           }
           try {
              const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
-             const rateData = await rateRes.json();
-             if (rateData?.rates && rateData.rates[currencyCode]) {
-                this.tempTrip.exchangeRate = rateData.rates[currencyCode];
+             const rateData = await rateRes.rates;
+             if (rateData && rateData[currencyCode]) {
+                this.tempTrip.exchangeRate = rateData[currencyCode];
              }
           } catch (err) { console.error("Rate fetch fail", err); }
           alert(`成功！\n座標: ${location.lat}, ${location.lon}\n國家: ${this.tempTrip.destination}\n貨幣: ${currencyCode}\n匯率: 1 HKD ≈ ${this.tempTrip.exchangeRate.toFixed(2)} ${currencyCode}`);
@@ -1313,10 +1309,10 @@
         this.newShoppingItem = { name: '', onlinePrice: null, localPrice: null, quantity: 1, bought: false, image: '' };
         this.saveData();
       },
-      // **新增方法**: 點擊切換已買狀態
+      // **修復方法**: 點擊切換已買狀態並保存
       toggleBought(item) {
           item.bought = !item.bought;
-          this.saveData();
+          this.saveData(); // 確保每次狀態變更都保存數據
       },
       removeShoppingItem(itemId) {
         if(confirm('確認刪除此購物項目嗎？')) {
