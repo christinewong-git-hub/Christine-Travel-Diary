@@ -222,8 +222,8 @@
       </div>
 
       <div class="flex gap-3 mb-5 overflow-x-auto pb-2 scrollbar-hide">
-        <button @click="addItineraryItem(activeDay)" class="flex-shrink-0 bg-primary/20 text-primary px-5 py-3 rounded-2xl text-sm font-bold shadow-sm hover:shadow-md transition active:scale-95 flex items-center gap-2">
-          <i class="ri-add-circle-fill text-lg"></i>新增 Day {{ activeDay }}
+        <button @click="addItineraryItem(activeDay)" class="flex-shrink-0 bg-slate-100 text-slate-600 px-5 py-3 rounded-2xl text-sm font-bold shadow-sm hover:shadow-md transition active:scale-95 flex items-center gap-2 border border-slate-200">
+          <i class="ri-add-circle-fill text-lg text-primary"></i>新增 Day {{ activeDay }} 行程
         </button>
         <button @click="showBatchImport = !showBatchImport" class="flex-shrink-0 bg-white text-slate-600 px-5 py-3 rounded-2xl text-sm font-bold shadow-sm border border-slate-100 flex items-center gap-2">
           <i class="ri-file-list-3-line text-lg"></i>批次匯入
@@ -248,8 +248,8 @@
              <div class="p-4 space-y-6">
                 <div v-if="group.items.length === 0" class="text-center py-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
                     <p class="text-sm text-slate-400 mb-3">此日暫無行程</p>
-                    <button @click="addItineraryItem(activeDay)" class="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full hover:bg-primary/20 transition">
-                        <i class="ri-add-line"></i> 新增 Day {{ activeDay }} 第一站
+                    <button @click="addItineraryItem(activeDay)" class="text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200 px-3 py-1 rounded-full hover:bg-slate-200 transition">
+                        <i class="ri-add-line text-primary"></i> 新增 Day {{ activeDay }} 第一站
                     </button>
                 </div>
 
@@ -537,7 +537,7 @@
           return diffDays > 0 ? diffDays : 1;
       },
 
-      // 依據天數分組行程 (保持分組邏輯，但不再處理 collapse)
+      // 依據天數分組行程 (保持分組邏輯)
       groupedItinerary() {
         if (!this.activeTrip) return [];
         
@@ -781,11 +781,12 @@
         window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank'); 
       },
       openDirections(loc) { 
+        // 假設從當前位置導航到 loc
         window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc)}`, '_blank'); 
       },
 
       mapMarkers: L.layerGroup(),
-      mapPolyline: null, // 🎯 新增: 路線層
+      mapPolyline: null, // 🎯 路線層
       
       forceUpdateMap() {
         if (this.activeTab !== 'itinerary-map') return;
@@ -804,13 +805,19 @@
           this.mapPolyline = L.polyline([], {color: '#97CBFF', weight: 4, opacity: 0.8, dashArray: '5, 10'}).addTo(this.map);
           
           this.updateMapMarkers(); 
+          // 確保地圖正確顯示
           setTimeout(() => { this.map.invalidateSize(); }, 100);
         } catch (e) { console.error("Map init fail", e); }
       },
       
       async geocodeLocation(location) {
           if (GeocodingCache[location]) return GeocodingCache[location];
+          
+          // ** 注意: 在本地 HTML 文件中運行時，瀏覽器可能阻止對 nominatim.openstreetmap.org 的請求。
+          // 解決方案：將文件上傳到伺服器 (如 GitHub Pages 或任何 Web Server) 後再嘗試。
+          
           try {
+              // 路線地圖依賴此 API，如果被阻止，路線將無法繪製
               const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`);
               const data = await res.json();
               if (data && data.length > 0) {
@@ -819,13 +826,14 @@
                   return coords;
               }
           } catch (e) {
-              console.warn(`Geocoding failed for: ${location}`, e);
+              console.warn(`Geocoding failed for: ${location}. Error: ${e}. Route may not be drawn.`);
           }
-          // Fallback to a random point near the trip center if geocoding fails
+          
+          // 失敗時，返回一個靠近中心點的隨機座標作為備用
           if (this.activeTrip.center) {
               return {
-                  lat: this.activeTrip.center.lat + (Math.random() - 0.5) * 0.05,
-                  lng: this.activeTrip.center.lng + (Math.random() - 0.5) * 0.05,
+                  lat: this.activeTrip.center.lat + (Math.random() - 0.5) * 0.005,
+                  lng: this.activeTrip.center.lng + (Math.random() - 0.5) * 0.005,
               };
           }
           return null; 
@@ -836,7 +844,7 @@
           this.mapMarkers.clearLayers();
           
           const currentDayItems = this.activeTrip.itinerary
-              .filter(item => (item.day || 1) === this.activeDay)
+              .filter(item => (item.day || 1) === this.activeDay && item.location) // 篩選有地點的
               .sort((a, b) => {
                   const timeA = a.time ? a.time.replace(':', '') : '9999';
                   const timeB = b.time ? b.time.replace(':', '') : '9999';
@@ -844,29 +852,31 @@
               });
           
           let lineCoords = [];
+          let markers = [];
           
-          const markersPromises = currentDayItems
-              .filter(item => item.location)
-              .map(async (item, index) => {
-                  const coords = await this.geocodeLocation(item.location + ', ' + this.activeTrip.city);
+          // 確保地點依序被地理編碼
+          for (let index = 0; index < currentDayItems.length; index++) {
+              const item = currentDayItems[index];
+              // 加上城市名稱以提高準確度
+              const fullLocation = item.location + ', ' + this.activeTrip.city + ', ' + this.activeTrip.destination; 
+              const coords = await this.geocodeLocation(fullLocation);
 
-                  if (coords) {
-                      lineCoords.push([coords.lat, coords.lng]); // 🎯 收集座標用於繪製路線
+              if (coords) {
+                  lineCoords.push([coords.lat, coords.lng]); // 🎯 收集座標用於繪製路線
 
-                      const marker = L.marker([coords.lat, coords.lng], {
-                          icon: L.divIcon({
-                              className: 'custom-div-icon',
-                              html: `<div style="background-color:#97CBFF; color:white; border-radius:50%; width:24px; height:24px; line-height:24px; text-align:center; font-weight:bold;">${index + 1}</div>`,
-                              iconSize: [24, 24],
-                              iconAnchor: [12, 12]
-                          })
-                      }).bindPopup(`<b>Day ${item.day || 1} - ${item.location}</b><br>${item.activity}`);
-                      return marker;
-                  }
-                  return null;
-              });
+                  const marker = L.marker([coords.lat, coords.lng], {
+                      icon: L.divIcon({
+                          className: 'custom-div-icon',
+                          html: `<div style="background-color:#97CBFF; color:white; border-radius:50%; width:24px; height:24px; line-height:24px; text-align:center; font-weight:bold;">${index + 1}</div>`,
+                          iconSize: [24, 24],
+                          iconAnchor: [12, 12]
+                      })
+                  }).bindPopup(`<b>Day ${item.day || 1} - ${item.location}</b><br>${item.activity}`);
+                  markers.push(marker);
+              }
+          }
 
-          const markers = (await Promise.all(markersPromises)).filter(m => m !== null);
+          // 繪製標記
           markers.forEach(marker => this.mapMarkers.addLayer(marker));
           
           // 🎯 繪製路線
@@ -874,6 +884,7 @@
               this.mapPolyline.setLatLngs(lineCoords);
           }
           
+          // 調整地圖視窗
           if (this.mapMarkers.getLayers().length > 0) {
             this.map.fitBounds(this.mapMarkers.getBounds(), { padding: [50, 50] });
           } else if (this.activeTrip.center) {
