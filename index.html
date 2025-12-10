@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+l<!DOCTYPE html>
 <html lang="zh-HK">
 <head>
   <meta charset="UTF-8">
@@ -1295,7 +1295,7 @@
           }
       },
       
-      // === 購物功能 (已修復) ===
+      // === 購物功能 ===
       handleImageUpload(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -1326,16 +1326,26 @@
         this.saveData();
       },
       
-      // **關鍵修復: 確保切換狀態和 Vue 響應式更新**
+      // **關鍵修復 V4: 採用 Vue 響應式最佳實踐 (splice 替換新物件) 以確保畫面更新**
       toggleBought(item) {
-          if (item) {
-              item.bought = !item.bought;
-              this.saveData();
+          if (!item || !this.activeTrip) return;
+
+          // 1. 找到該 item 在 shoppingItems 陣列中的確切索引
+          const index = this.activeTrip.shoppingItems.findIndex(i => i.id === item.id);
+          
+          if (index !== -1) {
+              // 2. 更改 bought 狀態
+              const newBoughtState = !item.bought;
+
+              // 3. 創建一個新的物件來替換舊的，確保 Vue 偵測到變化
+              const newItem = { ...item, bought: newBoughtState };
               
-              // 透過替換整個 shoppingItems 陣列來強制 Vue 重新渲染 DOM 樣式 (解決無法取消勾選和半透明不生效的問題)
-              if (this.activeTrip) {
-                   this.activeTrip.shoppingItems = [...this.activeTrip.shoppingItems];
-              }
+              // 4. 使用 splice 替換舊物件
+              this.activeTrip.shoppingItems.splice(index, 1, newItem);
+              
+              this.saveData(); 
+              
+              // 5. 確保總覽頁面等依賴也被觸發 (非必要，但能提高穩定性)
               this.trips = [...this.trips]; 
           }
       },
