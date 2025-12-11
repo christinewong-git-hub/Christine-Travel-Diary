@@ -1,4 +1,6 @@
-l<!DOCTYPE html>
+Firebase
+
+<!DOCTYPE html>
 <html lang="zh-HK">
 <head>
   <meta charset="UTF-8">
@@ -35,6 +37,9 @@ l<!DOCTYPE html>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script> 
 
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <style>
     body {
       background: linear-gradient(135deg, #C4E1FF 0%, #D2E9FF 33%, #DDDDFF 66%, #FFECF5 100%);
@@ -118,6 +123,11 @@ l<!DOCTYPE html>
         color: white; 
         background-color: transparent; 
     }
+
+    /* 🔥 登入 Modal 樣式 */
+    .auth-modal {
+        animation: fadeIn 0.3s ease-out;
+    }
   </style>
 </head>
 <body>
@@ -129,9 +139,14 @@ l<!DOCTYPE html>
       <div class="bg-primary/20 p-2 rounded-full"><i class="ri-plane-fill text-xl text-primary"></i></div>
       <h1 class="text-lg font-bold text-slate-700 tracking-wide">Christine's Travel Diary</h1>
     </div>
-    <button @click="openNewTripModal" class="pointer-events-auto w-10 h-10 rounded-full bg-white/90 backdrop-blur shadow-lg text-primary flex items-center justify-center hover:scale-110 transition active:scale-95">
-      <i class="ri-add-line text-xl"></i>
-    </button>
+    <div class="flex items-center gap-3">
+        <button v-if="currentUser" @click="logoutUser" class="pointer-events-auto w-10 h-10 rounded-full bg-red-100/90 backdrop-blur shadow-lg text-red-500 flex items-center justify-center hover:scale-110 transition active:scale-95">
+          <i class="ri-logout-box-r-line text-xl"></i>
+        </button>
+        <button @click="openNewTripModal" class="pointer-events-auto w-10 h-10 rounded-full bg-white/90 backdrop-blur shadow-lg text-primary flex items-center justify-center hover:scale-110 transition active:scale-95">
+          <i class="ri-add-line text-xl"></i>
+        </button>
+    </div>
   </header>
 
   <main class="pt-24 px-4 max-w-3xl mx-auto pb-8">
@@ -600,6 +615,29 @@ l<!DOCTYPE html>
     </section>
 
   </main>
+  
+  <div v-if="showLoginModal" class="auth-modal fixed inset-0 z-[500] flex items-end sm:items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+    <div class="bg-white w-full sm:w-[400px] p-8 rounded-t-3xl sm:rounded-3xl relative z-10 animate-slide-up pb-10 shadow-2xl">
+      <h3 class="text-2xl font-black mb-2 text-center text-slate-800 flex items-center justify-center gap-2">
+          <i class="ri-lock-2-line text-primary"></i> 旅程雲端同步
+      </h3>
+      <p class="text-sm text-slate-500 text-center mb-6">請登入以安全地儲存及同步您的旅程資料。</p>
+      
+      <div class="space-y-4">
+        <input v-model="loginEmail" type="email" placeholder="電子郵件 (Email)" class="w-full p-4 rounded-xl bg-slate-50 border-0 focus:ring-2 ring-primary/20">
+        <input v-model="loginPassword" type="password" placeholder="密碼 (Password)" class="w-full p-4 rounded-xl bg-slate-50 border-0 focus:ring-2 ring-primary/20">
+        
+        <button @click="loginUser" class="w-full bg-primary text-white py-3 rounded-xl font-bold text-lg shadow-md shadow-primary/30 active:scale-95 transition">登入 (Sign In)</button>
+        <button @click="registerUser" class="w-full bg-secondary/20 text-secondary py-3 rounded-xl font-bold text-lg shadow-sm active:scale-95 transition">註冊 (Sign Up)</button>
+      </div>
+      
+      <div class="text-center mt-5">
+          <p class="text-xs text-slate-400">登入後，您的數據將被上傳至 Firestore 資料庫。</p>
+      </div>
+    </div>
+  </div>
+
 
   <div v-if="showTripModal" class="fixed inset-0 z-[200] flex items-end sm:items-center justify-center">
     <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" @click="showTripModal = false"></div>
@@ -653,6 +691,24 @@ l<!DOCTYPE html>
   const AVIATIONSTACK_KEY = '5bxxxxxxxxx'; 
   
   const GeocodingCache = {};
+  
+  // 🔥 【新增】您的 Firebase 配置
+  // 請將以下內容替換為您從 Firebase 控制台取得的實際配置
+  const firebaseConfig = {
+    apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM",
+    authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
+    projectId: "my-travel-diary-1dbc0",
+    storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
+    messagingSenderId: "592971246262",
+    appId: "1:592971246262:web:f7d0c923b697a26e199417",
+    // measurementId: "G-F6X3YWL2MY" // V8 版本不需要
+  };
+
+  // 🔥 【新增】Firebase 初始化 (V8 模式)
+  const app = firebase.initializeApp(firebaseConfig);
+  const auth = app.auth();
+  const db = app.firestore();
+
 
   createApp({
     data() {
@@ -692,6 +748,12 @@ l<!DOCTYPE html>
         },
         
         activeDay: 1, // 行程頁面專用
+
+        // 🔥 【新增】Firebase/Auth 相關狀態變數
+        currentUser: null,       
+        loginEmail: '',          
+        loginPassword: '',       
+        showLoginModal: true, 
 
         tabs: [
           { id: 'info', label: 'Trip Info', icon: 'ri-information-line' },
@@ -931,7 +993,24 @@ l<!DOCTYPE html>
       }
     },
     mounted() {
-      this.loadData();
+      // 🔥 【修改】將 loadData() 移到 Firebase 狀態監聽後
+      
+      // 監聽 Firebase 登入狀態
+      auth.onAuthStateChanged(user => {
+            if (user) {
+                this.currentUser = user;
+                this.showLoginModal = false;
+                // 🔥 登入成功後，從 Firestore 載入數據
+                this.loadData(); 
+            } else {
+                this.currentUser = null;
+                this.trips = []; // 清空數據
+                this.showLoginModal = true;
+                // 如果已經登出，嘗試載入舊的本地數據（以防萬一）
+                this.loadInitialOrLocalData(); 
+            }
+        });
+
       if (this.activeTrip) {
           this.inputCurrency = this.activeTrip.currency;
           this.newExpense.day = 1;
@@ -943,15 +1022,114 @@ l<!DOCTYPE html>
           this.activeDay = day;
       },
       
-      saveData() { 
-          localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips)); 
+      // 🔥 【修改】saveData: 優先儲存到 Firestore，其次是 LocalStorage 備份
+      async saveData() { 
+          // 1. 儲存到雲端 Firestore
+          if (this.currentUser && this.activeTrip) {
+               try {
+                   const userRef = db.collection('userTrips').doc(this.currentUser.uid);
+                   await userRef.set({
+                       trips: JSON.parse(JSON.stringify(this.trips)), // 確保數據是純粹的 JSON
+                       activeTripId: this.activeTripId,
+                       timestamp: firebase.firestore.FieldValue.serverTimestamp() // 新增時間戳
+                   });
+                   // console.log("數據成功儲存到 Firestore!");
+               } catch (e) {
+                   console.error("Firestore 儲存失敗: ", e);
+                   // 儲存失敗時，仍然備份到 LocalStorage
+                   localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
+                   alert("數據儲存到雲端失敗，已儲存至瀏覽器本地。請檢查網路或 Firestore 規則！");
+               }
+          }
+          
+          // 2. 儲存到 LocalStorage (作為備份)
+          localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
           this.updateChart(); 
       },
-      loadData() {
-        const saved = localStorage.getItem('christine_travel_diary_v4');
-        if (saved) {
-          const parsedTrips = JSON.parse(saved).map(trip => {
-              // ... (Expenses and Itinerary loading logic remains the same)
+      
+      // 🔥 【修改】loadData: 優先從 Firestore 載入
+      async loadData() {
+        if (!this.currentUser) {
+            // 如果未登入，則載入本地舊數據
+            this.loadInitialOrLocalData(false);
+            return;
+        }
+
+        try {
+            const docSnap = await db.collection('userTrips').doc(this.currentUser.uid).get();
+            
+            if (docSnap.exists) {
+                const data = docSnap.data();
+                
+                // 檢查雲端數據是否有效
+                if (data.trips && data.trips.length > 0) {
+                    this.trips = this.sanitizeLoadedTrips(data.trips);
+                    this.activeTripId = data.activeTripId || (this.trips.length > 0 ? this.trips[0].id : null);
+                    // 覆蓋本地存儲為最新的雲端數據
+                    localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
+                    // alert("成功從雲端載入數據！");
+                } else {
+                    // 雲端文件存在，但無 trips 數據，嘗試載入本地或預設，並上傳
+                    console.log("Firestore 數據為空，嘗試載入本地或預設數據。");
+                    this.loadInitialOrLocalData(true);
+                }
+            } else {
+                // 雲端無數據，載入本地或預設，並上傳
+                console.log("Firestore 找不到文件，載入本地或預設數據。");
+                this.loadInitialOrLocalData(true);
+            }
+        } catch (e) {
+            console.error("Firestore 讀取失敗: ", e);
+            alert("數據讀取失敗，已嘗試載入本地數據。請檢查網路或 Firestore 規則！");
+            this.loadInitialOrLocalData(false);
+        }
+        
+        // 載入完成後設置初始狀態
+        if (this.activeTripId) {
+          this.fetchWeather();
+          this.newExpense.day = 1;
+          this.inputCurrency = this.activeTrip.currency; 
+        }
+      },
+      
+      // 🔥 【新增】處理首次登入時的數據 (整合自舊的 loadData 邏輯)
+      loadInitialOrLocalData(shouldUpload = false) {
+          const savedLocal = localStorage.getItem('christine_travel_diary_v4');
+          let parsedTrips = [];
+
+          if (savedLocal) {
+              parsedTrips = this.sanitizeLoadedTrips(JSON.parse(savedLocal));
+              this.trips = parsedTrips;
+              // alert('從瀏覽器本地載入數據。');
+          } else {
+              // 載入預設數據 (與您原有的初始數據相同)
+              const defaultItinerary = [{ id: Date.now(), day: 1, time: '10:00', activity: '到達機場', location: 'Narita Airport', mapLink: '' }];
+              this.trips = [{
+                id: Date.now(), title: 'Japan Trip', destination: 'Japan', city: 'Tokyo', currency: 'JPY',
+                startDate: '2025-12-24', endDate: '2025-12-28',
+                center: { lat: 35.6895, lng: 139.6917 }, exchangeRate: 19.2,
+                flights: { outbound: { no: 'CX500', date: '2025-12-24' }, inbound: { no: 'CX501', date: '2025-12-28' } },
+                itinerary: defaultItinerary, 
+                expenses: [{ id: Date.now()+1, name: '機票', amount: 3500, method: '信用卡', category: '旅行前', date: '12/10', day: 0, localAmount: 67200 }], 
+                shoppingItems: [
+                    { id: Date.now()+2, name: '防曬霜', onlinePrice: 200, localPrice: 3000, quantity: 2, bought: false, image: '' },
+                    { id: Date.now()+3, name: '手信餅乾', onlinePrice: 150, localPrice: 2500, quantity: 3, bought: true, image: '' },
+                ]
+              }];
+              // alert('載入預設數據。');
+          }
+          
+          this.activeTripId = this.trips.length > 0 ? this.trips[0].id : null;
+          
+          if (shouldUpload && this.currentUser) {
+              // 如果是首次登入，將本地或預設數據上傳到雲端
+              this.saveData(); 
+          }
+      },
+      
+      // 🔥 【新增】清理載入數據，確保所有欄位和 ID 完整
+      sanitizeLoadedTrips(rawTrips) {
+          return rawTrips.map(trip => {
               if (trip.expenses) {
                   trip.expenses = trip.expenses.map(exp => ({ 
                       id: exp.id || Date.now() + Math.random(), 
@@ -972,49 +1150,22 @@ l<!DOCTYPE html>
               } else {
                   trip.itinerary = [];
               }
-              
-              // **更新**: 確保 shoppingItems 欄位存在，且包含新欄位
               if (trip.shoppingItems) {
                   trip.shoppingItems = trip.shoppingItems.map(item => ({
                       id: item.id || Date.now() + Math.random(),
                       quantity: item.quantity || 1, 
                       localPrice: item.localPrice || null, 
                       onlinePrice: item.onlinePrice || null, 
-                      bought: item.bought || false, // 確保 bought 欄位存在
+                      bought: item.bought || false, 
                       ...item
                   }));
               } else {
                   trip.shoppingItems = [];
               }
-
               return trip;
           });
-          this.trips = parsedTrips;
-        } else {
-          // 初始數據
-          const defaultItinerary = [{ id: Date.now(), day: 1, time: '10:00', activity: '到達機場', location: 'Narita Airport', mapLink: '' }];
-          this.trips = [{
-            id: Date.now(), title: 'Japan Trip', destination: 'Japan', city: 'Tokyo', currency: 'JPY',
-            startDate: '2025-12-24', endDate: '2025-12-28',
-            center: { lat: 35.6895, lng: 139.6917 }, exchangeRate: 19.2,
-            flights: { outbound: { no: 'CX500', date: '2025-12-24' }, inbound: { no: 'CX501', date: '2025-12-28' } },
-            itinerary: defaultItinerary, 
-            expenses: [{ id: Date.now()+1, name: '機票', amount: 3500, method: '信用卡', category: '旅行前', date: '12/10', day: 0, localAmount: 67200 }], 
-            shoppingItems: [
-                { id: Date.now()+2, name: '防曬霜', onlinePrice: 200, localPrice: 3000, quantity: 2, bought: false, image: '' },
-                { id: Date.now()+3, name: '手信餅乾', onlinePrice: 150, localPrice: 2500, quantity: 3, bought: true, image: '' },
-            ]
-          }];
-          this.saveData();
-        }
-        this.activeTripId = this.trips.length > 0 ? this.trips[0].id : null;
-        if (this.activeTripId) {
-          this.fetchWeather();
-          this.newExpense.day = 1;
-          this.inputCurrency = this.activeTrip.currency; 
-        }
       },
-      
+
       calculateTripTotal(trip) {
         if (!trip.expenses) return 0;
         return trip.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -1026,6 +1177,44 @@ l<!DOCTYPE html>
                      .filter(exp => (exp.day === undefined ? 1 : exp.day) === dayIndex) 
                      .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
           return parseFloat(total.toFixed(2));
+      },
+      
+      // 🔥 【新增】Firebase Authentication Methods
+      async registerUser() {
+        if (!this.loginEmail || !this.loginPassword) return alert('請輸入電子郵件和密碼');
+        try {
+            await auth.createUserWithEmailAndPassword(this.loginEmail, this.loginPassword);
+            // onAuthStateChanged 會自動處理後續的 this.currentUser 和 this.loadData
+            this.showLoginModal = false;
+            alert('註冊成功！數據將開始同步到雲端。');
+        } catch (error) {
+            alert('註冊失敗: ' + error.message);
+        }
+      },
+
+      async loginUser() {
+        if (!this.loginEmail || !this.loginPassword) return alert('請輸入電子郵件和密碼');
+        try {
+            await auth.signInWithEmailAndPassword(this.loginEmail, this.loginPassword);
+            // onAuthStateChanged 會自動處理後續的 this.currentUser 和 this.loadData
+            this.showLoginModal = false;
+        } catch (error) {
+            alert('登入失敗: ' + error.message);
+        }
+      },
+
+      async logoutUser() {
+        if(confirm('確認登出嗎？登出後將無法同步數據。')) {
+            try {
+                await auth.signOut();
+                alert('您已登出。');
+                this.trips = [];
+                this.activeTripId = null;
+                this.showLoginModal = true;
+            } catch (error) {
+                alert('登出失敗: ' + error.message);
+            }
+        }
       },
       
       // === API 功能 (保持不變) ===
@@ -1057,9 +1246,9 @@ l<!DOCTYPE html>
           }
           try {
              const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
-             const rateData = await rateRes.rates;
-             if (rateData && rateData[currencyCode]) {
-                this.tempTrip.exchangeRate = rateData[currencyCode];
+             const rateData = await rateRes.json();
+             if (rateData?.rates && rateData.rates[currencyCode]) {
+                this.tempTrip.exchangeRate = rateData.rates[currencyCode];
              }
           } catch (err) { console.error("Rate fetch fail", err); }
           alert(`成功！\n座標: ${location.lat}, ${location.lon}\n國家: ${this.tempTrip.destination}\n貨幣: ${currencyCode}\n匯率: 1 HKD ≈ ${this.tempTrip.exchangeRate.toFixed(2)} ${currencyCode}`);
@@ -1071,7 +1260,7 @@ l<!DOCTYPE html>
       async fetchFlight(type) {
         const flight = this.activeTrip.flights[type];
         if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
-        if(AVIATIONSTACK_KEY === '5b729556e3ef80e18916fcecbcfd81ba') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
+        if(AVIATIONSTACK_KEY === '5bxxxxxxxxx') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
         
         try {
           const res = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}&flight_date=${flight.date}`);
