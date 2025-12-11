@@ -8,6 +8,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+  
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet"> 
 
   <script>
     tailwind.config = {
@@ -31,7 +33,6 @@
     }
   </script>
   
-  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -51,7 +52,7 @@
       -webkit-tap-highlight-color: transparent;
     }
     
-    /* 🔥 替換：設置 Playfair Display 字體樣式 */
+    /* 設置 Playfair Display 字體樣式 */
     .fancy-title {
         font-family: 'Playfair Display', serif;
     }
@@ -130,7 +131,7 @@
         background-color: transparent; 
     }
 
-    /* 🔥 登入 Modal 樣式 */
+    /* 登入 Modal 樣式 */
     .auth-modal {
         animation: fadeIn 0.3s ease-out;
     }
@@ -141,9 +142,9 @@
 <div id="app" class="min-h-screen">
   
   <header class="fixed top-0 left-0 w-full p-6 z-50 flex items-center justify-between pointer-events-none">
-    <div class="flex items-center gap-2 pointer-events-auto bg-white/30 backdrop-blur-sm pr-4 py-1 rounded-full">
+    <div class="flex items-center gap-2 pointer-events-auto bg-white/30 backdrop-blur-sm pr-2 py-1 rounded-full max-w-[60%] overflow-hidden">
       <div class="bg-primary/20 p-2 rounded-full"><i class="ri-plane-fill text-xl text-primary"></i></div>
-      <h1 class="fancy-title text-xl font-bold text-slate-700 tracking-wide whitespace-nowrap">Christine's Travel Diary</h1>
+      <h1 class="fancy-title text-lg font-bold text-slate-700 tracking-wide whitespace-nowrap overflow-hidden text-ellipsis">Christine's Travel Diary</h1>
     </div>
     <div class="flex items-center gap-3">
         <button v-if="!currentUser" @click="showLoginModal = true" 
@@ -155,7 +156,7 @@
           <i class="ri-logout-box-r-line text-xl"></i>
         </button>
         <button @click="openNewTripModal" class="pointer-events-auto w-10 h-10 rounded-full bg-white/90 backdrop-blur shadow-lg text-primary flex items-center justify-center hover:scale-110 transition active:scale-95">
-          <i class="ri-add-line text-xl"></i>
+          <i class="ri-add-line text-xl"></i> 
         </button>
     </div>
   </header>
@@ -710,7 +711,7 @@
 <script>
   const { createApp } = Vue;
   // **注意: 請將此替換為您實際的 AviationStack Key**
-  const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; 
+  const AVIATIONSTACK_KEY = '5bxxxxxxxxx'; 
   
   const GeocodingCache = {};
   
@@ -1335,7 +1336,7 @@
 
         const flight = this.activeTrip.flights[type];
         if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
-        if(AVIATIONSTACK_KEY === '5b729556e3ef80e18916fcecbcfd81ba') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
+        if(AVIATIONSTACK_KEY === '5bxxxxxxxxx') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
         
         try {
           const res = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}&flight_date=${flight.date}`);
