@@ -717,8 +717,7 @@
   
   const GeocodingCache = {};
   
-  // 🔥 【新增】您的 Firebase 配置
-  // 請將以下內容替換為您從 Firebase 控制台取得的實際配置
+  // 🔥 【替換為您的 Firebase 配置】
   const firebaseConfig = {
     apiKey: "AIzaSyCeFnypnf5WdO9mIsuaWLwGZIsEv123QcuM",
     authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
@@ -726,10 +725,9 @@
     storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
     messagingSenderId: "592971246262",
     appId: "1:592971246262:web:f7d0c923b697a26e199417",
-    // measurementId: "G-F6X3YWL2MY" // V8 版本不需要
   };
 
-  // 🔥 【新增】Firebase 初始化 (V8 模式)
+  // 🔥 Firebase 初始化 (V8 模式)
   const app = firebase.initializeApp(firebaseConfig);
   const auth = app.auth();
   const db = app.firestore();
@@ -755,7 +753,7 @@
         newExpense: { 
           id: null, 
           name: '', 
-          localAmount: null, // 🔥 保持為 null，但現在是 v-model 綁定字串
+          localAmount: null, // 綁定字串
           amount: null,      
           method: '現金', 
           category: '飲食', 
@@ -849,16 +847,19 @@
       },
       
       finalHKDAmount() {
-          // 🔥 關鍵變動：使用 parseFloat 而非 Number() 確保字串轉數字時更可靠
-          const amount = parseFloat(this.newExpense.localAmount); 
+          // 【優化點】使用 Number() 轉換，更嚴格，依賴 cleanAmountInput 清理後的字串
+          const amount = Number(String(this.newExpense.localAmount).replace(/[^0-9.]/g, ''));
+          
           if (!this.activeTrip || isNaN(amount) || amount <= 0) {
               return 0;
           }
           
+          // 【關鍵修正】當選擇 HKD 時，直接返回金額
           if (this.inputCurrency === 'HKD') {
               return amount;
           }
           
+          // 處理外幣轉換邏輯
           const rate = this.activeTrip.exchangeRate;
           if (!rate || rate <= 0) return 0;
           
@@ -1390,11 +1391,10 @@
         }
       },
 
-      // === 記帳功能 (新的驗證邏輯) ===
+      // === 記帳功能 (金額輸入處理) ===
       
-      // 🔥 變動 2: 新增 cleanAmountInput 方法
+      // 【優化點】確保輸入框只保留數字和小數點
       cleanAmountInput(event) {
-          // 移除所有非數字和小數點的字符
           let cleaned = event.target.value.replace(/[^0-9.]/g, '');
           
           // 只保留第一個小數點
@@ -1403,10 +1403,10 @@
               cleaned = parts[0] + '.' + parts.slice(1).join('');
           }
           
-          // 更新 V-model (保持為字串)
           this.newExpense.localAmount = cleaned;
       },
       
+      // 【優化點】最終 `addExpense` 邏輯 (使用 Number() 嚴格檢查輸入)
       addExpense() {
         if (!this.currentUser) {
             alert("請先登入以同步您的記帳記錄。");
@@ -1414,17 +1414,23 @@
             return;
         }
 
-        // --- 🔥 強化驗證邏輯 (使用 parseFloat 確保轉換) START ---
+        // 步驟 1: 強制將輸入框的字串值轉換為數字，依賴 cleanAmountInput
+        const localAmountStr = String(this.newExpense.localAmount || '').replace(/[^0-9.]/g, '');
+        const localAmount = Number(localAmountStr);
         
-        // 確保 localAmount 被轉換為數字
-        const localAmount = parseFloat(this.newExpense.localAmount);
-        const finalHKD = this.finalHKDAmount; // 直接使用計算屬性
+        // 步驟 2: 取得最終港幣金額
+        const finalHKD = this.finalHKDAmount;
         
+        // 步驟 3: 執行驗證
         if (!this.newExpense.name || isNaN(localAmount) || localAmount <= 0 || isNaN(finalHKD) || finalHKD <= 0) {
+            // 如果這裏失敗，最可能是因為：
+            // 1. 名字為空。
+            // 2. 轉換後的 localAmount 不是有效數字。
+            // 3. finalHKDAmount 算出來是 0 或 NaN (例如：匯率為 0 或 HKD 模式下轉換失敗)
             return alert('請輸入消費項目和有效的金額 (請確保金額是數字且大於零)');
         }
-        // --- 強化驗證邏輯 END ---
         
+        // 步驟 4: 處理旅行前 Day 0 邏輯
         if (this.newExpense.category === '旅行前') {
             this.newExpense.day = 0; 
         } else if (!this.newExpense.day || this.newExpense.day === 0) {
@@ -1435,7 +1441,8 @@
 
         const d = new Date();
         
-        this.newExpense.amount = finalHKD; // 使用經過驗證的 finalHKDAmount
+        // 步驟 5: 新增 expense
+        this.newExpense.amount = finalHKD; 
 
         this.activeTrip.expenses.unshift({ 
             id: Date.now() + Math.random(), 
@@ -1448,6 +1455,7 @@
             day: this.newExpense.day, 
         });
         
+        // 步驟 6: 重置
         this.newExpense = { 
             name:'', 
             localAmount:null, 
