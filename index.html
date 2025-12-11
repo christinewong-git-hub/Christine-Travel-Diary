@@ -407,7 +407,7 @@
             </select>
             
             <div class="relative flex-1">
-               <input v-model.number="newExpense.localAmount" type="number" placeholder="金額" class="w-full p-3 rounded-xl bg-slate-50 border-0 text-sm">
+               <input v-model="newExpense.localAmount" type="text" @input="cleanAmountInput" placeholder="金額" class="w-full p-3 rounded-xl bg-slate-50 border-0 text-sm">
             </div>
 
             <select v-model="newExpense.method" class="w-1/3 p-3 rounded-xl bg-slate-50 border-0 text-sm text-slate-600">
@@ -713,14 +713,14 @@
 <script>
   const { createApp } = Vue;
   // **注意: 請將此替換為您實際的 AviationStack Key**
-  const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; 
+  const AVIATIONSTACK_KEY = '5bxxxxxxxxx'; 
   
   const GeocodingCache = {};
   
   // 🔥 【新增】您的 Firebase 配置
   // 請將以下內容替換為您從 Firebase 控制台取得的實際配置
   const firebaseConfig = {
-    apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM",
+    apiKey: "AIzaSyCeFnypnf5WdO9mIsuaWLwGZIsEv123QcuM",
     authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
     projectId: "my-travel-diary-1dbc0",
     storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
@@ -755,7 +755,7 @@
         newExpense: { 
           id: null, 
           name: '', 
-          localAmount: null, 
+          localAmount: null, // 🔥 保持為 null，但現在是 v-model 綁定字串
           amount: null,      
           method: '現金', 
           category: '飲食', 
@@ -849,7 +849,8 @@
       },
       
       finalHKDAmount() {
-          const amount = Number(this.newExpense.localAmount); // 使用 Number() 確保類型正確
+          // 🔥 關鍵變動：使用 parseFloat 而非 Number() 確保字串轉數字時更可靠
+          const amount = parseFloat(this.newExpense.localAmount); 
           if (!this.activeTrip || isNaN(amount) || amount <= 0) {
               return 0;
           }
@@ -1337,7 +1338,7 @@
 
         const flight = this.activeTrip.flights[type];
         if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
-        if(AVIATIONSTACK_KEY === '5b729556e3ef80e18916fcecbcfd81ba') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
+        if(AVIATIONSTACK_KEY === '5bxxxxxxxxx') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
         
         try {
           const res = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}&flight_date=${flight.date}`);
@@ -1390,6 +1391,22 @@
       },
 
       // === 記帳功能 (新的驗證邏輯) ===
+      
+      // 🔥 變動 2: 新增 cleanAmountInput 方法
+      cleanAmountInput(event) {
+          // 移除所有非數字和小數點的字符
+          let cleaned = event.target.value.replace(/[^0-9.]/g, '');
+          
+          // 只保留第一個小數點
+          let parts = cleaned.split('.');
+          if (parts.length > 2) {
+              cleaned = parts[0] + '.' + parts.slice(1).join('');
+          }
+          
+          // 更新 V-model (保持為字串)
+          this.newExpense.localAmount = cleaned;
+      },
+      
       addExpense() {
         if (!this.currentUser) {
             alert("請先登入以同步您的記帳記錄。");
@@ -1397,14 +1414,16 @@
             return;
         }
 
-        // --- 🔥 強化驗證邏輯 START ---
-        const localAmount = Number(this.newExpense.localAmount);
-        const finalHKD = Number(this.finalHKDAmount);
+        // --- 🔥 強化驗證邏輯 (使用 parseFloat 確保轉換) START ---
+        
+        // 確保 localAmount 被轉換為數字
+        const localAmount = parseFloat(this.newExpense.localAmount);
+        const finalHKD = this.finalHKDAmount; // 直接使用計算屬性
         
         if (!this.newExpense.name || isNaN(localAmount) || localAmount <= 0 || isNaN(finalHKD) || finalHKD <= 0) {
             return alert('請輸入消費項目和有效的金額 (請確保金額是數字且大於零)');
         }
-        // --- 🔥 強化驗證邏輯 END ---
+        // --- 強化驗證邏輯 END ---
         
         if (this.newExpense.category === '旅行前') {
             this.newExpense.day = 0; 
