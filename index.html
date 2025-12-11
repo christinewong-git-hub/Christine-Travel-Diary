@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+m<!DOCTYPE html>
 <html lang="zh-HK">
 <head>
   <meta charset="UTF-8">
@@ -141,12 +141,14 @@
 
 <div id="app" class="min-h-screen">
   
-  <header class="fixed top-0 left-0 w-full p-6 z-50 flex items-center justify-between pointer-events-none">
-    <div class="flex items-center gap-2 pointer-events-auto bg-white/30 backdrop-blur-sm pr-2 py-1 rounded-full max-w-[60%] overflow-hidden">
+  <header class="fixed top-0 left-0 w-full px-4 py-6 z-50 flex items-center justify-between pointer-events-none">
+    
+    <div class="flex items-center gap-1 pointer-events-auto bg-white/30 backdrop-blur-sm pr-2 py-1 rounded-full overflow-hidden">
       <div class="bg-primary/20 p-2 rounded-full"><i class="ri-plane-fill text-xl text-primary"></i></div>
-      <h1 class="fancy-title text-lg font-bold text-slate-700 tracking-wide whitespace-nowrap overflow-hidden text-ellipsis">Christine's Travel Diary</h1>
+      <h1 class="fancy-title text-base font-bold text-slate-700 tracking-wide whitespace-nowrap overflow-hidden">Christine's Travel Diary</h1>
     </div>
-    <div class="flex items-center gap-3">
+    
+    <div class="flex items-center gap-2">
         <button v-if="!currentUser" @click="showLoginModal = true" 
                 class="pointer-events-auto w-10 h-10 rounded-full bg-white/90 backdrop-blur shadow-lg text-slate-600 flex items-center justify-center hover:scale-110 transition active:scale-95">
           <i class="ri-lock-2-line text-xl"></i>
@@ -1005,7 +1007,6 @@
         if (this.activeTrip) {
             this.inputCurrency = this.activeTrip.currency; 
             this.newExpense.day = 1; 
-            this.newExpense.category = '飲食'; 
             // 🔥 修正 3: 載入 tempExchangeRate
             this.tempExchangeRate = this.activeTrip.exchangeRate || 1; 
         }
