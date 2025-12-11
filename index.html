@@ -7,7 +7,7 @@
   
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
 
   <script>
     tailwind.config = {
@@ -51,9 +51,9 @@
       -webkit-tap-highlight-color: transparent;
     }
     
-    /* 🔥 新增：設置 Dancing Script 字體樣式 */
+    /* 🔥 替換：設置 Playfair Display 字體樣式 */
     .fancy-title {
-        font-family: 'Dancing Script', cursive;
+        font-family: 'Playfair Display', serif;
     }
     
     .glass-card {
@@ -710,7 +710,7 @@
 <script>
   const { createApp } = Vue;
   // **注意: 請將此替換為您實際的 AviationStack Key**
-  const AVIATIONSTACK_KEY = '5bxxxxxxxxx'; 
+  const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; 
   
   const GeocodingCache = {};
   
@@ -1335,7 +1335,7 @@
 
         const flight = this.activeTrip.flights[type];
         if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
-        if(AVIATIONSTACK_KEY === '5bxxxxxxxxx') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
+        if(AVIATIONSTACK_KEY === '5b729556e3ef80e18916fcecbcfd81ba') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
         
         try {
           const res = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}&flight_date=${flight.date}`);
