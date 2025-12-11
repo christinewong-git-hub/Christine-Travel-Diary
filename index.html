@@ -1,4 +1,4 @@
-m<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-HK">
 <head>
   <meta charset="UTF-8">
@@ -780,7 +780,7 @@ m<!DOCTYPE html>
         loginPassword: '',       
         showLoginModal: false, 
 
-        // 🔥 修正 2: 新增暫存匯率變數
+        // 🔥 新增暫存匯率變數
         tempExchangeRate: null,
 
         tabs: [
@@ -849,8 +849,8 @@ m<!DOCTYPE html>
       },
       
       finalHKDAmount() {
-          const amount = this.newExpense.localAmount;
-          if (!this.activeTrip || !amount || amount <= 0) {
+          const amount = Number(this.newExpense.localAmount); // 使用 Number() 確保類型正確
+          if (!this.activeTrip || isNaN(amount) || amount <= 0) {
               return 0;
           }
           
@@ -996,7 +996,7 @@ m<!DOCTYPE html>
         if (newTab === 'itinerary-map') {
           setTimeout(() => this.forceUpdateMap(), 500);
         } else if (newTab === 'budget') { 
-          // 🔥 修正 3: 載入 tempExchangeRate
+          // 載入 tempExchangeRate
           this.tempExchangeRate = this.activeTrip?.exchangeRate || 1; 
           this.$nextTick(() => this.updateChart());
         }
@@ -1007,7 +1007,7 @@ m<!DOCTYPE html>
         if (this.activeTrip) {
             this.inputCurrency = this.activeTrip.currency; 
             this.newExpense.day = 1; 
-            // 🔥 修正 3: 載入 tempExchangeRate
+            // 載入 tempExchangeRate
             this.tempExchangeRate = this.activeTrip.exchangeRate || 1; 
         }
         this.updateChart(); 
@@ -1033,7 +1033,7 @@ m<!DOCTYPE html>
                 this.loadData(); 
             } else {
                 this.currentUser = null;
-                // 修正 1.1: 未登入時，嘗試載入本地數據並允許瀏覽
+                // 未登入時，嘗試載入本地數據並允許瀏覽
                 this.loadInitialOrLocalData(false); // 僅從本地載入，不嘗試上傳
                 this.showLoginModal = false; // 預設隱藏模態框
             }
@@ -1112,7 +1112,7 @@ m<!DOCTYPE html>
           this.fetchWeather();
           this.newExpense.day = 1;
           this.inputCurrency = this.activeTrip.currency; 
-          // 🔥 修正 3: 初始化 tempExchangeRate
+          // 初始化 tempExchangeRate
           this.tempExchangeRate = this.activeTrip.exchangeRate || 1;
         }
       },
@@ -1149,7 +1149,7 @@ m<!DOCTYPE html>
               this.saveData(); 
           }
 
-          // 🔥 修正 3: 初始化 tempExchangeRate
+          // 初始化 tempExchangeRate
           if (this.activeTrip) {
               this.tempExchangeRate = this.activeTrip.exchangeRate || 1;
           }
@@ -1236,7 +1236,7 @@ m<!DOCTYPE html>
       
       // === API 功能 (匯率修正) ===
 
-      // 🔥 修正 1.1: 新增專門用於記帳頁面抓取匯率的方法
+      // 🔥 新增專門用於記帳頁面抓取匯率的方法
       async fetchExchangeRate() {
         if (!this.activeTrip || !this.activeTrip.currency || this.activeTrip.currency === 'HKD') {
             return alert('請先設定目標國家貨幣 (Currency)！');
@@ -1268,7 +1268,7 @@ m<!DOCTYPE html>
         }
       },
       
-      // 🔥 修正 2.1: 匯率輸入框的 blur/Enter 處理方法
+      // 🔥 匯率輸入框的 blur/Enter 處理方法
       updateExchangeRate() {
           const rate = Number(this.tempExchangeRate);
           if (isNaN(rate) || rate <= 0) {
@@ -1389,7 +1389,7 @@ m<!DOCTYPE html>
         }
       },
 
-      // === 記帳功能 (加入登入檢查) ===
+      // === 記帳功能 (新的驗證邏輯) ===
       addExpense() {
         if (!this.currentUser) {
             alert("請先登入以同步您的記帳記錄。");
@@ -1397,9 +1397,14 @@ m<!DOCTYPE html>
             return;
         }
 
-        if(!this.newExpense.name || !this.newExpense.localAmount || this.finalHKDAmount === 0) {
-            return alert('請輸入消費項目和有效的金額');
+        // --- 🔥 強化驗證邏輯 START ---
+        const localAmount = Number(this.newExpense.localAmount);
+        const finalHKD = Number(this.finalHKDAmount);
+        
+        if (!this.newExpense.name || isNaN(localAmount) || localAmount <= 0 || isNaN(finalHKD) || finalHKD <= 0) {
+            return alert('請輸入消費項目和有效的金額 (請確保金額是數字且大於零)');
         }
+        // --- 🔥 強化驗證邏輯 END ---
         
         if (this.newExpense.category === '旅行前') {
             this.newExpense.day = 0; 
@@ -1411,7 +1416,7 @@ m<!DOCTYPE html>
 
         const d = new Date();
         
-        this.newExpense.amount = this.finalHKDAmount; 
+        this.newExpense.amount = finalHKD; // 使用經過驗證的 finalHKDAmount
 
         this.activeTrip.expenses.unshift({ 
             id: Date.now() + Math.random(), 
@@ -1419,7 +1424,7 @@ m<!DOCTYPE html>
             amount: this.newExpense.amount,
             method: this.newExpense.method,
             category: this.newExpense.category,
-            localAmount: this.newExpense.localAmount, 
+            localAmount: localAmount, 
             date: `${d.getMonth()+1}/${d.getDate()}`,
             day: this.newExpense.day, 
         });
@@ -1675,7 +1680,6 @@ m<!DOCTYPE html>
       },
       
       searchGoogleMaps(query) {
-          // 修正 4.1: 修正 Google Maps 搜尋 URL 格式
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
           window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
       },
@@ -1687,7 +1691,7 @@ m<!DOCTYPE html>
         if (this.activeTab !== 'itinerary-map') return;
         try {
           const container = document.getElementById('map');
-          // 修正 3.1: 檢查父級元素是否可見，避免在非當前 Tab 渲染時失敗
+          // 檢查父級元素是否可見，避免在非當前 Tab 渲染時失敗
           if (!container || container.offsetParent === null) {
               console.log("Map container not visible, skipping init.");
               return; 
@@ -1903,7 +1907,7 @@ m<!DOCTYPE html>
             this.newExpense.day = 1; 
             this.newExpense.category = '飲食'; 
             this.inputCurrency = this.activeTrip.currency;
-            // 🔥 修正 3: 同步 tempExchangeRate
+            // 同步 tempExchangeRate
             this.tempExchangeRate = this.activeTrip.exchangeRate; 
             this.updateChart();
         });
@@ -1929,7 +1933,7 @@ m<!DOCTYPE html>
             this.newExpense.day = 1; 
             this.newExpense.category = '飲食'; 
             this.inputCurrency = this.activeTrip.currency;
-            // 🔥 修正 3: 同步 tempExchangeRate
+            // 同步 tempExchangeRate
             this.tempExchangeRate = this.activeTrip.exchangeRate; 
             this.updateChart();
         });
