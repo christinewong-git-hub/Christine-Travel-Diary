@@ -1,1296 +1,1865 @@
-<script>
-  const { createApp } = Vue;
-  // **注意: 請將此替換為您實際的 AviationStack Key**
-  const AVIATIONSTACK_KEY = '5bxxxxxxxxx'; 
-  
-  const GeocodingCache = {};
-  
-  // 🔥 【替換為您的 Firebase 配置】
-  const firebaseConfig = {
-    apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM", 
-    authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
-    projectId: "my-travel-diary-1dbc0",
-    storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
-    messagingSenderId: "592971246262",
-    appId: "1:592971246262:web:f7d0c923b697a26e199417",
-    // measurementId: "G-F6X3YWL2MY" 
-  };
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>個人旅行日記與預算追蹤</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #97CBFF;
+            --secondary: #FFD9EC;
+            --accent: #C7C7E2;
+            --bg-light: #f8f9fa;
+            --bg-dark: #343a40;
+            --text-dark: #212529;
+            --text-light: #ffffff;
+            --radius: 12px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: '微軟正黑體', 'Microsoft JhengHei', Arial, sans-serif; }
+        body { background-color: var(--bg-light); color: var(--text-dark); min-height: 100vh; }
+        #app { display: flex; flex-direction: column; max-width: 1200px; margin: 0 auto; padding: 20px; }
 
-  // 🔥 Firebase 初始化 (保留 V8 模式，以確保所有功能兼容)
-  const app = firebase.initializeApp(firebaseConfig);
-  const auth = app.auth();
-  const db = app.firestore();
+        /* === Header and Navigation === */
+        header { background: var(--bg-dark); color: var(--text-light); border-radius: var(--radius); margin-bottom: 20px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow); }
+        header h1 { font-size: 1.5rem; margin: 0; }
+        .nav-tabs { display: flex; overflow-x: auto; white-space: nowrap; background: #fff; border-radius: var(--radius); padding: 5px; box-shadow: var(--shadow); margin-bottom: 20px; }
+        .nav-tabs button { flex: 1 1 auto; background: none; border: none; padding: 10px 15px; cursor: pointer; font-weight: 600; font-size: 0.95rem; color: var(--text-dark); border-radius: 8px; transition: background-color 0.2s, color 0.2s; min-width: 80px; }
+        .nav-tabs button.active { background-color: var(--primary); color: var(--text-light); }
+        .nav-tabs i { margin-right: 5px; }
 
+        /* === Content Layout === */
+        .content-area { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        @media (min-width: 768px) {
+            .content-area { grid-template-columns: 2fr 1fr; }
+            .info-area { grid-column: 1 / 3; } /* Info page uses full width */
+        }
+        .section-box { background: #fff; padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); }
+        h2 { font-size: 1.3rem; color: var(--primary); margin-bottom: 15px; border-bottom: 2px solid var(--secondary); padding-bottom: 5px; }
 
-  createApp({
-    data() {
-      return {
-        activeTab: 'info',
-        trips: [],
-        activeTripId: null,
-        showTripModal: false,
-        editingTripId: null,
-        tempTrip: {},
-        map: null,
-        weatherData: null,
-        weatherTheme: 'sunny',
-        showBatchImport: false,
-        batchImportText: '',
+        /* === Trip Info === */
+        .trip-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .trip-header h2 { border-bottom: none; margin-bottom: 0; }
+        .trip-details p { margin: 5px 0; font-size: 0.95rem; }
+        .weather-card { text-align: center; padding: 20px; background: linear-gradient(135deg, var(--primary), var(--accent)); color: var(--text-light); border-radius: var(--radius); margin-bottom: 20px; }
+        .weather-card.sunny { background: linear-gradient(135deg, #FFC700, #FFD700); }
+        .weather-card.cloudy { background: linear-gradient(135deg, #B0C4DE, #778899); }
+        .weather-card.rainy { background: linear-gradient(135deg, #87CEEB, #4682B4); }
+        .weather-card i { font-size: 3rem; margin-bottom: 5px; }
+        .flight-info { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .flight-box { padding: 15px; border: 1px solid var(--secondary); border-radius: var(--radius); }
+
+        /* === Forms & Inputs === */
+        form { display: flex; flex-direction: column; gap: 10px; }
+        label { font-weight: 600; font-size: 0.9rem; margin-top: 5px; }
+        input[type="text"], input[type="number"], input[type="date"], input[type="time"], select {
+            padding: 10px; border: 1px solid #ccc; border-radius: 8px; width: 100%; font-size: 0.95rem;
+        }
+        button { padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; transition: background-color 0.2s; }
+        .btn-primary { background-color: var(--primary); color: var(--text-light); }
+        .btn-primary:hover { background-color: #6a9ce7; }
+        .btn-secondary { background-color: var(--accent); color: var(--text-light); }
+        .btn-secondary:hover { background-color: #a7a7c7; }
+        .btn-danger { background-color: #dc3545; color: var(--text-light); }
+        .btn-danger:hover { background-color: #c82333; }
+        .btn-small { padding: 5px 10px; font-size: 0.8rem; }
+        .flex-row { display: flex; gap: 10px; align-items: center; }
+        .flex-row > * { flex: 1; }
+        .flex-row .flex-2 { flex: 2; }
+        .flex-row .flex-auto { flex: 0 0 auto; }
+
+        /* === Modals === */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: #fff; padding: 30px; border-radius: var(--radius); max-width: 500px; width: 90%; max-height: 90%; overflow-y: auto; position: relative; }
+        .close-button { position: absolute; top: 10px; right: 15px; font-size: 1.5rem; cursor: pointer; color: #aaa; }
+
+        /* === Itinerary & Map === */
+        .map-container { height: 400px; border-radius: var(--radius); margin-bottom: 20px; }
+        #map { height: 100%; border-radius: var(--radius); }
+        .itinerary-day-selector { display: flex; overflow-x: auto; margin-bottom: 15px; padding-bottom: 5px; gap: 10px; }
+        .itinerary-day-selector button { flex: 0 0 auto; min-width: 60px; }
+        .itinerary-item { background: var(--bg-light); border: 1px solid #eee; padding: 15px; border-radius: var(--radius); margin-bottom: 10px; display: grid; grid-template-columns: 1fr 3fr 1fr; gap: 10px; align-items: center; font-size: 0.9rem; }
+        .itinerary-item .time { font-weight: 700; color: var(--primary); }
+        .itinerary-item .location { font-style: italic; color: #666; }
+        .itinerary-item-controls { text-align: right; }
+
+        /* === Budget === */
+        .budget-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .budget-inputs .flex-2 { grid-column: span 2; }
+        .currency-switch { display: flex; gap: 5px; align-items: center; }
+        .currency-switch input[type="radio"] { margin-right: 5px; }
         
-        chartInstance: null,
-        
-        newExpense: { 
-          id: null, 
-          name: '', 
-          localAmount: null, // 綁定字串
-          amount: null,      
-          method: '現金', 
-          category: '飲食', 
-          day: 1, 
-        },
-        inputCurrency: '', 
-        
-        newShoppingItem: { 
-            name: '', 
-            onlinePrice: null, // 預計為 HKD
-            localPrice: null,  // 預計為當地幣別金額
-            quantity: 1,       // 數量欄位
-            bought: false, 
-            image: '' 
-        },
-        
-        activeDay: 1, // 行程頁面專用
+        .expense-list { max-height: 400px; overflow-y: auto; padding-right: 10px; }
+        .expense-item { display: grid; grid-template-columns: 1fr 2fr 1fr 1fr 0.5fr; gap: 10px; padding: 10px 0; border-bottom: 1px dotted #eee; align-items: center; font-size: 0.9rem; }
+        .expense-item.header { font-weight: bold; background: #f0f0f0; padding: 10px; border-radius: var(--radius); grid-template-columns: 1fr 4fr 0.5fr; }
+        .expense-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .expense-item.is-header { grid-template-columns: 1fr 3fr 1fr; background: #e9ecef; font-weight: 700; margin-top: 15px; padding: 10px; border-radius: 6px; }
+        .expense-item.is-header .total-amount { color: #dc3545; font-size: 1.1rem; }
+        .expense-item.is-header .day-label { color: var(--primary); }
+        .chart-container { height: 300px; margin-bottom: 20px; }
+        .summary-box { background: #f0f8ff; padding: 15px; border-radius: var(--radius); margin-bottom: 15px; font-weight: 600; }
+        .summary-box span { color: #dc3545; font-size: 1.1rem; }
 
-        // 🔥 Firebase/Auth 相關狀態變數
-        currentUser: null,       
-        loginEmail: '',          
-        loginPassword: '',       
-        showLoginModal: false, 
+        /* === Shopping === */
+        .shopping-item { background: var(--bg-light); border: 1px solid #eee; padding: 15px; border-radius: var(--radius); margin-bottom: 10px; display: grid; grid-template-columns: 0.5fr 2fr 1fr 1fr 0.5fr; gap: 10px; align-items: center; font-size: 0.9rem; }
+        .shopping-item.bought { opacity: 0.6; text-decoration: line-through; }
+        .savings-tag { background: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.8rem; }
+        .no-savings-tag { background: #f8d7da; color: #721c24; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.8rem; }
+        .shopping-controls { display: flex; gap: 5px; align-items: center; }
+        .image-preview { max-width: 50px; max-height: 50px; border-radius: 4px; object-fit: cover; }
+        .shopping-form .flex-row input, .shopping-form .flex-row select { width: 100%; }
+        .shopping-list-header { font-weight: bold; padding: 10px 0; border-bottom: 2px solid #ccc; margin-bottom: 10px; display: grid; grid-template-columns: 0.5fr 2fr 1fr 1fr 0.5fr; gap: 10px; }
+        .shopping-summary { background: #f0f8ff; padding: 15px; border-radius: var(--radius); margin-bottom: 15px; font-weight: 600; text-align: center; }
+        .shopping-summary span { color: #28a745; font-size: 1.2rem; }
 
-        // 🔥 新增暫存匯率變數
-        tempExchangeRate: null,
+        /* === Trip History === */
+        .trip-card { background: var(--bg-light); padding: 15px; border-radius: var(--radius); margin-bottom: 15px; border-left: 5px solid var(--primary); display: flex; justify-content: space-between; align-items: center; }
+        .trip-card-details h3 { color: var(--primary); margin-bottom: 5px; font-size: 1.2rem; }
+        .trip-card-details p { font-size: 0.9rem; color: #666; }
+        .trip-card-actions button { margin-left: 8px; }
 
-        tabs: [
-          { id: 'info', label: 'Trip Info', icon: 'ri-information-line' },
-          { id: 'itinerary-map', label: '行程', icon: 'ri-map-pin-user-line' },
-          { id: 'budget', label: '記帳', icon: 'ri-wallet-3-line' },
-          { id: 'shopping', label: '購物', icon: 'ri-shopping-bag-3-line' },
-          { id: 'trips', label: 'History', icon: 'ri-suitcase-line' },
-        ]
-      };
-    },
-    computed: {
-      activeTrip() { return this.trips.find(t => t.id === this.activeTripId) || null; },
-      
-      totalDays() {
-          if (!this.activeTrip || !this.activeTrip.startDate || !this.activeTrip.endDate) return 1;
-          const start = new Date(this.activeTrip.startDate);
-          const end = new Date(this.activeTrip.endDate);
-          const diffTime = Math.abs(end - start);
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
-          return diffDays > 0 ? diffDays : 1;
-      },
+        /* === Auth/Login === */
+        .auth-container { display: flex; gap: 10px; align-items: center; }
+        .auth-status { font-weight: 600; font-size: 0.9rem; margin-right: 10px; }
+    </style>
+</head>
+<body>
 
-      groupedItinerary() {
-        if (!this.activeTrip) return [];
+<div id="app" v-cloak>
+    
+    <div class="modal-overlay" v-if="showLoginModal">
+        <div class="modal-content">
+            <span class="close-button" @click="showLoginModal = false">×</span>
+            <h2>用戶登入 / 註冊</h2>
+            <p>請先登入以同步您的旅行數據到雲端，避免數據丟失。</p>
+            <form @submit.prevent="loginUser">
+                <label>電子郵件 (Email)</label>
+                <input type="text" v-model="loginEmail" required placeholder="name@example.com">
+                <label>密碼 (Password)</label>
+                <input type="password" v-model="loginPassword" required placeholder="至少 6 位數">
+                <button type="submit" class="btn-primary">登入</button>
+            </form>
+            <p style="text-align:center; margin-top: 15px; font-size: 0.9rem;">
+                如果您沒有帳號，請直接使用上述欄位輸入 Email 和密碼，系統會自動為您創建帳號並登入。
+            </p>
+        </div>
+    </div>
+    
+    <header>
+        <h1><i class="ri-plane-line"></i> 旅行日誌</h1>
+        <div class="auth-container">
+            <span class="auth-status" v-if="currentUser">
+                Logged in as: {{ currentUser.email }}
+            </span>
+            <button class="btn-small btn-secondary" @click="currentUser ? logoutUser() : showLoginModal = true">
+                <i :class="currentUser ? 'ri-logout-box-r-line' : 'ri-login-box-line'"></i> 
+                {{ currentUser ? '登出' : '登入/註冊' }}
+            </button>
+        </div>
+    </header>
+
+    <template v-if="activeTrip">
+        <h2 style="text-align: center; color: var(--text-dark); margin-bottom: 15px; font-size: 1.8rem;">
+            {{ activeTrip.title }} <span style="font-size: 1rem; color: #666;">({{ activeTrip.city }}, {{ activeTrip.destination }})</span>
+        </h2>
         
-        const days = Array.from({ length: this.totalDays }, (_, i) => ({ day: i + 1, items: [] }));
-        
-        this.activeTrip.itinerary
-            .sort((a, b) => (a.day || 1) - (b.day || 1)) 
-            .forEach(item => {
-                const dayIndex = (item.day || 1) - 1; 
-                if (dayIndex >= 0 && dayIndex < days.length) { 
-                    days[dayIndex].items.push(item);
-                }
-            });
+        <div class="nav-tabs">
+            <button v-for="tab in tabs" :key="tab.id" 
+                    :class="{ active: activeTab === tab.id }" 
+                    @click="activeTab = tab.id">
+                <i :class="tab.icon"></i> {{ tab.label }}
+            </button>
+        </div>
+
+        <div class="content-area">
             
-        days.forEach(day => {
-             day.items.sort((a, b) => {
-                 const timeA = a.time ? a.time.replace(':', '') : '9999';
-                 const timeB = b.time ? b.time.replace(':', '') : '9999';
-                 return timeA - timeB;
-             });
-        });
-        
-        return days;
-      },
-      
-      filteredExpenses() {
-          if (!this.activeTrip || !this.activeTrip.expenses) {
-              return [];
-          }
-          return this.activeTrip.expenses; 
-      },
+            <div class="info-area" v-if="activeTab === 'info'">
+                <div class="trip-header">
+                    <h2>旅行資訊概覽</h2>
+                    <button class="btn-small btn-secondary" @click="openEditTripModal(activeTrip)">
+                        <i class="ri-edit-line"></i> 編輯旅程
+                    </button>
+                </div>
+                
+                <div class="trip-details section-box" style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+                    <div>
+                        <h3>基本資訊</h3>
+                        <p><strong>目的地:</strong> {{ activeTrip.city }}, {{ activeTrip.destination }}</p>
+                        <p><strong>日期:</strong> {{ activeTrip.startDate }} ~ {{ activeTrip.endDate }} (共 {{ totalDays }} 日)</p>
+                        <p><strong>當地貨幣:</strong> {{ activeTrip.currency }}</p>
+                        <p><strong>匯率:</strong> 1 HKD ≈ {{ activeTrip.exchangeRate }} {{ activeTrip.currency }}</p>
+                        <p><strong>總開銷 (HKD):</strong> <span style="color: #dc3545; font-weight: bold;">HKD {{ totalExpensesHKD.toFixed(2) }}</span></p>
+                    </div>
 
-      totalExpensesHKD() {
-        if (!this.activeTrip) return 0;
-        return this.filteredExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-      },
+                    <div :class="['weather-card', weatherTheme]">
+                        <i :class="weatherData?.weathercode < 3 ? 'ri-sun-line' : weatherData?.weathercode >= 51 ? 'ri-rainy-line' : 'ri-cloudy-line'"></i>
+                        <h3>{{ activeTrip.city }} 天氣</h3>
+                        <p style="font-size: 2rem; font-weight: bold;">{{ weatherData?.temperature }} °C</p>
+                        <p>{{ weatherDesc }}</p>
+                    </div>
 
-      weatherDesc() {
-        if (!this.weatherData) return 'Loading...';
-        const code = this.weatherData.weathercode;
-        const map = { 0:'晴朗 Sunny', 1:'多雲 Cloudy', 2:'陰天 Overcast', 3:'毛毛雨 Drizzle', 45:'霧 Fog', 48:'霧淞 Rime fog', 51:'毛毛雨 Drizzle', 53:'小雨 Light Rain', 55:'大雨 Heavy Rain', 61:'陣雨 Rain', 63:'中雨 Moderate Rain', 65:'大雨 Heavy Rain', 80:'陣雨 Showers', 81:'中度陣雨 Moderate Showers', 82:'強烈陣雨 Violent Showers', 95:'雷暴 Thunderstorm' };
-        return map[code] || '多雲 Cloudy';
-      },
-      
-      // 🔥 關鍵修正點 1: 確保 localAmount 被強制清理，並在 HKD 時直接使用
-      finalHKDAmount() {
-          // 【強制清理和轉換】使用一個更嚴格的方法來確保 newExpense.localAmount 是有效的數字
-          // 移除所有非數字和小數點的字符
-          const localAmountStr = String(this.newExpense.localAmount || '').replace(/[^0-9.]/g, '');
-          const amount = Number(localAmountStr);
-          
-          if (!this.activeTrip || isNaN(amount) || amount <= 0) {
-              return 0;
-          }
-          
-          // 當選擇 HKD 時，直接返回金額 (即為 HKD)
-          if (this.inputCurrency === 'HKD') {
-              return parseFloat(amount.toFixed(2));
-          }
-          
-          // 處理外幣轉換邏輯
-          const rate = this.activeTrip.exchangeRate;
-          if (!rate || rate <= 0) {
-               // 如果是外幣但匯率無效，返回 0
-               return 0;
-          }
-          
-          // 確保返回的金額保留兩位小數
-          return parseFloat((amount / rate).toFixed(2));
-      },
-      
-      categorySummary() {
-          if (!this.activeTrip || !this.filteredExpenses) {
-              return { labels: [], data: [] };
-          }
-          const summary = this.filteredExpenses.reduce((acc, expense) => {
-              const category = expense.category || '其他';
-              const amount = Number(expense.amount) || 0;
-              acc[category] = (acc[category] || 0) + amount;
-              return acc;
-          }, {});
-          
-          const labels = Object.keys(summary);
-          const data = Object.values(summary).map(val => parseFloat(val.toFixed(2)));
-          
-          return { labels, data };
-      },
+                    <div style="grid-column: 1 / 3;">
+                        <h3>航班資訊 <i class="ri-flight-takeoff-line"></i></h3>
+                        <div class="flight-info">
+                            <div class="flight-box">
+                                <strong>去程: {{ activeTrip.flights.outbound.no || '未設定' }}</strong>
+                                <p>{{ activeTrip.flights.outbound.from || '---' }} <i class="ri-arrow-right-line"></i> {{ activeTrip.flights.outbound.to || '---' }}</p>
+                                <p>{{ activeTrip.flights.outbound.date || '---' }} | 
+                                   {{ activeTrip.flights.outbound.depTime || '---' }} ~ {{ activeTrip.flights.outbound.arrTime || '---' }}</p>
+                                <button class="btn-small btn-secondary" @click="fetchFlight('outbound')">更新航班</button>
+                            </div>
+                            <div class="flight-box">
+                                <strong>回程: {{ activeTrip.flights.inbound.no || '未設定' }}</strong>
+                                <p>{{ activeTrip.flights.inbound.from || '---' }} <i class="ri-arrow-right-line"></i> {{ activeTrip.flights.inbound.to || '---' }}</p>
+                                <p>{{ activeTrip.flights.inbound.date || '---' }} | 
+                                   {{ activeTrip.flights.inbound.depTime || '---' }} ~ {{ activeTrip.flights.inbound.arrTime || '---' }}</p>
+                                <button class="btn-small btn-secondary" @click="fetchFlight('inbound')">更新航班</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-      paymentSummary() {
-          const summary = { '現金': 0, '信用卡': 0, '其他': 0 };
-          if (!this.activeTrip) return summary;
+            <template v-if="activeTab === 'itinerary-map'">
+                <div class="map-section section-box" style="grid-column: 1 / 3;">
+                    <h2>當日行程地圖 (Day {{ activeDay }})</h2>
+                    <div class="itinerary-day-selector">
+                        <button v-for="day in totalDays" :key="day" 
+                                :class="{ 'btn-primary': activeDay === day, 'btn-secondary': activeDay !== day }"
+                                @click="selectDay(day)">
+                            Day {{ day }}
+                        </button>
+                    </div>
+                    <div id="map" class="map-container"></div>
+                </div>
 
-          this.filteredExpenses.forEach(exp => {
-              const method = exp.method || '現金'; 
-              const amount = Number(exp.amount) || 0;
-              if (summary.hasOwnProperty(method)) {
-                  summary[method] += amount;
-              } else {
-                  summary['其他'] += amount; 
-              }
-          });
+                <div class="itinerary-list section-box">
+                    <h2>行程細節</h2>
+                    <button class="btn-primary" @click="addItineraryItem(activeDay)"><i class="ri-add-line"></i> 新增行程</button>
+                    <button class="btn-secondary" @click="showBatchImport = true"><i class="ri-file-list-line"></i> 批量匯入</button>
 
-          summary['現金'] = parseFloat(summary['現金'].toFixed(2));
-          summary['信用卡'] = parseFloat(summary['信用卡'].toFixed(2));
-          summary['其他'] = parseFloat(summary['其他'].toFixed(2));
+                    <div v-for="dayData in groupedItinerary" :key="dayData.day">
+                        <h3 v-if="dayData.day === activeDay" style="margin-top: 15px; color: #666;">Day {{ dayData.day }} ({{ activeTrip.startDate.substring(5) }} + {{ dayData.day - 1 }} days)</h3>
+                        <div v-if="dayData.day === activeDay">
+                            <div v-for="item in dayData.items" :key="item.id" class="itinerary-item">
+                                <input type="time" v-model="item.time" @change="saveData">
+                                <div>
+                                    <input type="text" v-model="item.activity" placeholder="活動名稱" @blur="saveData">
+                                    <input type="text" v-model="item.location" placeholder="地點/地址 (如: Tokyo SkyTree)" @blur="saveData">
+                                </div>
+                                <div class="itinerary-item-controls">
+                                    <button class="btn-small btn-primary" @click="openGoogleMaps(item)"><i class="ri-map-pin-line"></i> Map</button>
+                                    <button class="btn-small btn-danger" @click="removeItineraryItem(item.id)"><i class="ri-delete-bin-line"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="groupedItinerary.find(d => d.day === activeDay)?.items.length === 0" style="padding: 15px; text-align: center; color: #999;">
+                        當日沒有行程。
+                    </div>
 
-          return summary;
-      },
-      
-      activeBudgetDayText() {
-          return '所有'; 
-      },
+                    <div class="modal-overlay" v-if="showBatchImport">
+                        <div class="modal-content">
+                            <span class="close-button" @click="showBatchImport = false">×</span>
+                            <h2>批量匯入行程</h2>
+                            <p>請按格式貼上行程：**Day, 時間, 活動名稱, 地點**。每行一個項目。</p>
+                            <textarea v-model="batchImportText" rows="10" style="width: 100%; padding: 10px; margin: 10px 0;" placeholder="範例:
+1, 09:00, 早餐, 飯店
+1, 10:30, 參觀景點, Asakusa Temple
+2, 18:00, 晚餐, Shinjuku"></textarea>
+                            <button class="btn-primary" @click="runBatchImport">確認匯入</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
 
-      groupedAndSortedExpenses() {
-          if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return [];
+            <template v-if="activeTab === 'budget'">
+                <div class="add-expense section-box">
+                    <h2><i class="ri-pencil-line"></i> 記一筆</h2>
+                    <div class="budget-inputs">
+                        <div class="flex-row flex-2">
+                            <label style="flex: 1;">項目:</label>
+                            <input type="text" v-model="newExpense.name" placeholder="消費項目 (e.g. 午餐)" required style="flex: 3;">
+                        </div>
+                        
+                        <div class="flex-row">
+                             <label for="currency-select" class="flex-auto">幣別:</label>
+                             <select id="currency-select" v-model="inputCurrency">
+                                 <option value="HKD">HKD (港幣)</option>
+                                 <option :value="activeTrip.currency">{{ activeTrip.currency }} (外幣)</option>
+                             </select>
+                        </div>
+                        
+                        <div class="flex-row">
+                            <label for="amount-input" class="flex-auto">金額:</label>
+                            <input id="amount-input" type="text" :value="newExpense.localAmount" 
+                                   @input="cleanAmountInput" 
+                                   placeholder="輸入金額" required>
+                        </div>
+                        
+                        <div class="flex-row">
+                            <label for="category-select" class="flex-auto">類別:</label>
+                            <select id="category-select" v-model="newExpense.category">
+                                <option>飲食</option>
+                                <option>購物</option>
+                                <option>交通</option>
+                                <option>娛樂</option>
+                                <option>住宿</option>
+                                <option>旅行前</option>
+                                <option>其他</option>
+                            </select>
+                        </div>
+                        
+                        <div class="flex-row" v-if="newExpense.category !== '旅行前'">
+                            <label for="day-select" class="flex-auto">Day:</label>
+                            <select id="day-select" v-model="newExpense.day">
+                                <option v-for="day in totalDays" :key="day" :value="day">Day {{ day }}</option>
+                            </select>
+                        </div>
+                        
+                        <div class="flex-row">
+                             <label for="method-select" class="flex-auto">支付:</label>
+                             <select id="method-select" v-model="newExpense.method">
+                                 <option>現金</option>
+                                 <option>信用卡</option>
+                                 <option>其他</option>
+                             </select>
+                        </div>
 
-          const expenses = this.activeTrip.expenses.slice() 
-              .sort((a, b) => (a.day === undefined ? 1 : a.day) - (b.day === undefined ? 1 : b.day));
+                    </div>
+                    
+                    <div class="summary-box" style="text-align: center; margin-top: 10px;">
+                        換算後港幣金額 (HKD)：
+                        <span style="font-size: 1.2rem;">{{ finalHKDAmount.toFixed(2) }} HKD</span>
+                    </div>
 
-          const result = [];
-          
-          const daysGrouped = expenses.reduce((acc, exp) => {
-              const day = exp.day === undefined ? 1 : exp.day;
-              if (!acc[day]) {
-                  acc[day] = [];
-              }
-              acc[day].push(exp);
-              return acc;
-          }, {});
+                    <button class="btn-primary" @click="addExpense"><i class="ri-add-line"></i> 新增消費</button>
+                    <button class="btn-secondary" @click="exportExpensesToCSV" style="margin-top: 5px;"><i class="ri-file-download-line"></i> 匯出 CSV</button>
+                    
+                    <h3 style="margin-top: 20px;">匯率設定 (1 HKD = X {{ activeTrip.currency }})</h3>
+                    <div class="flex-row">
+                        <input type="number" v-model="tempExchangeRate" step="0.01" @blur="updateExchangeRate">
+                        <button class="btn-small btn-secondary" @click="fetchExchangeRate"><i class="ri-refresh-line"></i> 取得即時匯率</button>
+                    </div>
+                </div>
 
-          const sortedDays = Object.keys(daysGrouped).map(Number).sort((a, b) => a - b);
-          
-          for (const day of sortedDays) {
-              const dayExpenses = daysGrouped[day];
-              
-              const total = dayExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
-              
-              result.push({
-                  isHeader: true,
-                  day: day,
-                  dayLabel: day === 0 ? '旅行前 (Day 0)' : `Day ${day}`,
-                  total: parseFloat(total.toFixed(2)),
-                  id: `header-${day}`
-              });
+                <div class="expense-summary section-box">
+                    <h2><i class="ri-bar-chart-box-line"></i> 支出總覽</h2>
+                    <div class="summary-box">
+                        總開支：<span style="color: #dc3545;">HKD {{ totalExpensesHKD.toFixed(2) }}</span>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <canvas id="expenseChart"></canvas>
+                    </div>
+                    
+                    <div class="payment-summary">
+                        <h3>支付方式分佈</h3>
+                        <p>現金: HKD {{ paymentSummary.現金.toFixed(2) }}</p>
+                        <p>信用卡: HKD {{ paymentSummary.信用卡.toFixed(2) }}</p>
+                    </div>
+                </div>
+                
+                <div class="expense-list-container section-box" style="grid-column: 1 / 3;">
+                    <h2>所有記帳記錄 (共 {{ filteredExpenses.length }} 筆)</h2>
+                    <div class="expense-list">
+                        <div class="expense-item header" style="grid-template-columns: 1fr 2fr 1fr 1fr 0.5fr;">
+                            <span>Day/日期</span>
+                            <span>項目/類別</span>
+                            <span>當地金額({{ activeTrip.currency }})</span>
+                            <span>港幣金額(HKD)</span>
+                            <span></span>
+                        </div>
+                        
+                        <template v-for="item in groupedAndSortedExpenses" :key="item.id">
+                            <div v-if="item.isHeader" class="expense-item is-header">
+                                <span class="day-label">{{ item.dayLabel }}</span>
+                                <span>總計</span>
+                                <span class="total-amount">{{ item.total.toFixed(2) }} HKD</span>
+                            </div>
+                            <div v-else class="expense-item">
+                                <span>Day {{ item.day }} ({{ item.date }})</span>
+                                <div>
+                                    <span style="font-weight: 600;">{{ item.name }}</span><br>
+                                    <span style="color: #999; font-size: 0.8em;">{{ item.category }} / {{ item.method }}</span>
+                                </div>
+                                <span>{{ item.localAmount.toFixed(2) }}</span>
+                                <span style="font-weight: 700;">{{ item.amount.toFixed(2) }}</span>
+                                <button class="btn-small btn-danger" @click="removeExpense(item.id)"><i class="ri-delete-bin-line"></i></button>
+                            </div>
+                        </template>
+                        
+                    </div>
+                </div>
+            </template>
 
-              result.push(...dayExpenses);
-          }
+            <template v-if="activeTab === 'shopping'">
+                <div class="add-shopping-item section-box">
+                    <h2><i class="ri-shopping-bag-line"></i> 新增購物項目</h2>
+                    <div class="shopping-form">
+                        <div class="flex-row">
+                             <label for="shop-name">品名:</label>
+                             <input id="shop-name" type="text" v-model="newShoppingItem.name" placeholder="例如: 某品牌精華液" required>
+                        </div>
+                        <div class="flex-row">
+                            <label>數量:</label>
+                            <input type="number" v-model.number="newShoppingItem.quantity" min="1">
+                        </div>
+                        <div class="flex-row">
+                             <label>網上價 (HKD):</label>
+                             <input type="number" v-model.number="newShoppingItem.onlinePrice" placeholder="香港網店價格 (HKD)" min="0" step="0.01">
+                        </div>
+                        <div class="flex-row">
+                             <label>當地價 ({{ activeTrip.currency }}):</label>
+                             <input type="number" v-model.number="newShoppingItem.localPrice" :placeholder="`當地價格 (${activeTrip.currency})`" min="0" step="0.01">
+                        </div>
+                        <div class="flex-row">
+                            <input type="checkbox" id="bought-check" v-model="newShoppingItem.bought" style="width: auto;">
+                            <label for="bought-check" style="margin-top: 0; font-weight: normal;">已購買</label>
+                        </div>
+                        <div class="flex-row">
+                            <label>圖片:</label>
+                            <input type="file" @change="handleImageUpload" accept="image/*">
+                        </div>
+                    </div>
+                    <button class="btn-primary" @click="addShoppingItem" style="margin-top: 10px;"><i class="ri-add-line"></i> 加入清單</button>
+                </div>
 
-          return result;
-      },
+                <div class="shopping-list-container section-box">
+                    <h2>購物清單</h2>
+                    <div class="shopping-summary">
+                        🎉 總共可節省：<span style="color: #28a745;">HKD {{ totalSavings.toFixed(2) }}</span>
+                    </div>
 
-      shoppingListWithSavings() {
-          if (!this.activeTrip || !this.activeTrip.shoppingItems) return [];
-          const rate = this.activeTrip.exchangeRate || 1; // 1 HKD = X 外幣
+                    <div class="shopping-list-header">
+                        <span>狀態</span>
+                        <span>品名/數量</span>
+                        <span>網上價(HKD)</span>
+                        <span>當地價(HKD)</span>
+                        <span>節省</span>
+                    </div>
 
-          const processedList = this.activeTrip.shoppingItems.map(item => {
-              // 確保 quantity, localPrice, onlinePrice 是有效數字
-              const quantity = Math.max(1, Number(item.quantity) || 1);
-              const localPrice = Number(item.localPrice) || 0;
-              const onlinePrice = Number(item.onlinePrice) || 0;
-              
-              // 1. 計算當地價換算成 HKD 的總額 (單價 / 匯率 * 數量)
-              // 只有當 localPrice 和 rate > 0 時才計算
-              const localPriceHKD = (localPrice > 0 && rate > 0) 
-                  ? parseFloat(((localPrice / rate) * quantity).toFixed(2)) 
-                  : 0;
-              
-              // 2. 計算網上價 HKD 的總額
-              const onlinePriceHKD = onlinePrice * quantity;
-              
-              // 3. 計算總共節省的金額 (網上價 - 當地價換算 HKD)
-              // 只有在兩種價格都存在時才計算價差
-              const savingsHKD = (localPriceHKD > 0 && onlinePriceHKD > 0) 
-                  ? parseFloat((onlinePriceHKD - localPriceHKD).toFixed(2))
-                  : 0;
+                    <div v-for="item in shoppingListWithSavings" :key="item.id" :class="['shopping-item', { 'bought': item.bought }]">
+                        <input type="checkbox" :checked="item.bought" @change="toggleBought(item)" style="width: auto;">
+                        <div>
+                            <span style="font-weight: 600;">{{ item.name }}</span> 
+                            <span style="font-size: 0.8em; color: #666;">x{{ item.quantity }}</span><br>
+                            <img v-if="item.image" :src="item.image" class="image-preview" alt="商品預覽">
+                        </div>
+                        <span>{{ item.onlinePriceHKD.toFixed(2) }}</span>
+                        <span>{{ item.localPriceHKD.toFixed(2) }}</span>
+                        <span v-if="item.savingsHKD > 0" class="savings-tag">
+                            +{{ item.savingsHKD.toFixed(2) }}
+                        </span>
+                        <span v-else class="no-savings-tag">
+                            {{ item.savingsHKD.toFixed(2) }}
+                        </span>
+                        <button class="btn-small btn-danger" @click="removeShoppingItem(item.id)"><i class="ri-delete-bin-line"></i></button>
+                    </div>
+                    
+                    <p v-if="shoppingListWithSavings.length === 0" style="padding: 15px; text-align: center; color: #999;">
+                        購物清單為空。
+                    </p>
+                </div>
+            </template>
 
-              return {
-                  ...item,
-                  quantity: quantity,
-                  localPriceHKD: localPriceHKD, // 0.00 or actual price
-                  onlinePriceHKD: parseFloat(onlinePriceHKD.toFixed(2)),
-                  savingsHKD: savingsHKD,
-              };
-          });
-          
-          // 排序邏輯：未買的在前，其次按節省金額降序
-          return processedList.sort((a, b) => {
-              if (a.bought === b.bought) {
-                  return b.savingsHKD - a.savingsHKD; // 未買的則按節省金額降序
-              }
-              return a.bought ? 1 : -1; // false (0) < true (1)，所以未買的在前
-          });
-      },
 
-      totalSavings() {
-          return this.shoppingListWithSavings.reduce((sum, item) => sum + item.savingsHKD, 0);
-      }
-    },
-    watch: {
-      activeTab(newTab) {
-        if (newTab === 'itinerary-map') {
-          setTimeout(() => this.forceUpdateMap(), 500);
-        } else if (newTab === 'budget') { 
-          // 載入 tempExchangeRate
-          this.tempExchangeRate = this.activeTrip?.exchangeRate || 1; 
-          // 修正：當切換到 Budget Tab 時，確保 inputCurrency 被設為 Trip 的預設外幣
-          this.inputCurrency = this.activeTrip.currency; 
-          this.$nextTick(() => this.updateChart());
-        }
-      },
-      activeTripId() {
-        this.fetchWeather();
-        this.activeDay = 1; 
-        if (this.activeTrip) {
-            this.inputCurrency = this.activeTrip.currency; 
-            this.newExpense.day = 1; 
-            // 初始化 tempExchangeRate
-            this.tempExchangeRate = this.activeTrip.exchangeRate || 1; 
-        }
-        this.updateChart(); 
-      },
-      activeDay() {
-        this.forceUpdateMap();
-      },
-      
-      categorySummary: {
-          handler() {
-              this.updateChart();
-          },
-          deep: true
-      }
-    },
-    mounted() {
-      // 監聽 Firebase 登入狀態
-      auth.onAuthStateChanged(user => {
-            if (user) {
-                this.currentUser = user;
-                this.showLoginModal = false;
-                // 登入成功後，從 Firestore 載入數據
-                this.loadData(); 
-            } else {
-                this.currentUser = null;
-                // 未登入時，嘗試載入本地數據並允許瀏覽
-                this.loadInitialOrLocalData(false); // 僅從本地載入，不嘗試上傳
-                this.showLoginModal = false; // 預設隱藏模態框
-            }
-        });
-
-      if (this.activeTrip) {
-          this.inputCurrency = this.activeTrip.currency;
-          this.newExpense.day = 1;
-          this.newExpense.category = '飲食'; 
-      }
-    },
-    methods: {
-      selectDay(day) {
-          this.activeDay = day;
-      },
-      
-      // 🔥 saveData 檢查登入狀態
-      async saveData() { 
-          // 1. 儲存到 LocalStorage (作為備份)
-          localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
-          this.updateChart(); 
-          
-          if (!this.currentUser) {
-              return; // 未登入時，只儲存本地
-          }
-          
-          // 2. 儲存到雲端 Firestore (只有登入後才執行)
-          if (this.currentUser && this.activeTrip) {
-               try {
-                   const userRef = db.collection('userTrips').doc(this.currentUser.uid);
-                   await userRef.set({
-                       trips: JSON.parse(JSON.stringify(this.trips)), // 確保數據是純粹的 JSON
-                       activeTripId: this.activeTripId,
-                       timestamp: firebase.firestore.FieldValue.serverTimestamp() // 新增時間戳
-                   });
-                   // console.log("數據成功儲存到 Firestore!");
-               } catch (e) {
-                   console.error("Firestore 儲存失敗: ", e);
-                   alert("數據儲存到雲端失敗，已儲存至瀏覽器本地。請檢查網路或 Firestore 規則！");
-               }
-          }
-      },
-      
-      // 🔥 loadData: 優先從 Firestore 載入
-      async loadData() {
-        if (!this.currentUser) {
-            this.loadInitialOrLocalData(false);
-            return;
-        }
-
-        try {
-            const docSnap = await db.collection('userTrips').doc(this.currentUser.uid).get();
+            <div class="info-area" v-if="activeTab === 'trips'">
+                <h2>旅程記錄與切換</h2>
+                <button class="btn-primary" @click="openNewTripModal"><i class="ri-add-line"></i> 新增旅程</button>
+                
+                <div v-for="trip in trips" :key="trip.id" class="trip-card" :style="{ borderLeftColor: trip.id === activeTripId ? 'var(--primary)' : '#ccc' }">
+                    <div class="trip-card-details">
+                        <h3>{{ trip.title }} ({{ trip.city }})</h3>
+                        <p>{{ trip.startDate }} ~ {{ trip.endDate }} ({{ trip.destination }})</p>
+                        <p>總開銷: HKD {{ calculateTripTotal(trip).toFixed(2) }}</p>
+                    </div>
+                    <div class="trip-card-actions">
+                        <button class="btn-small" 
+                                :class="trip.id === activeTripId ? 'btn-primary' : 'btn-secondary'" 
+                                @click="switchTrip(trip.id)">
+                            {{ trip.id === activeTripId ? '當前' : '切換' }}
+                        </button>
+                        <button class="btn-small btn-secondary" @click="openEditTripModal(trip)">
+                            <i class="ri-edit-line"></i> 編輯
+                        </button>
+                        <button class="btn-small btn-danger" @click="deleteTrip(trip.id)">
+                            <i class="ri-delete-bin-line"></i> 刪除
+                        </button>
+                    </div>
+                </div>
+                <p v-if="trips.length === 0">目前沒有旅程記錄。</p>
+            </div>
             
-            if (docSnap.exists) {
-                const data = docSnap.data();
+        </div>
+        
+    </template>
+    <div v-else class="info-area section-box">
+        <h2>歡迎使用旅行日誌</h2>
+        <p>請點擊下方的「新增旅程」按鈕開始規劃您的旅行！</p>
+        <button class="btn-primary" @click="openNewTripModal"><i class="ri-add-line"></i> 新增旅程</button>
+    </div>
+    
+    <div class="modal-overlay" v-if="showTripModal">
+        <div class="modal-content">
+            <span class="close-button" @click="showTripModal = false">×</span>
+            <h2>{{ editingTripId ? '編輯旅程' : '新增旅程' }}</h2>
+            <form @submit.prevent="saveTrip">
+                <label>旅程名稱</label>
+                <input type="text" v-model="tempTrip.title" required>
                 
-                if (data.trips && data.trips.length > 0) {
-                    this.trips = this.sanitizeLoadedTrips(data.trips);
-                    this.activeTripId = data.activeTripId || (this.trips.length > 0 ? this.trips[0].id : null);
-                    localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
-                } else {
-                    console.log("Firestore 數據為空，嘗試載入本地或預設數據。");
-                    this.loadInitialOrLocalData(true);
-                }
-            } else {
-                console.log("Firestore 找不到文件，載入本地或預設數據。");
-                this.loadInitialOrLocalData(true);
-            }
-        } catch (e) {
-            console.error("Firestore 讀取失敗: ", e);
-            alert("數據讀取失敗，已嘗試載入本地數據。請檢查網路或 Firestore 規則！");
-            this.loadInitialOrLocalData(false);
-        }
-        
-        if (this.activeTripId) {
-          this.fetchWeather();
-          this.newExpense.day = 1;
-          this.inputCurrency = this.activeTrip.currency; 
-          // 初始化 tempExchangeRate
-          this.tempExchangeRate = this.activeTrip.exchangeRate || 1;
-        }
-      },
-      
-      // 🔥 loadInitialOrLocalData: 處理首次登入時的數據
-      loadInitialOrLocalData(shouldUpload = false) {
-          const savedLocal = localStorage.getItem('christine_travel_diary_v4');
-          let parsedTrips = [];
+                <label>目的地 (城市)</label>
+                <input type="text" v-model="tempTrip.city" placeholder="例如: Tokyo" required>
 
-          if (savedLocal) {
-              parsedTrips = this.sanitizeLoadedTrips(JSON.parse(savedLocal));
-              this.trips = parsedTrips;
-          } else {
-              // 載入預設數據
-              const defaultItinerary = [{ id: Date.now(), day: 1, time: '10:00', activity: '到達機場', location: 'Narita Airport', mapLink: '' }];
-              this.trips = [{
-                id: Date.now(), title: 'Japan Trip', destination: 'Japan', city: 'Tokyo', currency: 'JPY',
-                startDate: '2025-12-24', endDate: '2025-12-28',
-                center: { lat: 35.6895, lng: 139.6917 }, exchangeRate: 19.2,
-                flights: { outbound: { no: 'CX500', date: '2025-12-24' }, inbound: { no: 'CX501', date: '2025-12-28' } },
-                itinerary: defaultItinerary, 
-                expenses: [{ id: Date.now()+1, name: '機票', amount: 3500, method: '信用卡', category: '旅行前', date: '12/10', day: 0, localAmount: 67200 }], 
-                shoppingItems: [
-                    { id: Date.now()+2, name: '防曬霜', onlinePrice: 200, localPrice: 3000, quantity: 2, bought: false, image: '' },
-                    { id: Date.now()+3, name: '手信餅乾', onlinePrice: 150, localPrice: 2500, quantity: 3, bought: true, image: '' },
-                ]
-              }];
-          }
-          
-          this.activeTripId = this.trips.length > 0 ? this.trips[0].id : null;
-          
-          if (shouldUpload && this.currentUser) {
-              // 如果是首次登入，將本地或預設數據上傳到雲端
-              this.saveData(); 
-          }
-
-          // 初始化 tempExchangeRate
-          if (this.activeTrip) {
-              this.tempExchangeRate = this.activeTrip.exchangeRate || 1;
-          }
-      },
-      
-      // 🔥 清理載入數據，確保所有欄位和 ID 完整
-      sanitizeLoadedTrips(rawTrips) {
-          return rawTrips.map(trip => {
-              if (trip.expenses) {
-                  trip.expenses = trip.expenses.map(exp => ({ 
-                      id: exp.id || Date.now() + Math.random(), 
-                      amount: exp.amount || 0,
-                      day: exp.day === undefined ? 1 : exp.day, 
-                      ...exp 
-                  }));
-              } else {
-                  trip.expenses = [];
-              }
-              if (trip.itinerary) {
-                  trip.itinerary = trip.itinerary.map(item => ({ 
-                      id: item.id || Date.now() + Math.random(), 
-                      day: item.day || 1, 
-                      mapLink: item.mapLink || '', 
-                      ...item 
-                  }));
-              } else {
-                  trip.itinerary = [];
-              }
-              if (trip.shoppingItems) {
-                  trip.shoppingItems = trip.shoppingItems.map(item => ({
-                      id: item.id || Date.now() + Math.random(),
-                      quantity: item.quantity || 1, 
-                      localPrice: item.localPrice || null, 
-                      onlinePrice: item.onlinePrice || null, 
-                      bought: item.bought || false, 
-                      ...item
-                  }));
-              } else {
-                  trip.shoppingItems = [];
-              }
-              return trip;
-          });
-      },
-
-      calculateTripTotal(trip) {
-        if (!trip.expenses) return 0;
-        return trip.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-      },
-      
-      calculateDayTotal(dayIndex) {
-          if (!this.activeTrip || !this.activeTrip.expenses) return 0;
-          const total = this.activeTrip.expenses
-                     .filter(exp => (exp.day === undefined ? 1 : exp.day) === dayIndex) 
-                     .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-          return parseFloat(total.toFixed(2));
-      },
-      
-      // 🔥 登入/註冊/登出方法
-
-      async loginUser() {
-        if (!this.loginEmail || !this.loginPassword) return alert('請輸入電子郵件和密碼');
-        try {
-            await auth.signInWithEmailAndPassword(this.loginEmail, this.loginPassword);
-            this.showLoginModal = false;
-        } catch (error) {
-            // 登入失敗: {"error":{... "message":"API key not valid." ...}}
-            console.error(error);
-            alert('登入失敗: ' + error.message);
-        }
-      },
-
-      async logoutUser() {
-        if(confirm('確認登出嗎？登出後將無法同步數據。')) {
-            try {
-                await auth.signOut();
-                alert('您已登出。');
-                this.trips = [];
-                this.activeTripId = null;
-                this.showLoginModal = false; // 登出後預設隱藏
-                this.loadInitialOrLocalData(false); // 重新載入本地數據
-            } catch (error) {
-                alert('登出失敗: ' + error.message);
-            }
-        }
-      },
-      
-      // === API 功能 (匯率修正) ===
-
-      // 🔥 新增專門用於記帳頁面抓取匯率的方法
-      async fetchExchangeRate() {
-        if (!this.activeTrip || !this.activeTrip.currency || this.activeTrip.currency === 'HKD') {
-            return alert('請先設定目標國家貨幣 (Currency)！');
-        }
-        
-        const currencyCode = this.activeTrip.currency;
-
-        try {
-             const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
-             const rateData = await rateRes.json();
-             
-             if (rateData?.rates && rateData.rates[currencyCode]) {
-                const newRate = parseFloat(rateData.rates[currencyCode].toFixed(3));
+                <div class="flex-row">
+                    <label style="flex: 2;">目的地 (國家)</label>
+                    <input type="text" v-model="tempTrip.destination" placeholder="例如: Japan" style="flex: 3;">
+                    <button type="button" class="btn-small btn-secondary" @click="autoGeocode" style="flex: 1 1 auto; white-space: nowrap;">自動偵測</button>
+                </div>
                 
-                // 直接更新 activeTrip 的匯率
-                this.activeTrip.exchangeRate = newRate;
+                <div class="flex-row">
+                    <div>
+                        <label>開始日期</label>
+                        <input type="date" v-model="tempTrip.startDate" required>
+                    </div>
+                    <div>
+                        <label>結束日期</label>
+                        <input type="date" v-model="tempTrip.endDate" required>
+                    </div>
+                </div>
                 
-                // 同步更新暫存變數
-                this.tempExchangeRate = newRate; 
+                <label>當地主要貨幣代碼 (Currency Code)</label>
+                <input type="text" v-model="tempTrip.currency" placeholder="例如: JPY">
 
-                this.saveData(); 
-                alert(`成功！1 HKD ≈ ${newRate} ${currencyCode}`);
-             } else {
-                 alert(`無法取得 ${currencyCode} 的即時匯率，請手動輸入。`);
-             }
-        } catch (e) { 
-          console.error("Rate fetch fail", e); 
-          alert('即時匯率服務失敗，請手動輸入或稍後再試。');
-        }
-      },
-      
-      // 🔥 匯率輸入框的 blur/Enter 處理方法
-      updateExchangeRate() {
-          const rate = Number(this.tempExchangeRate);
-          if (isNaN(rate) || rate <= 0) {
-              alert('請輸入有效的數字 (大於 0)');
-              this.tempExchangeRate = this.activeTrip.exchangeRate || 1; // 恢復舊值
-              return;
-          }
-          // 更新 activeTrip 的實際值
-          this.activeTrip.exchangeRate = parseFloat(rate.toFixed(3));
-          this.saveData();
-      },
+                <label>匯率 (1 HKD = X 外幣)</label>
+                <input type="number" v-model.number="tempTrip.exchangeRate" step="0.01" min="0.01">
 
-      async autoGeocode() {
-        if (!this.tempTrip.city) return alert('請先輸入城市名稱 (City)');
-        
-        try {
-          const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${this.tempTrip.city},${this.tempTrip.destination || ''}&addressdetails=1&limit=1`);
-          const geoData = await geoRes.json();
-          if (!geoData || geoData.length === 0) {
-            return alert('找不到該城市，請檢查拼字。');
-          }
-          const location = geoData[0];
-          this.tempTrip.center = { lat: parseFloat(location.lat), lng: parseFloat(location.lon) };
-          if(location.address && location.address.country) {
-             this.tempTrip.destination = location.address.country;
-          }
-          let currencyCode = 'USD';
-          const countryCode = location.address?.country_code?.toUpperCase(); 
-          if (countryCode) {
-            try {
-              const countryRes = await fetch(`https://restcountries.com/v3.1/alpha/${countryCode}`);
-              const countryData = await countryRes.json();
-              if (countryData[0]?.currencies) {
-                currencyCode = Object.keys(countryData[0].currencies)[0];
-                this.tempTrip.currency = currencyCode;
-              }
-            } catch (err) { console.error("Currency fetch fail", err); }
-          }
-          
-          try {
-             // 匯率抓取邏輯與 fetchExchangeRate 相同
-             const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
-             const rateData = await rateRes.json();
-             if (rateData?.rates && rateData.rates[currencyCode]) {
-                this.tempTrip.exchangeRate = parseFloat(rateData.rates[currencyCode].toFixed(3));
-             } else {
-                 this.tempTrip.exchangeRate = 1; 
-             }
-          } catch (err) { 
-              console.error("Rate fetch fail", err); 
-              this.tempTrip.exchangeRate = 1;
-          }
-          
-          alert(`成功！\n座標: ${location.lat}, ${location.lon}\n國家: ${this.tempTrip.destination}\n貨幣: ${currencyCode}\n匯率: 1 HKD ≈ ${this.tempTrip.exchangeRate.toFixed(2)} ${currencyCode}`);
-        } catch (e) {
-          console.error(e);
-          alert('自動取得失敗，請稍後再試。');
-        }
-      },
-      async fetchFlight(type) {
-        if (!this.currentUser) {
-            alert("請先登入以同步航班資料。");
-            this.showLoginModal = true;
-            return;
-        }
+                <button type="submit" class="btn-primary" style="margin-top: 15px;">保存</button>
+            </form>
+        </div>
+    </div>
 
-        const flight = this.activeTrip.flights[type];
-        if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
-        if(AVIATIONSTACK_KEY === '5bxxxxxxxxx') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
-        
-        try {
-          const res = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}&flight_date=${flight.date}`);
-          const data = await res.json();
-          if (data.data && data.data.length > 0) {
-            const f = data.data[0]; 
-            flight.from = f.departure.iata;
-            flight.to = f.arrival.iata;
-            flight.depTime = f.departure.scheduled ? f.departure.scheduled.slice(11,16) : '--:--';
-            flight.arrTime = f.arrival.scheduled ? f.arrival.scheduled.slice(11,16) : '--:--';
-            this.saveData();
-            alert(`已更新航班: ${flight.from} -> ${flight.to}`);
-          } else {
-            alert('未找到航班資料，請確認 API Key、航班號與日期。');
-             this.mockFlightData(type);
-          }
-        } catch(e) {
-          console.error(e);
-          alert('API 請求失敗，請檢查 Key 是否正確或網路連線。使用模擬數據。');
-          this.mockFlightData(type);
-        }
-      },
-      mockFlightData(type) {
-          const flight = this.activeTrip.flights[type];
-          const isOutbound = type === 'outbound';
-          flight.from = isOutbound ? 'HKG' : 'NRT';
-          flight.to = isOutbound ? 'NRT' : 'HKG';
-          flight.depTime = isOutbound ? '09:00' : '14:30';
-          flight.arrTime = isOutbound ? '14:30' : '20:30';
-          this.saveData();
-      },
-      async fetchWeather() {
-        if(!this.activeTrip?.center) return;
-        try {
-          const {lat,lng} = this.activeTrip.center;
-          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&timezone=auto`);
-          const d = await res.json();
-          this.weatherData = d.current_weather;
-          
-          const code = d.current_weather.weathercode;
-          if (code < 3) { this.weatherTheme = 'sunny'; } 
-          else if (code >= 51 && code < 80) { this.weatherTheme = 'rainy'; } 
-          else { this.weatherTheme = 'cloudy'; } 
-          
-        } catch(e){
-          console.error("Weather fetch failed", e);
-          this.weatherData = { temperature: 20 + Math.floor(Math.random()*5), weathercode: 1 };
-          this.weatherTheme = 'sunny';
-        }
-      },
 
-      // === 記帳功能 (金額輸入處理) ===
-      
-      // 【優化點】確保輸入框只保留數字和小數點
-      cleanAmountInput(event) {
-          let cleaned = event.target.value.replace(/[^0-9.]/g, '');
-          
-          // 只保留第一個小數點
-          let parts = cleaned.split('.');
-          if (parts.length > 2) {
-              cleaned = parts[0] + '.' + parts.slice(1).join('');
-          }
-          
-          this.newExpense.localAmount = cleaned;
-      },
-      
-      // 🔥 關鍵修正點 2: 強化 addExpense 的驗證邏輯
-      addExpense() {
-        if (!this.currentUser) {
-            alert("請先登入以同步您的記帳記錄。");
-            this.showLoginModal = true;
-            return;
-        }
-
-        // 步驟 1: 強制清理並轉換 localAmount
-        const localAmountStr = String(this.newExpense.localAmount || '').replace(/[^0-9.]/g, '');
-        const localAmount = Number(localAmountStr);
+</div> <script>
+    // 捕獲並顯示初始化錯誤
+    try {
+        const { createApp } = Vue;
+        // **注意: 請將此替換為您實際的 AviationStack Key**
+        const AVIATIONSTACK_KEY = '5bxxxxxxxxx'; 
         
-        // 步驟 2: 取得最終港幣金額 (計算屬性 finalHKDAmount 已包含清理邏輯)
-        const finalHKD = this.finalHKDAmount;
+        const GeocodingCache = {};
         
-        // 步驟 3: 執行驗證
-        // 驗證邏輯：
-        // a. 必須有消費項目名稱
-        // b. localAmount 必須是數字且大於 0
-        // c. 如果選擇的是外幣 (非HKD)，則 finalHKD 必須是數字且大於 0
-        
-        let isValid = true;
-        if (!this.newExpense.name || isNaN(localAmount) || localAmount <= 0) {
-            isValid = false; // 項目名稱或當地金額無效
-        }
-        
-        // 如果不是 HKD，則必須確保換算後的 HKD 金額大於 0
-        if (this.inputCurrency !== 'HKD' && (isNaN(finalHKD) || finalHKD <= 0)) {
-            isValid = false; // 外幣轉換失敗或結果為 0
-        }
-        
-        if (!isValid) {
-            // 如果驗證失敗，輸出詳細錯誤訊息到 Console 供除錯用
-            console.error("Validation Failed:", {
-                name: this.newExpense.name,
-                localAmount: localAmount,
-                finalHKD: finalHKD,
-                inputCurrency: this.inputCurrency,
-                isHKD: this.inputCurrency === 'HKD'
-            });
-            return alert('請輸入消費項目和有效的金額 (請確保金額是數字且大於零)');
-        }
-        
-        // 【新增檢查】確保貨幣選擇正確
-        if (!this.inputCurrency) {
-             // 理論上這應該不會發生，因為 inputCurrency 有預設值
-             return alert('請選擇有效的幣別 (HKD 或外幣)。');
-        }
-
-        // 步驟 4: 處理旅行前 Day 0 邏輯
-        if (this.newExpense.category === '旅行前') {
-            this.newExpense.day = 0; 
-        } else if (!this.newExpense.day || this.newExpense.day === 0) {
-             if (this.newExpense.category !== '旅行前') {
-                 this.newExpense.day = 1;
-             }
-        }
-
-        const d = new Date();
-        
-        // 步驟 5: 新增 expense
-        this.newExpense.amount = finalHKD; 
-
-        this.activeTrip.expenses.unshift({ 
-            id: Date.now() + Math.random(), 
-            name: this.newExpense.name,
-            amount: this.newExpense.amount,
-            method: this.newExpense.method,
-            category: this.newExpense.category,
-            localAmount: localAmount, 
-            date: `${d.getMonth()+1}/${d.getDate()}`,
-            day: this.newExpense.day, 
-        });
-        
-        // 步驟 6: 重置
-        this.newExpense = { 
-            name:'', 
-            localAmount:null, 
-            amount:null, 
-            method:'現金', 
-            category:'飲食', 
-            day: 1
+        // 🔥 【您的 Firebase 配置 (已確認並貼入)】
+        // 確保這裡使用您提供的真實密鑰！
+        const firebaseConfig = {
+            apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM",
+            authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
+            projectId: "my-travel-diary-1dbc0",
+            storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
+            messagingSenderId: "592971246262",
+            appId: "1:592971246262:web:f7d0c923b697a26e199417",
+            measurementId: "G-F6X3YWL2MY" 
         };
-        // 重置 inputCurrency 為 Trip 預設外幣
-        this.inputCurrency = this.activeTrip.currency; 
-        this.saveData();
-      },
-      removeExpense(expenseId) {
-        if (!this.currentUser) {
-            alert("請先登入以同步您的記帳記錄。");
-            this.showLoginModal = true;
-            return;
-        }
-        if(confirm('確認刪除這筆消費嗎？')) {
-            const index = this.activeTrip.expenses.findIndex(exp => exp.id === expenseId);
-            if (index !== -1) {
-                this.activeTrip.expenses.splice(index, 1);
-                this.saveData();
-            }
-        }
-      },
 
-      exportExpensesToCSV() {
-          if (!this.activeTrip || !this.activeTrip.expenses.length) {
-              return alert('目前沒有消費記錄可以匯出！');
-          }
-          
-          const trip = this.activeTrip;
-          
-          const expensesToExport = this.activeTrip.expenses
-              .slice() 
-              .sort((a, b) => (a.day === undefined ? 1 : a.day) - (b.day === undefined ? 1 : b.day)); 
-
-          if (expensesToExport.length === 0) {
-              return alert(`暫無消費記錄可以匯出！`);
-          }
-
-          const headers = [
-              "Day", "日期", "項目", "類別", "支付方式", 
-              `當地金額 (${trip.currency})`, "匯率 (1 HKD = X)", 
-              "港幣金額 (HKD)"
-          ];
-          
-          const rows = expensesToExport.map(exp => [
-              exp.day === 0 ? '旅行前' : exp.day || 1, 
-              exp.date || '',
-              exp.name || '',
-              exp.category || '',
-              exp.method || '',
-              (exp.localAmount || 0).toFixed(2),
-              (trip.exchangeRate || 1).toFixed(2),
-              (exp.amount || 0).toFixed(2) 
-          ]);
-          
-          const csvContent = [
-              headers.join(','),
-              ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-          ].join('\n');
-          
-          const encodedUri = encodeURI("data:text/csv;charset=utf-8,\uFEFF" + csvContent);
-          const link = document.createElement("a");
-          
-          const fileName = `${trip.title}_All_Expenses_${new Date().toISOString().split('T')[0]}.csv`;
-          
-          link.setAttribute("href", encodedUri);
-          link.setAttribute("download", fileName);
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          
-          alert(`「${fileName}」匯出成功！`);
-      },
-
-      updateChart() {
-          if (this.activeTab !== 'budget') return;
-          
-          const summary = this.categorySummary;
-          const ctx = document.getElementById('expenseChart');
-          
-          if (!ctx) return;
-
-          const categoryColors = {
-              '飲食': '#FFD9EC', 
-              '購物': '#C7C7E2', 
-              '交通': '#97CBFF',
-              '娛樂': '#A4D8B9', 
-              '其他': '#F5E6CC',
-              '旅行前': '#8A2BE2', 
-          };
-          
-          const backgroundColors = summary.labels.map(label => 
-              categoryColors[label] || '#97CBFF'
-          );
+        // 🔥 Firebase 初始化 (V8 全域模式)
+        // 由於您使用的是 V8 CDN，我們必須使用 V8 的初始化語法
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = app.auth();
+        const db = app.firestore();
 
 
-          const chartData = {
-              labels: summary.labels,
-              datasets: [{
-                  data: summary.data,
-                  backgroundColor: backgroundColors,
-                  hoverOffset: 10,
-                  borderWidth: 0,
-              }]
-          };
-
-          if (this.chartInstance) {
-              this.chartInstance.data = chartData;
-              this.chartInstance.update();
-          } else {
-              this.chartInstance = new Chart(ctx, {
-                  type: 'doughnut',
-                  data: chartData,
-                  options: {
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                          legend: {
-                              position: 'bottom',
-                              labels: {
-                                  usePointStyle: true,
-                                  boxWidth: 8,
-                                  padding: 15,
-                              }
-                          },
-                          tooltip: {
-                              callbacks: {
-                                  label: (context) => {
-                                      let label = context.label || '';
-                                      if (label) { label += ': '; }
-                                      if (context.parsed !== null) {
-                                          const total = summary.data.reduce((a, b) => a + b, 0);
-                                          const percentage = (context.parsed * 100 / total).toFixed(1);
-                                          label += `${context.parsed.toFixed(2)} HKD (${percentage}%)`;
-                                      }
-                                      return label;
-                                  }
-                              }
-                          }
-                      }
-                  }
-              });
-          }
-      },
-      
-      // === 購物功能 (加入登入檢查) ===
-      handleImageUpload(e) {
-        if (!this.currentUser) {
-            alert("請先登入以同步您的圖片資料。");
-            this.showLoginModal = true;
-            return;
-        }
-        const file = e.target.files[0];
-        if (!file) return;
-        if (file.size > 1024 * 1024) return alert('圖片請小於 1MB');
-        const reader = new FileReader();
-        reader.onload = (evt) => { this.newShoppingItem.image = evt.target.result; };
-        reader.readAsDataURL(file);
-      },
-      addShoppingItem() {
-        if (!this.currentUser) {
-            alert("請先登入以同步您的購物清單。");
-            this.showLoginModal = true;
-            return;
-        }
-
-        if(!this.newShoppingItem.name) return alert('請輸入品名');
-        
-        // 允許價格為空
-        const onlinePrice = Number(this.newShoppingItem.onlinePrice);
-        const localPrice = Number(this.newShoppingItem.localPrice);
-
-        this.activeTrip.shoppingItems.unshift({ 
-            id: Date.now() + Math.random(), 
-            onlinePrice: isNaN(onlinePrice) ? null : onlinePrice,
-            localPrice: isNaN(localPrice) ? null : localPrice,
-            quantity: Math.max(1, Number(this.newShoppingItem.quantity) || 1),
-            bought: this.newShoppingItem.bought, 
-            name: this.newShoppingItem.name,
-            image: this.newShoppingItem.image
-        }); 
-        
-        // 重置欄位
-        this.newShoppingItem = { name: '', onlinePrice: null, localPrice: null, quantity: 1, bought: false, image: '' };
-        this.saveData();
-      },
-      
-      // **關鍵修復 V4: 採用 Vue 響應式最佳實踐 (splice 替換新物件) 以確保畫面更新**
-      toggleBought(item) {
-          if (!this.currentUser) {
-              alert("請先登入以同步您的購物清單。");
-              this.showLoginModal = true;
-              return;
-          }
-          if (!item || !this.activeTrip) return;
-
-          // 1. 找到該 item 在 shoppingItems 陣列中的確切索引
-          const index = this.activeTrip.shoppingItems.findIndex(i => i.id === item.id);
-          
-          if (index !== -1) {
-              // 2. 更改 bought 狀態
-              const newBoughtState = !item.bought;
-
-              // 3. 創建一個新的物件來替換舊的，確保 Vue 偵測到變化
-              const newItem = { ...item, bought: newBoughtState };
-              
-              // 4. 使用 splice 替換舊物件
-              this.activeTrip.shoppingItems.splice(index, 1, newItem);
-              
-              this.saveData(); 
-              
-              // 5. 確保總覽頁面等依賴也被觸發 (非必要，但能提高穩定性)
-              this.trips = [...this.trips]; 
-          }
-      },
-      removeShoppingItem(itemId) {
-        if (!this.currentUser) {
-            alert("請先登入以同步您的購物清單。");
-            this.showLoginModal = true;
-            return;
-        }
-        if(confirm('確認刪除此購物項目嗎？')) {
-            const index = this.activeTrip.shoppingItems.findIndex(item => item.id === itemId);
-            if (index !== -1) {
-                this.activeTrip.shoppingItems.splice(index, 1);
-                this.saveData();
-            }
-        }
-      },
-
-      // === 地圖/行程功能 (加入登入檢查) ===
-      openGoogleMaps(item) { 
-          if (item.mapLink && item.mapLink.trim()) {
-              const url = item.mapLink.trim();
-              if (url.startsWith('http')) {
-                  window.open(url, '_blank');
-              } else {
-                  this.searchGoogleMaps(url);
-              }
-          } 
-          else if (item.location && item.location.trim()) {
-              this.searchGoogleMaps(item.location);
-          } else {
-              alert('請輸入地點名稱或貼上 Google Map 連結。');
-          }
-      },
-      
-      searchGoogleMaps(query) {
-          const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
-          window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
-      },
-
-      mapMarkers: L.layerGroup(),
-      mapPolyline: null, 
-      
-      forceUpdateMap() {
-        if (this.activeTab !== 'itinerary-map') return;
-        try {
-          const container = document.getElementById('map');
-          // 檢查父級元素是否可見，避免在非當前 Tab 渲染時失敗
-          if (!container || container.offsetParent === null) {
-              console.log("Map container not visible, skipping init.");
-              return; 
-          }
-          if (this.map) { this.map.off(); this.map.remove(); }
-          
-          const center = this.activeTrip.center ? [this.activeTrip.center.lat, this.activeTrip.center.lng] : [35.6895, 139.6917];
-          
-          this.map = L.map('map', { zoomControl: false }).setView(center, 13);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(this.map);
-          this.mapMarkers.clearLayers();
-          this.mapMarkers.addTo(this.map);
-          this.mapPolyline = L.polyline([], {color: '#97CBFF', weight: 4, opacity: 0.8, dashArray: '5, 10'}).addTo(this.map);
-          
-          this.updateMapMarkers(); 
-          setTimeout(() => { this.map.invalidateSize(); }, 100);
-        } catch (e) { console.error("Map init fail", e); }
-      },
-      
-      async geocodeLocation(location) {
-          if (GeocodingCache[location]) return GeocodingCache[location];
-          
-          try {
-              const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`);
-              const data = await res.json();
-              if (data && data.length > 0) {
-                  const coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-                  GeocodingCache[location] = coords;
-                  return coords;
-              }
-          } catch (e) {
-              console.warn(`Geocoding failed for: ${location}. Error: ${e}. Route may not be drawn.`);
-          }
-          
-          if (this.activeTrip.center) {
-              // 隨機偏移，模擬地圖中心附近
-              return {
-                  lat: this.activeTrip.center.lat + (Math.random() - 0.5) * 0.005,
-                  lng: this.activeTrip.center.lng + (Math.random() - 0.5) * 0.005,
-              };
-          }
-          return null; 
-      },
-
-      async updateMapMarkers() {
-          if (!this.map || !this.activeTrip?.itinerary) return;
-          this.mapMarkers.clearLayers();
-          
-          const currentDayItems = this.activeTrip.itinerary
-              .filter(item => (item.day || 1) === this.activeDay && item.location) 
-              .sort((a, b) => {
-                  const timeA = a.time ? a.time.replace(':', '') : '9999';
-                  const timeB = b.time ? b.time.replace(':', '') : '9999';
-                  return timeA - timeB;
-              });
-          
-          let lineCoords = [];
-          let markers = [];
-          
-          for (let index = 0; index < currentDayItems.length; index++) {
-              const item = currentDayItems[index];
-              const fullLocation = item.location + ', ' + this.activeTrip.city + ', ' + this.activeTrip.destination; 
-              const coords = await this.geocodeLocation(fullLocation);
-
-              if (coords) {
-                  lineCoords.push([coords.lat, coords.lng]); 
-
-                  const marker = L.marker([coords.lat, coords.lng], {
-                      icon: L.divIcon({
-                          className: 'custom-div-icon',
-                          html: `<div style="background-color:#97CBFF; color:white; border-radius:50%; width:24px; height:24px; line-height:24px; text-align:center; font-weight:bold;">${index + 1}</div>`,
-                          iconSize: [24, 24],
-                          iconAnchor: [12, 12]
-                      })
-                  }).bindPopup(`<b>Day ${item.day || 1} - ${item.location}</b><br>${item.activity}`);
-                  markers.push(marker);
-              }
-          }
-
-          markers.forEach(marker => this.mapMarkers.addLayer(marker));
-          
-          if (this.mapPolyline) {
-              this.mapPolyline.setLatLngs(lineCoords);
-          }
-          
-          if (this.mapMarkers.getLayers().length > 0) {
-            this.map.fitBounds(this.mapMarkers.getBounds(), { padding: [50, 50] });
-          } else if (this.activeTrip.center) {
-             this.map.setView([this.activeTrip.center.lat, this.activeTrip.center.lng], 13);
-          }
-      },
-      
-      addItineraryItem(day) { 
-          if (!this.currentUser) {
-              alert("請先登入以同步您的行程。");
-              this.showLoginModal = true;
-              return;
-          }
-          this.activeTrip.itinerary.push({ 
-              id: Date.now() + Math.random(), 
-              day: day, 
-              time: '10:00', 
-              activity: '', 
-              location: '',
-              mapLink: '' 
-          }); 
-          this.saveData(); 
-          this.forceUpdateMap();
-      },
-      
-      removeItineraryItem(itemId) { 
-          if (!this.currentUser) {
-              alert("請先登入以同步您的行程。");
-              this.showLoginModal = true;
-              return;
-          }
-          if(confirm('確認刪除此行程項目嗎？')) {
-              const index = this.activeTrip.itinerary.findIndex(item => item.id === itemId);
-              if(index !== -1) {
-                  this.activeTrip.itinerary.splice(index, 1);
-                  this.saveData(); 
-                  this.forceUpdateMap();
-              }
-          }
-      },
-      
-      runBatchImport() {
-        if (!this.currentUser) {
-            alert("請先登入以同步您的行程。");
-            this.showLoginModal = true;
-            return;
-        }
-
-        if(!this.batchImportText) return alert('請貼上內容');
-        const lines = this.batchImportText.split('\n').filter(line => line.trim() !== '');
-        
-        const newItems = lines.map(line => {
-            const parts = line.split(',');
-            const dayNum = parseInt(parts[0]) || 1; 
+        createApp({
+            data() {
             return {
-                id: Date.now() + Math.random(), 
-                day: dayNum > this.totalDays ? this.totalDays : dayNum,
-                time: parts[1] ? parts[1].trim() : 'N/A',
-                mapLink: '', 
-                activity: parts[2] ? parts[2].trim() : '活動',
-                location: parts[3] ? parts[3].trim() : ''
+                activeTab: 'info',
+                trips: [],
+                activeTripId: null,
+                showTripModal: false,
+                editingTripId: null,
+                tempTrip: {},
+                map: null,
+                weatherData: null,
+                weatherTheme: 'sunny',
+                showBatchImport: false,
+                batchImportText: '',
+                
+                chartInstance: null,
+                
+                newExpense: { 
+                id: null, 
+                name: '', 
+                localAmount: null, // 綁定字串
+                amount: null,      
+                method: '現金', 
+                category: '飲食', 
+                day: 1, 
+                },
+                inputCurrency: '', 
+                
+                newShoppingItem: { 
+                    name: '', 
+                    onlinePrice: null, // 預計為 HKD
+                    localPrice: null,  // 預計為當地幣別金額
+                    quantity: 1,       // 數量欄位
+                    bought: false, 
+                    image: '' 
+                },
+                
+                activeDay: 1, // 行程頁面專用
+
+                // 🔥 Firebase/Auth 相關狀態變數
+                currentUser: null,       
+                loginEmail: '',          
+                loginPassword: '',       
+                showLoginModal: false, 
+
+                // 🔥 新增暫存匯率變數
+                tempExchangeRate: null,
+
+                tabs: [
+                { id: 'info', label: 'Trip Info', icon: 'ri-information-line' },
+                { id: 'itinerary-map', label: '行程', icon: 'ri-map-pin-user-line' },
+                { id: 'budget', label: '記帳', icon: 'ri-wallet-3-line' },
+                { id: 'shopping', label: '購物', icon: 'ri-shopping-bag-3-line' },
+                { id: 'trips', label: 'History', icon: 'ri-suitcase-line' },
+                ]
             };
-        });
-        
-        this.activeTrip.itinerary.push(...newItems);
-        this.saveData();
-        this.showBatchImport = false;
-        this.batchImportText = '';
-        this.forceUpdateMap(); 
-        alert(`成功匯入 ${newItems.length} 條行程！`);
-      },
+            },
+            computed: {
+            activeTrip() { return this.trips.find(t => t.id === this.activeTripId) || null; },
+            
+            totalDays() {
+                if (!this.activeTrip || !this.activeTrip.startDate || !this.activeTrip.endDate) return 1;
+                const start = new Date(this.activeTrip.startDate);
+                const end = new Date(this.activeTrip.endDate);
+                const diffTime = Math.abs(end - start);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+                return diffDays > 0 ? diffDays : 1;
+            },
+
+            groupedItinerary() {
+                if (!this.activeTrip) return [];
+                
+                const days = Array.from({ length: this.totalDays }, (_, i) => ({ day: i + 1, items: [] }));
+                
+                this.activeTrip.itinerary
+                    .sort((a, b) => (a.day || 1) - (b.day || 1)) 
+                    .forEach(item => {
+                        const dayIndex = (item.day || 1) - 1; 
+                        if (dayIndex >= 0 && dayIndex < days.length) { 
+                            days[dayIndex].items.push(item);
+                        }
+                    });
+                    
+                days.forEach(day => {
+                    day.items.sort((a, b) => {
+                        const timeA = a.time ? a.time.replace(':', '') : '9999';
+                        const timeB = b.time ? b.time.replace(':', '') : '9999';
+                        return timeA - timeB;
+                    });
+                });
+                
+                return days;
+            },
+            
+            filteredExpenses() {
+                if (!this.activeTrip || !this.activeTrip.expenses) {
+                    return [];
+                }
+                return this.activeTrip.expenses; 
+            },
+
+            totalExpensesHKD() {
+                if (!this.activeTrip) return 0;
+                return this.filteredExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+            },
+
+            weatherDesc() {
+                if (!this.weatherData) return 'Loading...';
+                const code = this.weatherData.weathercode;
+                const map = { 0:'晴朗 Sunny', 1:'多雲 Cloudy', 2:'陰天 Overcast', 3:'毛毛雨 Drizzle', 45:'霧 Fog', 48:'霧淞 Rime fog', 51:'毛毛雨 Drizzle', 53:'小雨 Light Rain', 55:'大雨 Heavy Rain', 61:'陣雨 Rain', 63:'中雨 Moderate Rain', 65:'大雨 Heavy Rain', 80:'陣雨 Showers', 81:'中度陣雨 Moderate Showers', 82:'強烈陣雨 Violent Showers', 95:'雷暴 Thunderstorm' };
+                return map[code] || '多雲 Cloudy';
+            },
+            
+            // 🔥 關鍵修正點 1: 確保 localAmount 被強制清理，並在 HKD 時直接使用
+            finalHKDAmount() {
+                // 【強制清理和轉換】使用一個更嚴格的方法來確保 newExpense.localAmount 是有效的數字
+                // 移除所有非數字和小數點的字符
+                const localAmountStr = String(this.newExpense.localAmount || '').replace(/[^0-9.]/g, '');
+                const amount = Number(localAmountStr);
+                
+                if (!this.activeTrip || isNaN(amount) || amount <= 0) {
+                    return 0;
+                }
+                
+                // 當選擇 HKD 時，直接返回金額 (即為 HKD)
+                if (this.inputCurrency === 'HKD') {
+                    return parseFloat(amount.toFixed(2));
+                }
+                
+                // 處理外幣轉換邏輯
+                const rate = this.activeTrip.exchangeRate;
+                if (!rate || rate <= 0) {
+                     // 如果是外幣但匯率無效，返回 0
+                     return 0;
+                }
+                
+                // 確保返回的金額保留兩位小數
+                return parseFloat((amount / rate).toFixed(2));
+            },
+            
+            categorySummary() {
+                if (!this.activeTrip || !this.filteredExpenses) {
+                    return { labels: [], data: [] };
+                }
+                const summary = this.filteredExpenses.reduce((acc, expense) => {
+                    const category = expense.category || '其他';
+                    const amount = Number(expense.amount) || 0;
+                    acc[category] = (acc[category] || 0) + amount;
+                    return acc;
+                }, {});
+                
+                const labels = Object.keys(summary);
+                const data = Object.values(summary).map(val => parseFloat(val.toFixed(2)));
+                
+                return { labels, data };
+            },
+
+            paymentSummary() {
+                const summary = { '現金': 0, '信用卡': 0, '其他': 0 };
+                if (!this.activeTrip) return summary;
+
+                this.filteredExpenses.forEach(exp => {
+                    const method = exp.method || '現金'; 
+                    const amount = Number(exp.amount) || 0;
+                    if (summary.hasOwnProperty(method)) {
+                        summary[method] += amount;
+                    } else {
+                        summary['其他'] += amount; 
+                    }
+                });
+
+                summary['現金'] = parseFloat(summary['現金'].toFixed(2));
+                summary['信用卡'] = parseFloat(summary['信用卡'].toFixed(2));
+                summary['其他'] = parseFloat(summary['其他'].toFixed(2));
+
+                return summary;
+            },
+            
+            activeBudgetDayText() {
+                return '所有'; 
+            },
+
+            groupedAndSortedExpenses() {
+                if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return [];
+
+                const expenses = this.activeTrip.expenses.slice() 
+                    .sort((a, b) => (a.day === undefined ? 1 : a.day) - (b.day === undefined ? 1 : b.day));
+
+                const result = [];
+                
+                const daysGrouped = expenses.reduce((acc, exp) => {
+                    const day = exp.day === undefined ? 1 : exp.day;
+                    if (!acc[day]) {
+                        acc[day] = [];
+                    }
+                    acc[day].push(exp);
+                    return acc;
+                }, {});
+
+                const sortedDays = Object.keys(daysGrouped).map(Number).sort((a, b) => a - b);
+                
+                for (const day of sortedDays) {
+                    const dayExpenses = daysGrouped[day];
+                    
+                    const total = dayExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+                    
+                    result.push({
+                        isHeader: true,
+                        day: day,
+                        dayLabel: day === 0 ? '旅行前 (Day 0)' : `Day ${day}`,
+                        total: parseFloat(total.toFixed(2)),
+                        id: `header-${day}`
+                    });
+
+                    result.push(...dayExpenses);
+                }
+
+                return result;
+            },
+
+            shoppingListWithSavings() {
+                if (!this.activeTrip || !this.activeTrip.shoppingItems) return [];
+                const rate = this.activeTrip.exchangeRate || 1; // 1 HKD = X 外幣
+
+                const processedList = this.activeTrip.shoppingItems.map(item => {
+                    // 確保 quantity, localPrice, onlinePrice 是有效數字
+                    const quantity = Math.max(1, Number(item.quantity) || 1);
+                    const localPrice = Number(item.localPrice) || 0;
+                    const onlinePrice = Number(item.onlinePrice) || 0;
+                    
+                    // 1. 計算當地價換算成 HKD 的總額 (單價 / 匯率 * 數量)
+                    // 只有當 localPrice 和 rate > 0 時才計算
+                    const localPriceHKD = (localPrice > 0 && rate > 0) 
+                        ? parseFloat(((localPrice / rate) * quantity).toFixed(2)) 
+                        : 0;
+                    
+                    // 2. 計算網上價 HKD 的總額
+                    const onlinePriceHKD = onlinePrice * quantity;
+                    
+                    // 3. 計算總共節省的金額 (網上價 - 當地價換算 HKD)
+                    // 只有在兩種價格都存在時才計算價差
+                    const savingsHKD = (localPriceHKD > 0 && onlinePriceHKD > 0) 
+                        ? parseFloat((onlinePriceHKD - localPriceHKD).toFixed(2))
+                        : 0;
+
+                    return {
+                        ...item,
+                        quantity: quantity,
+                        localPriceHKD: localPriceHKD, // 0.00 or actual price
+                        onlinePriceHKD: parseFloat(onlinePriceHKD.toFixed(2)),
+                        savingsHKD: savingsHKD,
+                    };
+                });
+                
+                // 排序邏輯：未買的在前，其次按節省金額降序
+                return processedList.sort((a, b) => {
+                    if (a.bought === b.bought) {
+                        return b.savingsHKD - a.savingsHKD; // 未買的則按節省金額降序
+                    }
+                    return a.bought ? 1 : -1; // false (0) < true (1)，所以未買的在前
+                });
+            },
+
+            totalSavings() {
+                return this.shoppingListWithSavings.reduce((sum, item) => sum + item.savingsHKD, 0);
+            }
+            },
+            watch: {
+            activeTab(newTab) {
+                if (newTab === 'itinerary-map') {
+                setTimeout(() => this.forceUpdateMap(), 500);
+                } else if (newTab === 'budget') { 
+                // 載入 tempExchangeRate
+                this.tempExchangeRate = this.activeTrip?.exchangeRate || 1; 
+                // 修正：當切換到 Budget Tab 時，確保 inputCurrency 被設為 Trip 的預設外幣
+                this.inputCurrency = this.activeTrip.currency; 
+                this.$nextTick(() => this.updateChart());
+                }
+            },
+            activeTripId() {
+                this.fetchWeather();
+                this.activeDay = 1; 
+                if (this.activeTrip) {
+                    this.inputCurrency = this.activeTrip.currency; 
+                    this.newExpense.day = 1; 
+                    // 初始化 tempExchangeRate
+                    this.tempExchangeRate = this.activeTrip.exchangeRate || 1;
+                }
+                this.updateChart(); 
+            },
+            activeDay() {
+                this.forceUpdateMap();
+            },
+            
+            categorySummary: {
+                handler() {
+                    this.updateChart();
+                },
+                deep: true
+            }
+            },
+            mounted() {
+            // 監聽 Firebase 登入狀態
+            auth.onAuthStateChanged(user => {
+                    if (user) {
+                        this.currentUser = user;
+                        this.showLoginModal = false;
+                        // 登入成功後，從 Firestore 載入數據
+                        this.loadData(); 
+                    } else {
+                        this.currentUser = null;
+                        // 未登入時，嘗試載入本地數據並允許瀏覽
+                        this.loadInitialOrLocalData(false); // 僅從本地載入，不嘗試上傳
+                        this.showLoginModal = false; // 預設隱藏模態框
+                    }
+                });
+
+            if (this.activeTrip) {
+                this.inputCurrency = this.activeTrip.currency;
+                this.newExpense.day = 1;
+                this.newExpense.category = '飲食'; 
+            }
+            },
+            methods: {
+            selectDay(day) {
+                this.activeDay = day;
+            },
+            
+            // 🔥 saveData 檢查登入狀態
+            async saveData() { 
+                // 1. 儲存到 LocalStorage (作為備份)
+                localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
+                this.updateChart(); 
+                
+                if (!this.currentUser) {
+                    return; // 未登入時，只儲存本地
+                }
+                
+                // 2. 儲存到雲端 Firestore (只有登入後才執行)
+                if (this.currentUser && this.activeTrip) {
+                     try {
+                         const userRef = db.collection('userTrips').doc(this.currentUser.uid);
+                         await userRef.set({
+                             trips: JSON.parse(JSON.stringify(this.trips)), // 確保數據是純粹的 JSON
+                             activeTripId: this.activeTripId,
+                             timestamp: firebase.firestore.FieldValue.serverTimestamp() // 新增時間戳
+                         });
+                         // console.log("數據成功儲存到 Firestore!");
+                     } catch (e) {
+                         console.error("Firestore 儲存失敗: ", e);
+                         alert("數據儲存到雲端失敗，已儲存至瀏覽器本地。請檢查網路或 Firestore 規則！");
+                     }
+                }
+            },
+            
+            // 🔥 loadData: 優先從 Firestore 載入
+            async loadData() {
+                if (!this.currentUser) {
+                    this.loadInitialOrLocalData(false);
+                    return;
+                }
+
+                try {
+                    const docSnap = await db.collection('userTrips').doc(this.currentUser.uid).get();
+                    
+                    if (docSnap.exists) {
+                        const data = docSnap.data();
+                        
+                        if (data.trips && data.trips.length > 0) {
+                            this.trips = this.sanitizeLoadedTrips(data.trips);
+                            this.activeTripId = data.activeTripId || (this.trips.length > 0 ? this.trips[0].id : null);
+                            localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
+                        } else {
+                            console.log("Firestore 數據為空，嘗試載入本地或預設數據。");
+                            this.loadInitialOrLocalData(true);
+                        }
+                    } else {
+                        console.log("Firestore 找不到文件，載入本地或預設數據。");
+                        this.loadInitialOrLocalData(true);
+                    }
+                } catch (e) {
+                    console.error("Firestore 讀取失敗: ", e);
+                    alert("數據讀取失敗，已嘗試載入本地數據。請檢查網路或 Firestore 規則！");
+                    this.loadInitialOrLocalData(false);
+                }
+                
+                if (this.activeTripId) {
+                this.fetchWeather();
+                this.newExpense.day = 1;
+                this.inputCurrency = this.activeTrip.currency; 
+                // 初始化 tempExchangeRate
+                this.tempExchangeRate = this.activeTrip.exchangeRate || 1;
+                }
+            },
+            
+            // 🔥 loadInitialOrLocalData: 處理首次登入時的數據
+            loadInitialOrLocalData(shouldUpload = false) {
+                const savedLocal = localStorage.getItem('christine_travel_diary_v4');
+                let parsedTrips = [];
+
+                if (savedLocal) {
+                    parsedTrips = this.sanitizeLoadedTrips(JSON.parse(savedLocal));
+                    this.trips = parsedTrips;
+                } else {
+                    // 載入預設數據
+                    const defaultItinerary = [{ id: Date.now(), day: 1, time: '10:00', activity: '到達機場', location: 'Narita Airport', mapLink: '' }];
+                    this.trips = [{
+                        id: Date.now(), title: 'Japan Trip', destination: 'Japan', city: 'Tokyo', currency: 'JPY',
+                        startDate: '2025-12-24', endDate: '2025-12-28',
+                        center: { lat: 35.6895, lng: 139.6917 }, exchangeRate: 19.2,
+                        flights: { outbound: { no: 'CX500', date: '2025-12-24' }, inbound: { no: 'CX501', date: '2025-12-28' } },
+                        itinerary: defaultItinerary, 
+                        expenses: [{ id: Date.now()+1, name: '機票', amount: 3500, method: '信用卡', category: '旅行前', date: '12/10', day: 0, localAmount: 67200 }], 
+                        shoppingItems: [
+                            { id: Date.now()+2, name: '防曬霜', onlinePrice: 200, localPrice: 3000, quantity: 2, bought: false, image: '' },
+                            { id: Date.now()+3, name: '手信餅乾', onlinePrice: 150, localPrice: 2500, quantity: 3, bought: true, image: '' },
+                        ]
+                    }];
+                }
+                
+                this.activeTripId = this.trips.length > 0 ? this.trips[0].id : null;
+                
+                if (shouldUpload && this.currentUser) {
+                    // 如果是首次登入，將本地或預設數據上傳到雲端
+                    this.saveData(); 
+                }
+
+                // 初始化 tempExchangeRate
+                if (this.activeTrip) {
+                    this.tempExchangeRate = this.activeTrip.exchangeRate || 1;
+                }
+            },
+            
+            // 🔥 清理載入數據，確保所有欄位和 ID 完整
+            sanitizeLoadedTrips(rawTrips) {
+                return rawTrips.map(trip => {
+                    if (trip.expenses) {
+                        trip.expenses = trip.expenses.map(exp => ({ 
+                            id: exp.id || Date.now() + Math.random(), 
+                            amount: exp.amount || 0,
+                            day: exp.day === undefined ? 1 : exp.day, 
+                            ...exp 
+                        }));
+                    } else {
+                        trip.expenses = [];
+                    }
+                    if (trip.itinerary) {
+                        trip.itinerary = trip.itinerary.map(item => ({ 
+                            id: item.id || Date.now() + Math.random(), 
+                            day: item.day || 1, 
+                            mapLink: item.mapLink || '', 
+                            ...item 
+                        }));
+                    } else {
+                        trip.itinerary = [];
+                    }
+                    if (trip.shoppingItems) {
+                        trip.shoppingItems = trip.shoppingItems.map(item => ({
+                            id: item.id || Date.now() + Math.random(),
+                            quantity: item.quantity || 1, 
+                            localPrice: item.localPrice || null, 
+                            onlinePrice: item.onlinePrice || null, 
+                            bought: item.bought || false, 
+                            ...item
+                        }));
+                    } else {
+                        trip.shoppingItems = [];
+                    }
+                    return trip;
+                });
+            },
+
+            calculateTripTotal(trip) {
+                if (!trip.expenses) return 0;
+                return trip.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+            },
+            
+            calculateDayTotal(dayIndex) {
+                if (!this.activeTrip || !this.activeTrip.expenses) return 0;
+                const total = this.activeTrip.expenses
+                            .filter(exp => (exp.day === undefined ? 1 : exp.day) === dayIndex) 
+                            .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+                return parseFloat(total.toFixed(2));
+            },
+            
+            // 🔥 登入/註冊/登出方法
+
+            async loginUser() {
+                if (!this.loginEmail || !this.loginPassword) return alert('請輸入電子郵件和密碼');
+                try {
+                    // **注意: 這裡必須使用 V8 語法**
+                    await auth.signInWithEmailAndPassword(this.loginEmail, this.loginPassword); 
+                    this.showLoginModal = false;
+                } catch (error) {
+                    // 如果用戶不存在，嘗試註冊
+                    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                         try {
+                             await auth.createUserWithEmailAndPassword(this.loginEmail, this.loginPassword);
+                             alert('帳號已創建並成功登入！');
+                             this.showLoginModal = false;
+                         } catch (registerError) {
+                             alert('登入/註冊失敗: ' + registerError.message);
+                             console.error(registerError);
+                         }
+                    } else {
+                         alert('登入失敗: ' + error.message);
+                         console.error(error);
+                    }
+                }
+            },
+
+            async logoutUser() {
+                if(confirm('確認登出嗎？登出後將無法同步數據。')) {
+                    try {
+                        // **注意: 這裡必須使用 V8 語法**
+                        await auth.signOut();
+                        alert('您已登出。');
+                        this.trips = [];
+                        this.activeTripId = null;
+                        this.showLoginModal = false; // 登出後預設隱藏
+                        this.loadInitialOrLocalData(false); // 重新載入本地數據
+                    } catch (error) {
+                        alert('登出失敗: ' + error.message);
+                    }
+                }
+            },
+            
+            // === API 功能 (匯率修正) ===
+
+            // 🔥 新增專門用於記帳頁面抓取匯率的方法
+            async fetchExchangeRate() {
+                if (!this.activeTrip || !this.activeTrip.currency || this.activeTrip.currency === 'HKD') {
+                    return alert('請先設定目標國家貨幣 (Currency)！');
+                }
+                
+                const currencyCode = this.activeTrip.currency;
+
+                try {
+                    const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
+                    const rateData = await rateRes.json();
+                    
+                    if (rateData?.rates && rateData.rates[currencyCode]) {
+                        const newRate = parseFloat(rateData.rates[currencyCode].toFixed(3));
+                        
+                        // 直接更新 activeTrip 的匯率
+                        this.activeTrip.exchangeRate = newRate;
+                        
+                        // 同步更新暫存變數
+                        this.tempExchangeRate = newRate; 
+
+                        this.saveData(); 
+                        alert(`成功！1 HKD ≈ ${newRate} ${currencyCode}`);
+                    } else {
+                        alert(`無法取得 ${currencyCode} 的即時匯率，請手動輸入。`);
+                    }
+                } catch (e) { 
+                console.error("Rate fetch fail", e); 
+                alert('即時匯率服務失敗，請手動輸入或稍後再試。');
+                }
+            },
+            
+            // 🔥 匯率輸入框的 blur/Enter 處理方法
+            updateExchangeRate() {
+                const rate = Number(this.tempExchangeRate);
+                if (isNaN(rate) || rate <= 0) {
+                    alert('請輸入有效的數字 (大於 0)');
+                    this.tempExchangeRate = this.activeTrip.exchangeRate || 1; // 恢復舊值
+                    return;
+                }
+                // 更新 activeTrip 的實際值
+                this.activeTrip.exchangeRate = parseFloat(rate.toFixed(3));
+                this.saveData();
+            },
+
+            async autoGeocode() {
+                if (!this.tempTrip.city) return alert('請先輸入城市名稱 (City)');
+                
+                try {
+                const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${this.tempTrip.city},${this.tempTrip.destination || ''}&addressdetails=1&limit=1`);
+                const geoData = await geoRes.json();
+                if (!geoData || geoData.length === 0) {
+                    return alert('找不到該城市，請檢查拼字。');
+                }
+                const location = geoData[0];
+                this.tempTrip.center = { lat: parseFloat(location.lat), lng: parseFloat(location.lon) };
+                if(location.address && location.address.country) {
+                    this.tempTrip.destination = location.address.country;
+                }
+                let currencyCode = 'USD';
+                const countryCode = location.address?.country_code?.toUpperCase(); 
+                if (countryCode) {
+                    try {
+                    const countryRes = await fetch(`https://restcountries.com/v3.1/alpha/${countryCode}`);
+                    const countryData = await countryRes.json();
+                    if (countryData[0]?.currencies) {
+                        currencyCode = Object.keys(countryData[0].currencies)[0];
+                        this.tempTrip.currency = currencyCode;
+                    }
+                    } catch (err) { console.error("Currency fetch fail", err); }
+                }
+                
+                try {
+                    // 匯率抓取邏輯與 fetchExchangeRate 相同
+                    const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
+                    const rateData = await rateRes.json();
+                    if (rateData?.rates && rateData.rates[currencyCode]) {
+                        this.tempTrip.exchangeRate = parseFloat(rateData.rates[currencyCode].toFixed(3));
+                    } else {
+                        this.tempTrip.exchangeRate = 1; 
+                    }
+                } catch (err) { 
+                    console.error("Rate fetch fail", err); 
+                    this.tempTrip.exchangeRate = 1;
+                }
+                
+                alert(`成功！\n座標: ${location.lat}, ${location.lon}\n國家: ${this.tempTrip.destination}\n貨幣: ${currencyCode}\n匯率: 1 HKD ≈ ${this.tempTrip.exchangeRate.toFixed(2)} ${currencyCode}`);
+                } catch (e) {
+                console.error(e);
+                alert('自動取得失敗，請稍後再試。');
+                }
+            },
+            async fetchFlight(type) {
+                if (!this.currentUser) {
+                    alert("請先登入以同步航班資料。");
+                    this.showLoginModal = true;
+                    return;
+                }
+
+                const flight = this.activeTrip.flights[type];
+                if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
+                if(AVIATIONSTACK_KEY === '5bxxxxxxxxx') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
+                
+                try {
+                const res = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}&flight_date=${flight.date}`);
+                const data = await res.json();
+                if (data.data && data.data.length > 0) {
+                    const f = data.data[0]; 
+                    flight.from = f.departure.iata;
+                    flight.to = f.arrival.iata;
+                    flight.depTime = f.departure.scheduled ? f.departure.scheduled.slice(11,16) : '--:--';
+                    flight.arrTime = f.arrival.scheduled ? f.arrival.scheduled.slice(11,16) : '--:--';
+                    this.saveData();
+                    alert(`已更新航班: ${flight.from} -> ${flight.to}`);
+                } else {
+                    alert('未找到航班資料，請確認 API Key、航班號與日期。');
+                    this.mockFlightData(type);
+                }
+                } catch(e) {
+                console.error(e);
+                alert('API 請求失敗，請檢查 Key 是否正確或網路連線。使用模擬數據。');
+                this.mockFlightData(type);
+                }
+            },
+            mockFlightData(type) {
+                const flight = this.activeTrip.flights[type];
+                const isOutbound = type === 'outbound';
+                flight.from = isOutbound ? 'HKG' : 'NRT';
+                flight.to = isOutbound ? 'NRT' : 'HKG';
+                flight.depTime = isOutbound ? '09:00' : '14:30';
+                flight.arrTime = isOutbound ? '14:30' : '20:30';
+                this.saveData();
+            },
+            async fetchWeather() {
+                if(!this.activeTrip?.center) return;
+                try {
+                const {lat,lng} = this.activeTrip.center;
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&timezone=auto`);
+                const d = await res.json();
+                this.weatherData = d.current_weather;
+                
+                const code = d.current_weather.weathercode;
+                if (code < 3) { this.weatherTheme = 'sunny'; } 
+                else if (code >= 51 && code < 80) { this.weatherTheme = 'rainy'; } 
+                else { this.weatherTheme = 'cloudy'; } 
+                
+                } catch(e){
+                console.error("Weather fetch failed", e);
+                this.weatherData = { temperature: 20 + Math.floor(Math.random()*5), weathercode: 1 };
+                this.weatherTheme = 'sunny';
+                }
+            },
+
+            // === 記帳功能 (金額輸入處理) ===
+            
+            // 【優化點】確保輸入框只保留數字和小數點
+            cleanAmountInput(event) {
+                let cleaned = event.target.value.replace(/[^0-9.]/g, '');
+                
+                // 只保留第一個小數點
+                let parts = cleaned.split('.');
+                if (parts.length > 2) {
+                    cleaned = parts[0] + '.' + parts.slice(1).join('');
+                }
+                
+                this.newExpense.localAmount = cleaned;
+            },
+            
+            // 🔥 關鍵修正點 2: 強化 addExpense 的驗證邏輯
+            addExpense() {
+                if (!this.currentUser) {
+                    alert("請先登入以同步您的記帳記錄。");
+                    this.showLoginModal = true;
+                    return;
+                }
+
+                // 步驟 1: 強制清理並轉換 localAmount
+                const localAmountStr = String(this.newExpense.localAmount || '').replace(/[^0-9.]/g, '');
+                const localAmount = Number(localAmountStr);
+                
+                // 步驟 2: 取得最終港幣金額 (計算屬性 finalHKDAmount 已包含清理邏輯)
+                const finalHKD = this.finalHKDAmount;
+                
+                // 步驟 3: 執行驗證
+                let isValid = true;
+                if (!this.newExpense.name || isNaN(localAmount) || localAmount <= 0) {
+                    isValid = false; // 項目名稱或當地金額無效
+                }
+                
+                // 如果不是 HKD，則必須確保換算後的 HKD 金額大於 0
+                if (this.inputCurrency !== 'HKD' && (isNaN(finalHKD) || finalHKD <= 0)) {
+                    isValid = false; // 外幣轉換失敗或結果為 0
+                }
+                
+                if (!isValid) {
+                    // 如果驗證失敗，輸出詳細錯誤訊息到 Console 供除錯用
+                    console.error("Validation Failed:", {
+                        name: this.newExpense.name,
+                        localAmount: localAmount,
+                        finalHKD: finalHKD,
+                        inputCurrency: this.inputCurrency,
+                        isHKD: this.inputCurrency === 'HKD'
+                    });
+                    return alert('請輸入消費項目和有效的金額 (請確保金額是數字且大於零)');
+                }
+                
+                // 【新增檢查】確保貨幣選擇正確
+                if (!this.inputCurrency) {
+                    return alert('請選擇有效的幣別 (HKD 或外幣)。');
+                }
+
+                // 步驟 4: 處理旅行前 Day 0 邏輯
+                if (this.newExpense.category === '旅行前') {
+                    this.newExpense.day = 0; 
+                } else if (!this.newExpense.day || this.newExpense.day === 0) {
+                    if (this.newExpense.category !== '旅行前') {
+                        this.newExpense.day = 1;
+                    }
+                }
+
+                const d = new Date();
+                
+                // 步驟 5: 新增 expense
+                this.newExpense.amount = finalHKD; 
+
+                this.activeTrip.expenses.unshift({ 
+                    id: Date.now() + Math.random(), 
+                    name: this.newExpense.name,
+                    amount: this.newExpense.amount,
+                    method: this.newExpense.method,
+                    category: this.newExpense.category,
+                    localAmount: localAmount, 
+                    date: `${d.getMonth()+1}/${d.getDate()}`,
+                    day: this.newExpense.day, 
+                });
+                
+                // 步驟 6: 重置
+                this.newExpense = { 
+                    name:'', 
+                    localAmount:null, 
+                    amount:null, 
+                    method:'現金', 
+                    category:'飲食', 
+                    day: 1
+                };
+                // 重置 inputCurrency 為 Trip 預設外幣
+                this.inputCurrency = this.activeTrip.currency; 
+                this.saveData();
+            },
+            removeExpense(expenseId) {
+                if (!this.currentUser) {
+                    alert("請先登入以同步您的記帳記錄。");
+                    this.showLoginModal = true;
+                    return;
+                }
+                if(confirm('確認刪除這筆消費嗎？')) {
+                    const index = this.activeTrip.expenses.findIndex(exp => exp.id === expenseId);
+                    if (index !== -1) {
+                        this.activeTrip.expenses.splice(index, 1);
+                        this.saveData();
+                    }
+                }
+            },
+
+            exportExpensesToCSV() {
+                if (!this.activeTrip || !this.activeTrip.expenses.length) {
+                    return alert('目前沒有消費記錄可以匯出！');
+                }
+                
+                const trip = this.activeTrip;
+                
+                const expensesToExport = this.activeTrip.expenses
+                    .slice() 
+                    .sort((a, b) => (a.day === undefined ? 1 : a.day) - (b.day === undefined ? 1 : b.day)); 
+
+                if (expensesToExport.length === 0) {
+                    return alert(`暫無消費記錄可以匯出！`);
+                }
+
+                const headers = [
+                    "Day", "日期", "項目", "類別", "支付方式", 
+                    `當地金額 (${trip.currency})`, "匯率 (1 HKD = X)", 
+                    "港幣金額 (HKD)"
+                ];
+                
+                const rows = expensesToExport.map(exp => [
+                    exp.day === 0 ? '旅行前' : exp.day || 1, 
+                    exp.date || '',
+                    exp.name || '',
+                    exp.category || '',
+                    exp.method || '',
+                    (exp.localAmount || 0).toFixed(2),
+                    (trip.exchangeRate || 1).toFixed(2),
+                    (exp.amount || 0).toFixed(2) 
+                ]);
+                
+                const csvContent = [
+                    headers.join(','),
+                    ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+                ].join('\n');
+                
+                const encodedUri = encodeURI("data:text/csv;charset=utf-8,\uFEFF" + csvContent);
+                const link = document.createElement("a");
+                
+                const fileName = `${trip.title}_All_Expenses_${new Date().toISOString().split('T')[0]}.csv`;
+                
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", fileName);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                alert(`「${fileName}」匯出成功！`);
+            },
+
+            updateChart() {
+                if (this.activeTab !== 'budget') return;
+                
+                const summary = this.categorySummary;
+                const ctx = document.getElementById('expenseChart');
+                
+                if (!ctx) return;
+
+                const categoryColors = {
+                    '飲食': '#FFD9EC', 
+                    '購物': '#C7C7E2', 
+                    '交通': '#97CBFF',
+                    '娛樂': '#A4D8B9', 
+                    '其他': '#F5E6CC',
+                    '旅行前': '#8A2BE2', 
+                };
+                
+                const backgroundColors = summary.labels.map(label => 
+                    categoryColors[label] || '#97CBFF'
+                );
 
 
-      // === 旅程管理功能 (加入登入檢查) ===
-      openNewTripModal() { 
-        if (!this.currentUser) {
-            alert("請先登入以管理您的旅程。");
-            this.showLoginModal = true;
-            return;
-        }
-        this.editingTripId = null; 
-        this.tempTrip = {
-            title:'', city:'', destination:'', currency:'JPY', exchangeRate:19.2, 
-            center:{lat:35.6,lng:139.6}, 
-            startDate: new Date().toISOString().split('T')[0], 
-            endDate: new Date().toISOString().split('T')[0]
-        }; 
-        this.showTripModal = true; 
-      },
-      openEditTripModal(trip) { 
-        if (!this.currentUser) {
-            alert("請先登入以管理您的旅程。");
-            this.showLoginModal = true;
-            return;
-        }
-        this.editingTripId = trip.id; this.tempTrip = JSON.parse(JSON.stringify(trip)); this.showTripModal = true; 
-      },
-      saveTrip() {
-        if (!this.currentUser) {
-            alert("請先登入以儲存您的旅程。");
-            this.showLoginModal = true;
-            return;
-        }
+                const chartData = {
+                    labels: summary.labels,
+                    datasets: [{
+                        data: summary.data,
+                        backgroundColor: backgroundColors,
+                        hoverOffset: 10,
+                        borderWidth: 0,
+                    }]
+                };
 
-        if (!this.tempTrip.title) return;
-        if (this.editingTripId) {
-          const idx = this.trips.findIndex(t => t.id === this.editingTripId);
-          this.trips[idx] = { ...this.trips[idx], ...this.tempTrip };
-        } else {
-          const center = this.tempTrip.center || {lat:35.6, lng:139.6};
-          const newTrip = { 
-            id: Date.now(), 
-            ...this.tempTrip, 
-            center: center, 
-            flights:{outbound:{},inbound:{}}, 
-            itinerary:[], 
-            expenses:[], 
-            shoppingItems:[] 
-          };
-          this.trips.unshift(newTrip); 
-          this.activeTripId = newTrip.id;
-        }
-        this.saveData();
-        this.showTripModal = false;
-        
-        this.$nextTick(() => {
-            this.activeDay = 1;
-            this.newExpense.day = 1; 
-            this.newExpense.category = '飲食'; 
-            this.inputCurrency = this.activeTrip.currency;
-            // 同步 tempExchangeRate
-            this.tempExchangeRate = this.activeTrip.exchangeRate; 
-            this.updateChart();
-        });
-      },
-      deleteTrip(id) {
-        if (!this.currentUser) {
-            alert("請先登入以管理您的旅程。");
-            this.showLoginModal = true;
-            return;
-        }
-        if(this.trips.length<=1) return alert('不能刪除最後一個旅程');
-        if(confirm('確認刪除?')) {
-          this.trips = this.trips.filter(t=>t.id!==id);
-          this.activeTripId = this.trips[0].id;
-          this.saveData();
-        }
-      },
-      switchTrip(id) { 
-        this.activeTripId = id; 
-        this.activeTab = 'info'; 
-        this.$nextTick(() => {
-            this.activeDay = 1;
-            this.newExpense.day = 1; 
-            this.newExpense.category = '飲食'; 
-            this.inputCurrency = this.activeTrip.currency;
-            // 同步 tempExchangeRate
-            this.tempExchangeRate = this.activeTrip.exchangeRate; 
-            this.updateChart();
-        });
-      },
+                if (this.chartInstance) {
+                    this.chartInstance.data = chartData;
+                    this.chartInstance.update();
+                } else {
+                    this.chartInstance = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: chartData,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        usePointStyle: true,
+                                        boxWidth: 8,
+                                        padding: 15,
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (context) => {
+                                            let label = context.label || '';
+                                            if (label) { label += ': '; }
+                                            if (context.parsed !== null) {
+                                                const total = summary.data.reduce((a, b) => a + b, 0);
+                                                const percentage = (context.parsed * 100 / total).toFixed(1);
+                                                label += `${context.parsed.toFixed(2)} HKD (${percentage}%)`;
+                                            }
+                                            return label;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            },
+            
+            // === 購物功能 (加入登入檢查) ===
+            handleImageUpload(e) {
+                if (!this.currentUser) {
+                    alert("請先登入以同步您的圖片資料。");
+                    this.showLoginModal = true;
+                    return;
+                }
+                const file = e.target.files[0];
+                if (!file) return;
+                if (file.size > 1024 * 1024) return alert('圖片請小於 1MB');
+                const reader = new FileReader();
+                reader.onload = (evt) => { this.newShoppingItem.image = evt.target.result; };
+                reader.readAsDataURL(file);
+            },
+            addShoppingItem() {
+                if (!this.currentUser) {
+                    alert("請先登入以同步您的購物清單。");
+                    this.showLoginModal = true;
+                    return;
+                }
+
+                if(!this.newShoppingItem.name) return alert('請輸入品名');
+                
+                // 允許價格為空
+                const onlinePrice = Number(this.newShoppingItem.onlinePrice);
+                const localPrice = Number(this.newShoppingItem.localPrice);
+
+                this.activeTrip.shoppingItems.unshift({ 
+                    id: Date.now() + Math.random(), 
+                    onlinePrice: isNaN(onlinePrice) ? null : onlinePrice,
+                    localPrice: isNaN(localPrice) ? null : localPrice,
+                    quantity: Math.max(1, Number(this.newShoppingItem.quantity) || 1),
+                    bought: this.newShoppingItem.bought, 
+                    name: this.newShoppingItem.name,
+                    image: this.newShoppingItem.image
+                }); 
+                
+                // 重置欄位
+                this.newShoppingItem = { name: '', onlinePrice: null, localPrice: null, quantity: 1, bought: false, image: '' };
+                this.saveData();
+            },
+            
+            // **關鍵修復 V4: 採用 Vue 響應式最佳實踐 (splice 替換新物件) 以確保畫面更新**
+            toggleBought(item) {
+                if (!this.currentUser) {
+                    alert("請先登入以同步您的購物清單。");
+                    this.showLoginModal = true;
+                    return;
+                }
+                if (!item || !this.activeTrip) return;
+
+                // 1. 找到該 item 在 shoppingItems 陣列中的確切索引
+                const index = this.activeTrip.shoppingItems.findIndex(i => i.id === item.id);
+                
+                if (index !== -1) {
+                    // 2. 更改 bought 狀態
+                    const newBoughtState = !item.bought;
+
+                    // 3. 創建一個新的物件來替換舊的，確保 Vue 偵測到變化
+                    const newItem = { ...item, bought: newBoughtState };
+                    
+                    // 4. 使用 splice 替換舊物件
+                    this.activeTrip.shoppingItems.splice(index, 1, newItem);
+                    
+                    this.saveData(); 
+                    
+                    // 5. 確保總覽頁面等依賴也被觸發 (非必要，但能提高穩定性)
+                    this.trips = [...this.trips]; 
+                }
+            },
+            removeShoppingItem(itemId) {
+                if (!this.currentUser) {
+                    alert("請先登入以同步您的購物清單。");
+                    this.showLoginModal = true;
+                    return;
+                }
+                if(confirm('確認刪除此購物項目嗎？')) {
+                    const index = this.activeTrip.shoppingItems.findIndex(item => item.id === itemId);
+                    if (index !== -1) {
+                        this.activeTrip.shoppingItems.splice(index, 1);
+                        this.saveData();
+                    }
+                }
+            },
+
+            // === 地圖/行程功能 (加入登入檢查) ===
+            openGoogleMaps(item) { 
+                if (item.mapLink && item.mapLink.trim()) {
+                    const url = item.mapLink.trim();
+                    if (url.startsWith('http')) {
+                        window.open(url, '_blank');
+                    } else {
+                        this.searchGoogleMaps(url);
+                    }
+                } 
+                else if (item.location && item.location.trim()) {
+                    this.searchGoogleMaps(item.location);
+                } else {
+                    alert('請輸入地點名稱或貼上 Google Map 連結。');
+                }
+            },
+            
+            searchGoogleMaps(query) {
+                const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
+                window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
+            },
+
+            mapMarkers: L.layerGroup(),
+            mapPolyline: null, 
+            
+            forceUpdateMap() {
+                if (this.activeTab !== 'itinerary-map') return;
+                try {
+                const container = document.getElementById('map');
+                // 檢查父級元素是否可見，避免在非當前 Tab 渲染時失敗
+                if (!container || container.offsetParent === null) {
+                    console.log("Map container not visible, skipping init.");
+                    return; 
+                }
+                if (this.map) { this.map.off(); this.map.remove(); }
+                
+                const center = this.activeTrip.center ? [this.activeTrip.center.lat, this.activeTrip.center.lng] : [35.6895, 139.6917];
+                
+                this.map = L.map('map', { zoomControl: false }).setView(center, 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(this.map);
+                this.mapMarkers.clearLayers();
+                this.mapMarkers.addTo(this.map);
+                this.mapPolyline = L.polyline([], {color: '#97CBFF', weight: 4, opacity: 0.8, dashArray: '5, 10'}).addTo(this.map);
+                
+                this.updateMapMarkers(); 
+                setTimeout(() => { this.map.invalidateSize(); }, 100);
+                } catch (e) { console.error("Map init fail", e); }
+            },
+            
+            async geocodeLocation(location) {
+                if (GeocodingCache[location]) return GeocodingCache[location];
+                
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`);
+                    const data = await res.json();
+                    if (data && data.length > 0) {
+                        const coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+                        GeocodingCache[location] = coords;
+                        return coords;
+                    }
+                } catch (e) {
+                    console.warn(`Geocoding failed for: ${location}. Error: ${e}. Route may not be drawn.`);
+                }
+                
+                if (this.activeTrip.center) {
+                    // 隨機偏移，模擬地圖中心附近
+                    return {
+                        lat: this.activeTrip.center.lat + (Math.random() - 0.5) * 0.005,
+                        lng: this.activeTrip.center.lng + (Math.random() - 0.5) * 0.005,
+                    };
+                }
+                return null; 
+            },
+
+            async updateMapMarkers() {
+                if (!this.map || !this.activeTrip?.itinerary) return;
+                this.mapMarkers.clearLayers();
+                
+                const currentDayItems = this.activeTrip.itinerary
+                    .filter(item => (item.day || 1) === this.activeDay && item.location) 
+                    .sort((a, b) => {
+                        const timeA = a.time ? a.time.replace(':', '') : '9999';
+                        const timeB = b.time ? b.time.replace(':', '') : '9999';
+                        return timeA - timeB;
+                    });
+                
+                let lineCoords = [];
+                let markers = [];
+                
+                for (let index = 0; index < currentDayItems.length; index++) {
+                    const item = currentDayItems[index];
+                    const fullLocation = item.location + ', ' + this.activeTrip.city + ', ' + this.activeTrip.destination; 
+                    const coords = await this.geocodeLocation(fullLocation);
+
+                    if (coords) {
+                        lineCoords.push([coords.lat, coords.lng]); 
+
+                        const marker = L.marker([coords.lat, coords.lng], {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<div style="background-color:#97CBFF; color:white; border-radius:50%; width:24px; height:24px; line-height:24px; text-align:center; font-weight:bold;">${index + 1}</div>`,
+                                iconSize: [24, 24],
+                                iconAnchor: [12, 12]
+                            })
+                        }).bindPopup(`<b>Day ${item.day || 1} - ${item.location}</b><br>${item.activity}`);
+                        markers.push(marker);
+                    }
+                }
+
+                markers.forEach(marker => this.mapMarkers.addLayer(marker));
+                
+                if (this.mapPolyline) {
+                    this.mapPolyline.setLatLngs(lineCoords);
+                }
+                
+                if (this.mapMarkers.getLayers().length > 0) {
+                    this.map.fitBounds(this.mapMarkers.getBounds(), { padding: [50, 50] });
+                } else if (this.activeTrip.center) {
+                    this.map.setView([this.activeTrip.center.lat, this.activeTrip.center.lng], 13);
+                }
+            },
+            
+            addItineraryItem(day) { 
+                if (!this.currentUser) {
+                    alert("請先登入以同步您的行程。");
+                    this.showLoginModal = true;
+                    return;
+                }
+                this.activeTrip.itinerary.push({ 
+                    id: Date.now() + Math.random(), 
+                    day: day, 
+                    time: '10:00', 
+                    activity: '', 
+                    location: '',
+                    mapLink: '' 
+                }); 
+                this.saveData(); 
+                this.forceUpdateMap();
+            },
+            
+            removeItineraryItem(itemId) { 
+                if (!this.currentUser) {
+                    alert("請先登入以同步您的行程。");
+                    this.showLoginModal = true;
+                    return;
+                }
+                if(confirm('確認刪除此行程項目嗎？')) {
+                    const index = this.activeTrip.itinerary.findIndex(item => item.id === itemId);
+                    if(index !== -1) {
+                        this.activeTrip.itinerary.splice(index, 1);
+                        this.saveData(); 
+                        this.forceUpdateMap();
+                    }
+                }
+            },
+            
+            runBatchImport() {
+                if (!this.currentUser) {
+                    alert("請先登入以同步您的行程。");
+                    this.showLoginModal = true;
+                    return;
+                }
+
+                if(!this.batchImportText) return alert('請貼上內容');
+                const lines = this.batchImportText.split('\n').filter(line => line.trim() !== '');
+                
+                const newItems = lines.map(line => {
+                    const parts = line.split(',');
+                    const dayNum = parseInt(parts[0]) || 1; 
+                    return {
+                        id: Date.now() + Math.random(), 
+                        day: dayNum > this.totalDays ? this.totalDays : dayNum,
+                        time: parts[1] ? parts[1].trim() : 'N/A',
+                        mapLink: '', 
+                        activity: parts[2] ? parts[2].trim() : '活動',
+                        location: parts[3] ? parts[3].trim() : ''
+                    };
+                });
+                
+                this.activeTrip.itinerary.push(...newItems);
+                this.saveData();
+                this.showBatchImport = false;
+                this.batchImportText = '';
+                this.forceUpdateMap(); 
+                alert(`成功匯入 ${newItems.length} 條行程！`);
+            },
+
+
+            // === 旅程管理功能 (加入登入檢查) ===
+            openNewTripModal() { 
+                // 允許未登入時新增旅程到本地
+                this.editingTripId = null; 
+                this.tempTrip = {
+                    title:'', city:'', destination:'', currency:'JPY', exchangeRate:19.2, 
+                    center:{lat:35.6,lng:139.6}, 
+                    startDate: new Date().toISOString().split('T')[0], 
+                    endDate: new Date().toISOString().split('T')[0]
+                }; 
+                this.showTripModal = true; 
+            },
+            openEditTripModal(trip) { 
+                // 允許未登入時編輯旅程
+                this.editingTripId = trip.id; this.tempTrip = JSON.parse(JSON.stringify(trip)); this.showTripModal = true; 
+            },
+            saveTrip() {
+                // 不論是否登入，都允許保存旅程到本地
+                if (!this.tempTrip.title) return;
+                if (this.editingTripId) {
+                const idx = this.trips.findIndex(t => t.id === this.editingTripId);
+                this.trips[idx] = { ...this.trips[idx], ...this.tempTrip };
+                } else {
+                const center = this.tempTrip.center || {lat:35.6, lng:139.6};
+                const newTrip = { 
+                    id: Date.now(), 
+                    ...this.tempTrip, 
+                    center: center, 
+                    flights:{outbound:{},inbound:{}}, 
+                    itinerary:[], 
+                    expenses:[], 
+                    shoppingItems:[] 
+                };
+                this.trips.unshift(newTrip); 
+                this.activeTripId = newTrip.id;
+                }
+                this.saveData();
+                this.showTripModal = false;
+                
+                this.$nextTick(() => {
+                    this.activeDay = 1;
+                    this.newExpense.day = 1; 
+                    this.newExpense.category = '飲食'; 
+                    if (this.activeTrip) {
+                        this.inputCurrency = this.activeTrip.currency;
+                        // 同步 tempExchangeRate
+                        this.tempExchangeRate = this.activeTrip.exchangeRate; 
+                    }
+                    this.updateChart();
+                });
+            },
+            deleteTrip(id) {
+                // 不論是否登入，都允許刪除旅程
+                if(this.trips.length<=1) return alert('不能刪除最後一個旅程');
+                if(confirm('確認刪除?')) {
+                this.trips = this.trips.filter(t=>t.id!==id);
+                this.activeTripId = this.trips[0].id;
+                this.saveData();
+                }
+            },
+            switchTrip(id) { 
+                this.activeTripId = id; 
+                this.activeTab = 'info'; 
+                this.$nextTick(() => {
+                    this.activeDay = 1;
+                    this.newExpense.day = 1; 
+                    this.newExpense.category = '飲食'; 
+                    if (this.activeTrip) {
+                        this.inputCurrency = this.activeTrip.currency;
+                        // 同步 tempExchangeRate
+                        this.tempExchangeRate = this.activeTrip.exchangeRate; 
+                    }
+                    this.updateChart();
+                });
+            },
+            }
+        }).mount('#app');
+
+    } catch (e) {
+        // 如果 Vue.js 應用程式啟動失敗，將錯誤訊息寫入 HTML 頁面
+        document.body.innerHTML = `
+            <div style="padding: 20px; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 5px; margin: 20px; font-size: 1.1em;">
+                <h2>🚨 應用程式啟動失敗 (頁面空白錯誤)</h2>
+                <p>這通常是 JavaScript 語法錯誤或 Firebase 配置問題導致的。請檢查瀏覽器的控制台 (Console) 以獲取詳細資訊。</p>
+                <h4 style="margin-top: 10px;">錯誤詳情:</h4>
+                <pre style="white-space: pre-wrap; word-break: break-all; color: #721c24; background: #f5c6cb; padding: 10px; border-radius: 3px;">${e.stack || e.message}</pre>
+                <p style="margin-top: 15px;">**建議您：** 按 F12 打開控制台，查看是否有關於 **Firebase** 或 **Vue** 的錯誤訊息。</p>
+            </div>
+        `;
+        console.error("Critical Application Startup Failure:", e);
     }
-  }).mount('#app');
 </script>
+
+</body>
+</html>
