@@ -719,15 +719,16 @@
   
   // 🔥 【替換為您的 Firebase 配置】
   const firebaseConfig = {
-    apiKey: "AIzaSyCeFnypnf5WdO9mIsuaWLwGZIsEv123QcuM",
+    apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM", // <--- 已替換為您提供的金鑰
     authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
     projectId: "my-travel-diary-1dbc0",
     storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
     messagingSenderId: "592971246262",
     appId: "1:592971246262:web:f7d0c923b697a26e199417",
+    // measurementId: "G-F6X3YWL2MY" // V8 不使用這個，但已備註
   };
 
-  // 🔥 Firebase 初始化 (V8 模式)
+  // 🔥 Firebase 初始化 (保留 V8 模式，以確保所有功能兼容)
   const app = firebase.initializeApp(firebaseConfig);
   const auth = app.auth();
   const db = app.firestore();
@@ -1009,7 +1010,7 @@
         if (this.activeTrip) {
             this.inputCurrency = this.activeTrip.currency; 
             this.newExpense.day = 1; 
-            // 載入 tempExchangeRate
+            // 初始化 tempExchangeRate
             this.tempExchangeRate = this.activeTrip.exchangeRate || 1; 
         }
         this.updateChart(); 
@@ -1217,6 +1218,8 @@
             await auth.signInWithEmailAndPassword(this.loginEmail, this.loginPassword);
             this.showLoginModal = false;
         } catch (error) {
+            // 登入失敗: {"error":{... "message":"API key not valid." ...}}
+            console.error(error);
             alert('登入失敗: ' + error.message);
         }
       },
@@ -1423,10 +1426,6 @@
         
         // 步驟 3: 執行驗證
         if (!this.newExpense.name || isNaN(localAmount) || localAmount <= 0 || isNaN(finalHKD) || finalHKD <= 0) {
-            // 如果這裏失敗，最可能是因為：
-            // 1. 名字為空。
-            // 2. 轉換後的 localAmount 不是有效數字。
-            // 3. finalHKDAmount 算出來是 0 或 NaN (例如：匯率為 0 或 HKD 模式下轉換失敗)
             return alert('請輸入消費項目和有效的金額 (請確保金額是數字且大於零)');
         }
         
