@@ -620,7 +620,7 @@
   </main>
   
   <div v-if="showLoginModal" class="auth-modal fixed inset-0 z-[500] flex items-end sm:items-center justify-center">
-    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showLoginModal = false"></div>
     <div class="bg-white w-full sm:w-[400px] p-8 rounded-t-3xl sm:rounded-3xl relative z-10 animate-slide-up pb-10 shadow-2xl">
       <h3 class="text-2xl font-black mb-2 text-center text-slate-800 flex items-center justify-center gap-2">
           <i class="ri-lock-2-line text-primary"></i> 旅程雲端同步
@@ -637,6 +637,9 @@
       
       <div class="text-center mt-5">
           <p class="text-xs text-slate-400">登入後，您的數據將被上傳至 Firestore 資料庫。</p>
+          <button @click="showLoginModal = false" class="text-xs text-slate-500 font-medium mt-1 hover:text-slate-700 transition">
+              <i class="ri-close-line text-sm"></i> 繼續使用本地模式
+          </button>
       </div>
     </div>
   </div>
