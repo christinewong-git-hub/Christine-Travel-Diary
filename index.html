@@ -138,6 +138,11 @@
       <h1 class="text-lg font-bold text-slate-700 tracking-wide">Christine's Travel Diary</h1>
     </div>
     <div class="flex items-center gap-3">
+        <button v-if="!currentUser" @click="showLoginModal = true" 
+                class="pointer-events-auto w-10 h-10 rounded-full bg-white/90 backdrop-blur shadow-lg text-slate-600 flex items-center justify-center hover:scale-110 transition active:scale-95">
+          <i class="ri-lock-2-line text-xl"></i>
+        </button>
+
         <button v-if="currentUser" @click="logoutUser" class="pointer-events-auto w-10 h-10 rounded-full bg-red-100/90 backdrop-blur shadow-lg text-red-500 flex items-center justify-center hover:scale-110 transition active:scale-95">
           <i class="ri-logout-box-r-line text-xl"></i>
         </button>
@@ -751,7 +756,7 @@
         currentUser: null,       
         loginEmail: '',          
         loginPassword: '',       
-        showLoginModal: false, // 🔥 修正 1.1: 預設為 false，允許瀏覽
+        showLoginModal: false, 
 
         tabs: [
           { id: 'info', label: 'Trip Info', icon: 'ri-information-line' },
@@ -1000,7 +1005,7 @@
                 this.loadData(); 
             } else {
                 this.currentUser = null;
-                // 🔥 修正 1.1: 未登入時，嘗試載入本地數據並允許瀏覽
+                // 修正 1.1: 未登入時，嘗試載入本地數據並允許瀏覽
                 this.loadInitialOrLocalData(false); // 僅從本地載入，不嘗試上傳
                 this.showLoginModal = false; // 預設隱藏模態框
             }
@@ -1024,9 +1029,9 @@
           this.updateChart(); 
           
           if (!this.currentUser) {
-              alert("您尚未登入，請登入以保存資料到雲端。資料已暫存至瀏覽器本地。");
-              this.showLoginModal = true; // 顯示登入模態框
-              return; 
+              // alert("您尚未登入，請登入以保存資料到雲端。資料已暫存至瀏覽器本地。");
+              // this.showLoginModal = true; // 顯示登入模態框
+              return; // 未登入時，只儲存本地
           }
           
           // 2. 儲存到雲端 Firestore (只有登入後才執行)
@@ -1170,18 +1175,6 @@
       },
       
       // 🔥 登入/註冊/登出方法
-      // 註冊方法已移除/註銷，只保留登入
-      /* async registerUser() {
-        if (!this.loginEmail || !this.loginPassword) return alert('請輸入電子郵件和密碼');
-        try {
-            await auth.createUserWithEmailAndPassword(this.loginEmail, this.loginPassword);
-            this.showLoginModal = false;
-            alert('註冊成功！數據將開始同步到雲端。');
-        } catch (error) {
-            alert('註冊失敗: ' + error.message);
-        }
-      },
-      */
 
       async loginUser() {
         if (!this.loginEmail || !this.loginPassword) return alert('請輸入電子郵件和密碼');
@@ -1595,9 +1588,9 @@
       },
       
       searchGoogleMaps(query) {
-          // 🔥 修正 4.1: 修正 Google Maps 搜尋 URL 格式
+          // 修正 4.1: 修正 Google Maps 搜尋 URL 格式
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
-          window.open(`http://maps.google.com/maps?q=${finalQuery}`, '_blank'); 
+          window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
       },
 
       mapMarkers: L.layerGroup(),
@@ -1607,7 +1600,7 @@
         if (this.activeTab !== 'itinerary-map') return;
         try {
           const container = document.getElementById('map');
-          // 🔥 修正 3.1: 檢查父級元素是否可見，避免在非當前 Tab 渲染時失敗
+          // 修正 3.1: 檢查父級元素是否可見，避免在非當前 Tab 渲染時失敗
           if (!container || container.offsetParent === null) {
               console.log("Map container not visible, skipping init.");
               return; 
