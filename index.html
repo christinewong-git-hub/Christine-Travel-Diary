@@ -135,8 +135,10 @@
         return map[code] || '多雲 Cloudy';
       },
       
+      // 🔥 關鍵修正點 1: 確保 localAmount 被強制清理，並在 HKD 時直接使用
       finalHKDAmount() {
           // 【強制清理和轉換】使用一個更嚴格的方法來確保 newExpense.localAmount 是有效的數字
+          // 移除所有非數字和小數點的字符
           const localAmountStr = String(this.newExpense.localAmount || '').replace(/[^0-9.]/g, '');
           const amount = Number(localAmountStr);
           
@@ -144,14 +146,17 @@
               return 0;
           }
           
-          // 當選擇 HKD 時，直接返回金額
+          // 當選擇 HKD 時，直接返回金額 (即為 HKD)
           if (this.inputCurrency === 'HKD') {
-              return amount;
+              return parseFloat(amount.toFixed(2));
           }
           
           // 處理外幣轉換邏輯
           const rate = this.activeTrip.exchangeRate;
-          if (!rate || rate <= 0) return 0;
+          if (!rate || rate <= 0) {
+               // 如果是外幣但匯率無效，返回 0
+               return 0;
+          }
           
           // 確保返回的金額保留兩位小數
           return parseFloat((amount / rate).toFixed(2));
@@ -291,6 +296,8 @@
         } else if (newTab === 'budget') { 
           // 載入 tempExchangeRate
           this.tempExchangeRate = this.activeTrip?.exchangeRate || 1; 
+          // 修正：當切換到 Budget Tab 時，確保 inputCurrency 被設為 Trip 的預設外幣
+          this.inputCurrency = this.activeTrip.currency; 
           this.$nextTick(() => this.updateChart());
         }
       },
@@ -699,7 +706,7 @@
           this.newExpense.localAmount = cleaned;
       },
       
-      // 【關鍵修正】強制 `addExpense` 邏輯 (使用 Number() 嚴格檢查輸入)
+      // 🔥 關鍵修正點 2: 強化 addExpense 的驗證邏輯
       addExpense() {
         if (!this.currentUser) {
             alert("請先登入以同步您的記帳記錄。");
@@ -714,20 +721,37 @@
         // 步驟 2: 取得最終港幣金額 (計算屬性 finalHKDAmount 已包含清理邏輯)
         const finalHKD = this.finalHKDAmount;
         
-        // 步驟 3: 執行驗證 (【關鍵修正】增加對 inputCurrency 的檢查)
-        if (!this.newExpense.name || isNaN(localAmount) || localAmount <= 0 || isNaN(finalHKD) || finalHKD <= 0) {
+        // 步驟 3: 執行驗證
+        // 驗證邏輯：
+        // a. 必須有消費項目名稱
+        // b. localAmount 必須是數字且大於 0
+        // c. 如果選擇的是外幣 (非HKD)，則 finalHKD 必須是數字且大於 0
+        
+        let isValid = true;
+        if (!this.newExpense.name || isNaN(localAmount) || localAmount <= 0) {
+            isValid = false; // 項目名稱或當地金額無效
+        }
+        
+        // 如果不是 HKD，則必須確保換算後的 HKD 金額大於 0
+        if (this.inputCurrency !== 'HKD' && (isNaN(finalHKD) || finalHKD <= 0)) {
+            isValid = false; // 外幣轉換失敗或結果為 0
+        }
+        
+        if (!isValid) {
             // 如果驗證失敗，輸出詳細錯誤訊息到 Console 供除錯用
             console.error("Validation Failed:", {
                 name: this.newExpense.name,
                 localAmount: localAmount,
                 finalHKD: finalHKD,
-                inputCurrency: this.inputCurrency
+                inputCurrency: this.inputCurrency,
+                isHKD: this.inputCurrency === 'HKD'
             });
             return alert('請輸入消費項目和有效的金額 (請確保金額是數字且大於零)');
         }
         
         // 【新增檢查】確保貨幣選擇正確
         if (!this.inputCurrency) {
+             // 理論上這應該不會發生，因為 inputCurrency 有預設值
              return alert('請選擇有效的幣別 (HKD 或外幣)。');
         }
 
@@ -765,6 +789,7 @@
             category:'飲食', 
             day: 1
         };
+        // 重置 inputCurrency 為 Trip 預設外幣
         this.inputCurrency = this.activeTrip.currency; 
         this.saveData();
       },
