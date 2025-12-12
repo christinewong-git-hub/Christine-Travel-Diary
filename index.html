@@ -50,7 +50,7 @@
       -webkit-tap-highlight-color: transparent;
     }
     
-    /* 標題字體修正: 使用 Playfair Display 且強制單行 */
+    /* 🔥 標題字體修正: 使用 Playfair Display 且強制單行 */
     header .header-title-container h1 {
         font-family: 'Playfair Display', serif;
         font-weight: 700; /* 確保字體夠粗 */
@@ -406,7 +406,7 @@
             </select>
             
             <div class="relative flex-1">
-               <input v-model.number="newExpense.localAmount" type="number" step="0.01" placeholder="當地金額" class="w-full p-3 rounded-xl bg-slate-50 border-0 text-sm">
+               <input v-model.number="newExpense.localAmount" type="number" step="0.01" placeholder="金額" class="w-full p-3 rounded-xl bg-slate-50 border-0 text-sm">
             </div>
 
             <select v-model="newExpense.method" class="w-1/3 p-3 rounded-xl bg-slate-50 border-0 text-sm text-slate-600">
@@ -1369,7 +1369,7 @@
         }
       },
 
-      // === 記帳功能 (V4.7 最小化驗證 + 幽默提示) ===
+      // === 記帳功能 (V4.8 - 修正刪除邏輯) ===
       addExpense() {
         // 檢查登入 (保留，這是數據同步的基礎)
         if (!this.currentUser) {
@@ -1441,22 +1441,42 @@
         this.inputCurrency = this.activeTrip.currency; 
         this.saveData();
         
-        // 成功提示
+        // 🔥 成功提示已修正為「距離破產又近一步！」
         alert('距離破產又近一步！'); 
       },
+      
       removeExpense(expenseId) {
-        if (!this.currentUser) {
-            alert("請先登入以同步您的記帳記錄。");
-            this.showLoginModal = true;
-            return;
-        }
-        if(confirm('確認刪除這筆消費嗎？')) {
-            const index = this.activeTrip.expenses.findIndex(exp => exp.id === expenseId);
-            if (index !== -1) {
-                this.activeTrip.expenses.splice(index, 1);
-                this.saveData();
-            }
-        }
+          // 1. 檢查登入狀態
+          if (!this.currentUser) {
+              alert("請先登入以同步您的記帳記錄。");
+              this.showLoginModal = true;
+              return;
+          }
+          
+          // 2. 執行確認刪除
+          if(confirm('確認刪除這筆消費嗎？')) {
+              if (!this.activeTrip || !this.activeTrip.expenses) {
+                  console.error("Active trip or expenses not found.");
+                  return;
+              }
+
+              // 3. 從 Vue 數據中移除該項目
+              const initialLength = this.activeTrip.expenses.length;
+              this.activeTrip.expenses = this.activeTrip.expenses.filter(exp => exp.id !== expenseId);
+              
+              const finalLength = this.activeTrip.expenses.length;
+
+              if (initialLength === finalLength) {
+                   // 輔助檢查，看是否 id 匹配有問題
+                   console.warn(`Expense ID ${expenseId} not found in the array for deletion.`);
+                   alert('刪除失敗：找不到該項目 ID。請嘗試刷新頁面。');
+                   return;
+              }
+              
+              // 4. 強制保存並同步到 Firebase
+              this.saveData(); 
+              alert('消費記錄已刪除並同步。');
+          }
       },
 
       exportExpensesToCSV() {
