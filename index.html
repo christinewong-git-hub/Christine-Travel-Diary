@@ -396,7 +396,7 @@
             </select>
             
             <div class="relative flex-1">
-               <input v-model.number="newExpense.localAmount" type="number" placeholder="金額" class="w-full p-3 rounded-xl bg-slate-50 border-0 text-sm">
+               <input v-model="newExpense.localAmount" type="number" step="0.01" placeholder="金額 (0或小數點)" class="w-full p-3 rounded-xl bg-slate-50 border-0 text-sm">
             </div>
 
             <select v-model="newExpense.method" class="w-1/3 p-3 rounded-xl bg-slate-50 border-0 text-sm text-slate-600">
@@ -839,8 +839,9 @@
       },
       
       finalHKDAmount() {
-          const amount = this.newExpense.localAmount;
-          if (!this.activeTrip || amount === null || amount === undefined || amount < 0) {
+          // 修正：使用 parseFloat 確保即使是字串 '0' 或 '1.2' 也能正常處理
+          const amount = parseFloat(this.newExpense.localAmount); 
+          if (!this.activeTrip || isNaN(amount) || amount < 0) {
               return 0;
           }
           
@@ -1393,23 +1394,43 @@
             return;
         }
 
-        // 🔥 關鍵修正 V4.2：優化驗證邏輯
-        if (!this.newExpense.name || this.newExpense.localAmount === null || this.newExpense.localAmount === undefined || this.newExpense.localAmount < 0) {
-            return alert('請輸入消費項目名稱和有效的金額 (需 >= 0)。');
+        // 🔥 關鍵修正 V4.3：優化驗證邏輯，允許 0 作為金額
+        
+        // 1. 檢查名稱 (允許中文、英文，檢查是否為空字串或只有空格)
+        if (!this.newExpense.name || this.newExpense.name.trim() === '') {
+            return alert('請輸入消費項目名稱。');
+        }
+        
+        // 2. 檢查金額是否為有效數字 (允許 0 和小數點)
+        const localAmountStr = String(this.newExpense.localAmount);
+        
+        // 檢查 localAmount 是否為空字串或只包含空格
+        if (!localAmountStr.trim()) {
+            return alert('請輸入有效的金額 (需 >= 0)。');
+        }
+        
+        const amountValue = parseFloat(localAmountStr);
+        
+        // 檢查是否為 NaN 或小於 0 (允許等於 0)
+        if (isNaN(amountValue) || amountValue < 0) {
+            return alert('請輸入有效的金額 (需 >= 0)。');
         }
 
-        // 確保至少計算出一個有效的 HKD 金額 (即使是 0)
+        // 確保至少計算出一個有效的 HKD 金額
         const calculatedHKDAmount = this.finalHKDAmount;
         if (isNaN(calculatedHKDAmount)) {
              return alert('金額轉換錯誤，請檢查匯率設定。');
         }
         
         // 確保 Day 0/旅行前 邏輯一致
-        if (this.newExpense.category === '旅行前' || this.newExpense.day === 0) {
+        const isPreTrip = this.newExpense.category === '旅行前' || this.newExpense.day === 0;
+
+        if (isPreTrip) {
             this.newExpense.day = 0; 
             this.newExpense.category = '旅行前';
-        } else if (!this.newExpense.day) {
-            this.newExpense.day = 1; // 預設 Day 1
+        } else if (!this.newExpense.day || this.newExpense.day === 0) {
+             // 如果 category 不是旅行前，但 day 意外是 0 或 null/undefined，則強制設為 1
+            this.newExpense.day = 1; 
         }
 
         const d = new Date();
@@ -1418,11 +1439,11 @@
 
         this.activeTrip.expenses.unshift({ 
             id: Date.now() + Math.random(), 
-            name: this.newExpense.name,
+            name: this.newExpense.name.trim(), // 清除名稱兩邊空格
             amount: this.newExpense.amount,
             method: this.newExpense.method,
             category: this.newExpense.category,
-            localAmount: this.newExpense.localAmount, 
+            localAmount: amountValue, // 使用解析後的數字
             date: `${d.getMonth()+1}/${d.getDate()}`,
             day: this.newExpense.day, 
         });
@@ -1433,7 +1454,7 @@
             amount:null, 
             method:'現金', 
             category:'飲食', 
-            day: 1 // 🔥 確保預設值為 1
+            day: isPreTrip ? 0 : 1 // 如果上一次是旅行前，保留 0，否則保留 1
         };
         this.inputCurrency = this.activeTrip.currency; 
         this.saveData();
@@ -1487,9 +1508,11 @@
           
           const csvContent = [
               headers.join(','),
+              // 🚨 修正: 確保 CSV 檔案在 Excel 等程式中正確顯示中文
               ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
           ].join('\n');
           
+          // 添加 BOM 讓 Excel 識別 UTF-8
           const encodedUri = encodeURI("data:text/csv;charset=utf-8,\uFEFF" + csvContent);
           const link = document.createElement("a");
           
@@ -1680,7 +1703,7 @@
       searchGoogleMaps(query) {
           // 🚨 關鍵修復: 修正 Google Maps 搜尋 URL 格式
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
-          window.open(`http://maps.google.com/maps?q=${finalQuery}`, '_blank'); 
+          window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
       },
 
       mapMarkers: L.layerGroup(),
