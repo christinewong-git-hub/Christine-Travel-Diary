@@ -718,7 +718,7 @@
   const GeocodingCache = {};
   
   // 🔥 【新增】您的 Firebase 配置
-  // 請將以下內容替換為您從 Firebase 控制台取得的實際配置
+  // 請將此替換為您從 Firebase 控制台取得的實際配置
   // ❗️ 請注意: 雖然配置公開，但請確保您的 Firestore 規則是安全的。
   const firebaseConfig = {
     apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM",
@@ -1371,7 +1371,7 @@
         }
       },
 
-      // === 記帳功能 (V4.9 - 強化刪除邏輯與強制更新) ===
+      // === 記帳功能 (V4.9.2 - 最終強制視圖刷新) ===
       addExpense() {
         // 檢查登入 (保留，這是數據同步的基礎)
         if (!this.currentUser) {
@@ -1458,34 +1458,28 @@
                   return;
               }
 
-              // 偵錯輔助：檢查是否有匹配的 ID
-              const itemToDelete = this.activeTrip.expenses.find(exp => exp.id === expenseId);
-              if (!itemToDelete) {
-                   console.error(`刪除失敗：找不到 Expense ID ${expenseId}。可能已刪除或 ID 錯誤。`);
-                   alert('刪除失敗：找不到該項目 ID。請嘗試刷新頁面。');
-                   return;
-              }
-
-
-              // 3. 從 Vue 數據中移除該項目
+              // ID 類型強制轉換，確保比較邏輯正確
+              const targetIdStr = String(expenseId); 
               const initialLength = this.activeTrip.expenses.length;
               
-              // 核心修正：使用 filter 排除項目
-              this.activeTrip.expenses = this.activeTrip.expenses.filter(exp => exp.id !== expenseId);
+              // 1. 計算新的陣列 (排除目標項目)
+              const newExpenses = this.activeTrip.expenses.filter(exp => String(exp.id) !== targetIdStr);
               
-              const finalLength = this.activeTrip.expenses.length;
+              const finalLength = newExpenses.length;
 
               if (initialLength === finalLength) {
-                   // 輔助檢查，看是否 id 匹配有問題
-                   console.warn(`Expense ID ${expenseId} 存在於陣列中，但 filter 失敗。`);
-                   alert('刪除操作未能移除本地記錄，可能原因：ID 類型不匹配或數據結構錯誤。');
+                   console.warn(`刪除失敗：找不到 Expense ID ${expenseId} (String: ${targetIdStr})。`);
+                   alert('刪除失敗：找不到該項目 ID。請檢查控制台。');
                    return;
               }
               
-              // 4. 強制保存並同步到 Firebase
+              // 2. 替換整個 Vue 響應式屬性（確保視圖強制刷新）
+              this.activeTrip.expenses = newExpenses;
+              
+              // 3. 強制保存並同步到 Firebase
               this.saveData(); 
               
-              // 5. 強制觸發 Vue 響應式更新 (用於應對某些瀏覽器/Vue版本無法自動刷新的情況)
+              // 4. (備用) 強制觸發 Vue 響應式更新
               this.trips = [...this.trips]; 
               
               alert('消費記錄已刪除並同步。');
