@@ -31,6 +31,8 @@
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+  
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script> 
@@ -126,18 +128,29 @@
     .auth-modal {
         animation: fadeIn 0.3s ease-out;
     }
+    
+    /* 🎨 修訂 2.2: 標題樣式調整 */
+    .app-header-title {
+        font-family: 'Playfair Display', serif;
+        /* 確保單行顯示 */
+        white-space: nowrap; 
+        overflow: hidden;
+        text-overflow: ellipsis; 
+        /* 防止 Icon 溢出，標題容器允許最大寬度，為右側按鈕組預留空間 */
+        max-width: calc(100% - 120px); 
+    }
   </style>
 </head>
 <body>
 
 <div id="app" class="min-h-screen">
   
-  <header class="fixed top-0 left-0 w-full p-6 z-50 flex items-center justify-between pointer-events-none">
+  <header class="fixed top-0 left-0 w-full p-4 sm:p-6 z-50 flex items-center justify-between pointer-events-none">
     <div class="flex items-center gap-2 pointer-events-auto bg-white/30 backdrop-blur-sm pr-4 py-1 rounded-full">
       <div class="bg-primary/20 p-2 rounded-full"><i class="ri-plane-fill text-xl text-primary"></i></div>
-      <h1 class="text-lg font-bold text-slate-700 tracking-wide">Christine's Travel Diary</h1>
+      <h1 class="text-lg font-bold text-slate-700 tracking-wide app-header-title">Christine's Travel Diary</h1>
     </div>
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-3 pr-2">
         <button v-if="!currentUser" @click="showLoginModal = true" 
                 class="pointer-events-auto w-10 h-10 rounded-full bg-white/90 backdrop-blur shadow-lg text-slate-600 flex items-center justify-center hover:scale-110 transition active:scale-95">
           <i class="ri-lock-2-line text-xl"></i>
@@ -381,10 +394,10 @@
         <h3 class="font-bold mb-4 flex items-center gap-2"><i class="ri-edit-line text-secondary"></i>記一筆</h3>
         
         <select v-model.number="newExpense.day" class="w-full p-3 rounded-xl bg-slate-50 border-0 mb-3 text-sm text-slate-600 font-bold text-center">
+            <option :value="0">旅行前 (Day 0)</option> 
             <option v-for="day in totalDays" :value="day" :key="'new_exp_day_' + day">
                 Day {{ day }}
             </option>
-            <option :value="0">旅行前</option> 
         </select>
 
         <input v-model="newExpense.name" placeholder="消費項目" class="w-full p-3 rounded-xl bg-slate-50 border-0 mb-3 text-sm">
@@ -769,7 +782,7 @@
         loginPassword: '',       
         showLoginModal: false, 
 
-        // 🔥 關鍵修復 2: 新增暫存匯率變數
+        // 🔥 修正 3.1: 新增暫存匯率變數
         tempExchangeRate: null,
 
         tabs: [
@@ -837,21 +850,21 @@
         return map[code] || '多雲 Cloudy';
       },
       
+      // 🐞 修訂 1.1: 修正金額計算邏輯
       finalHKDAmount() {
-          const amount = this.newExpense.localAmount;
+          const amount = Number(this.newExpense.localAmount);
           if (!this.activeTrip || !amount || amount <= 0) {
               return 0;
           }
           
           if (this.inputCurrency === 'HKD') {
-              return amount;
+              return amount; // 如果是港幣，直接使用
           }
           
-          // 🔥 關鍵修復 2: 使用 activeTrip.exchangeRate (已同步的最新匯率) 來計算
-          const rate = this.activeTrip.exchangeRate; 
+          const rate = this.activeTrip.exchangeRate;
           if (!rate || rate <= 0) return 0;
           
-          return (amount / rate);
+          return (amount / rate); // 換算為港幣
       },
       
       categorySummary() {
@@ -986,7 +999,7 @@
         if (newTab === 'itinerary-map') {
           setTimeout(() => this.forceUpdateMap(), 500);
         } else if (newTab === 'budget') { 
-          // 🔥 關鍵修復 2: 載入 tempExchangeRate
+          // 🔥 修正 3.2: 載入 tempExchangeRate
           this.tempExchangeRate = this.activeTrip?.exchangeRate || 1; 
           this.$nextTick(() => this.updateChart());
         }
@@ -998,7 +1011,7 @@
             this.inputCurrency = this.activeTrip.currency; 
             this.newExpense.day = 1; 
             this.newExpense.category = '飲食'; 
-            // 🔥 關鍵修復 2: 載入 tempExchangeRate
+            // 🔥 修正 3.3: 載入 tempExchangeRate
             this.tempExchangeRate = this.activeTrip.exchangeRate || 1; 
         }
         this.updateChart(); 
@@ -1024,7 +1037,7 @@
                 this.loadData(); 
             } else {
                 this.currentUser = null;
-                // 🔥 關鍵修復 1: 未登入時，嘗試載入本地數據並允許瀏覽
+                // 修正 1.1: 未登入時，嘗試載入本地數據並允許瀏覽
                 this.loadInitialOrLocalData(false); // 僅從本地載入，不嘗試上傳
                 this.showLoginModal = false; // 預設隱藏模態框
             }
@@ -1103,7 +1116,7 @@
           this.fetchWeather();
           this.newExpense.day = 1;
           this.inputCurrency = this.activeTrip.currency; 
-          // 🔥 關鍵修復 2: 初始化 tempExchangeRate
+          // 🔥 修正 3.4: 初始化 tempExchangeRate
           this.tempExchangeRate = this.activeTrip.exchangeRate || 1;
         }
       },
@@ -1140,7 +1153,7 @@
               this.saveData(); 
           }
 
-          // 🔥 關鍵修復 2: 初始化 tempExchangeRate
+          // 🔥 修正 3.5: 初始化 tempExchangeRate
           if (this.activeTrip) {
               this.tempExchangeRate = this.activeTrip.exchangeRate || 1;
           }
@@ -1227,7 +1240,7 @@
       
       // === API 功能 (匯率修正) ===
 
-      // 🔥 關鍵修復 2: 新增專門用於記帳頁面抓取匯率的方法
+      // 🔥 修正 1.2: 新增專門用於記帳頁面抓取匯率的方法
       async fetchExchangeRate() {
         if (!this.activeTrip || !this.activeTrip.currency || this.activeTrip.currency === 'HKD') {
             return alert('請先設定目標國家貨幣 (Currency)！');
@@ -1259,7 +1272,7 @@
         }
       },
       
-      // 🔥 關鍵修復 2: 匯率輸入框的 blur/Enter 處理方法
+      // 🔥 修正 3.6: 匯率輸入框的 blur/Enter 處理方法
       updateExchangeRate() {
           const rate = Number(this.tempExchangeRate);
           if (isNaN(rate) || rate <= 0) {
@@ -1380,7 +1393,7 @@
         }
       },
 
-      // === 記帳功能 (加入登入檢查) ===
+      // === 記帳功能 (🐞 修訂 1.3: 修正 addExpense 邏輯) ===
       addExpense() {
         if (!this.currentUser) {
             alert("請先登入以同步您的記帳記錄。");
@@ -1388,22 +1401,31 @@
             return;
         }
 
-        if(!this.newExpense.name || !this.newExpense.localAmount || this.finalHKDAmount === 0) {
+        // 檢查消費項目和金額是否有效 (金額 > 0)
+        if (!this.newExpense.name || Number(this.newExpense.localAmount) <= 0) {
             return alert('請輸入消費項目和有效的金額');
         }
         
-        // 🔥 關鍵修復 3: 修正 Day 0/旅行前的邏輯
+        // 確保最終港幣金額有效
+        const finalAmount = parseFloat(this.finalHKDAmount.toFixed(2));
+        if (finalAmount <= 0) {
+            return alert('計算後的港幣金額無效，請檢查金額或匯率。');
+        }
+
+        // 設置 Day
+        let expenseDay = Number(this.newExpense.day);
         if (this.newExpense.category === '旅行前') {
-            this.newExpense.day = 0; 
-        } else if (!this.newExpense.day || this.newExpense.day === 0) {
-             if (this.newExpense.category !== '旅行前') {
-                 this.newExpense.day = 1;
-             }
+            expenseDay = 0; 
+        } else if (expenseDay === 0) { 
+             // 如果選了 Day 0 但類別不是旅行前，則修正為 Day 1
+             expenseDay = 1;
+        } else if (expenseDay > this.totalDays) {
+             expenseDay = this.totalDays; // 防止超過最大天數
         }
 
         const d = new Date();
         
-        this.newExpense.amount = this.finalHKDAmount; 
+        this.newExpense.amount = finalAmount; 
 
         this.activeTrip.expenses.unshift({ 
             id: Date.now() + Math.random(), 
@@ -1411,11 +1433,12 @@
             amount: this.newExpense.amount,
             method: this.newExpense.method,
             category: this.newExpense.category,
-            localAmount: this.newExpense.localAmount, 
+            localAmount: Number(this.newExpense.localAmount) || 0, // 確保儲存數字
             date: `${d.getMonth()+1}/${d.getDate()}`,
-            day: this.newExpense.day, 
+            day: expenseDay, // 使用修正後的 Day
         });
         
+        // 重置欄位 (將 Day 重置回 1)
         this.newExpense = { 
             name:'', 
             localAmount:null, 
@@ -1606,7 +1629,7 @@
         this.saveData();
       },
       
-      // 🔥 關鍵修復 5: 採用 Vue 響應式最佳實踐 (splice 替換新物件) 以確保畫面更新
+      // **關鍵修復 V4: 採用 Vue 響應式最佳實踐 (splice 替換新物件) 以確保畫面更新**
       toggleBought(item) {
           if (!this.currentUser) {
               alert("請先登入以同步您的購物清單。");
@@ -1666,8 +1689,8 @@
           }
       },
       
+      // 🐛 修正 4.2: 修正 Google Maps 搜尋 URL 格式
       searchGoogleMaps(query) {
-          // 🔥 關鍵修復 4: 修正 Google Maps 搜尋 URL 格式
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
           window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
       },
@@ -1675,11 +1698,11 @@
       mapMarkers: L.layerGroup(),
       mapPolyline: null, 
       
+      // 🐛 修正 3.7: 檢查容器是否可見再初始化地圖
       forceUpdateMap() {
         if (this.activeTab !== 'itinerary-map') return;
         try {
           const container = document.getElementById('map');
-          // 修正 3.1: 檢查父級元素是否可見，避免在非當前 Tab 渲染時失敗
           if (!container || container.offsetParent === null) {
               console.log("Map container not visible, skipping init.");
               return; 
@@ -1895,7 +1918,7 @@
             this.newExpense.day = 1; 
             this.newExpense.category = '飲食'; 
             this.inputCurrency = this.activeTrip.currency;
-            // 🔥 關鍵修復 2: 同步 tempExchangeRate
+            // 🔥 修正 3.8: 同步 tempExchangeRate
             this.tempExchangeRate = this.activeTrip.exchangeRate; 
             this.updateChart();
         });
@@ -1921,7 +1944,7 @@
             this.newExpense.day = 1; 
             this.newExpense.category = '飲食'; 
             this.inputCurrency = this.activeTrip.currency;
-            // 🔥 關鍵修復 2: 同步 tempExchangeRate
+            // 🔥 修正 3.9: 同步 tempExchangeRate
             this.tempExchangeRate = this.activeTrip.exchangeRate; 
             this.updateChart();
         });
