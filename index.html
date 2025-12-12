@@ -313,7 +313,7 @@
             <i class="ri-refresh-line text-sm mr-1"></i>刷新地圖
         </button>
         <div id="map"></div>
-        <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-slate-700 shadow-sm z-[400] border border-slate-200">
+        <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-slate-700 shadow-sm z-[400]">
           <i class="ri-map-pin-range-line text-primary mr-1"></i>行程地圖
         </div>
         <div class="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-slate-600 shadow-sm z-[400]">
@@ -406,7 +406,7 @@
             </select>
         </div>
         
-        <div v-if="finalHKDAmount > 0" class="text-sm text-slate-500 bg-blue-50/70 p-3 rounded-xl mb-3 flex justify-between items-center animate-fade-in border border-blue-100">
+        <div v-if="!isNaN(finalHKDAmount) && finalHKDAmount >= 0" class="text-sm text-slate-500 bg-blue-50/70 p-3 rounded-xl mb-3 flex justify-between items-center animate-fade-in border border-blue-100">
             <span class="font-bold text-slate-700">最終港幣 (HKD):</span>
             <span class="font-black text-lg text-primary">{{ finalHKDAmount.toFixed(2) }}</span>
         </div>
@@ -840,7 +840,7 @@
       
       finalHKDAmount() {
           const amount = this.newExpense.localAmount;
-          if (!this.activeTrip || !amount || amount <= 0) {
+          if (!this.activeTrip || amount === null || amount === undefined || amount < 0) {
               return 0;
           }
           
@@ -852,7 +852,9 @@
           const rate = this.activeTrip.exchangeRate; 
           if (!rate || rate <= 0) return 0;
           
-          return (amount / rate);
+          // 確保計算結果是浮點數，並處理可能出現的 NaN
+          const result = (amount / rate);
+          return isNaN(result) ? 0 : result;
       },
       
       categorySummary() {
@@ -1391,21 +1393,28 @@
             return;
         }
 
-        if(!this.newExpense.name || !this.newExpense.localAmount || this.finalHKDAmount === 0) {
-            return alert('請輸入消費項目和有效的金額');
+        // 🔥 關鍵修正 V4.2：優化驗證邏輯
+        if (!this.newExpense.name || this.newExpense.localAmount === null || this.newExpense.localAmount === undefined || this.newExpense.localAmount < 0) {
+            return alert('請輸入消費項目名稱和有效的金額 (需 >= 0)。');
+        }
+
+        // 確保至少計算出一個有效的 HKD 金額 (即使是 0)
+        const calculatedHKDAmount = this.finalHKDAmount;
+        if (isNaN(calculatedHKDAmount)) {
+             return alert('金額轉換錯誤，請檢查匯率設定。');
         }
         
-        if (this.newExpense.category === '旅行前') {
+        // 確保 Day 0/旅行前 邏輯一致
+        if (this.newExpense.category === '旅行前' || this.newExpense.day === 0) {
             this.newExpense.day = 0; 
-        } else if (!this.newExpense.day || this.newExpense.day === 0) {
-             if (this.newExpense.category !== '旅行前') {
-                 this.newExpense.day = 1;
-             }
+            this.newExpense.category = '旅行前';
+        } else if (!this.newExpense.day) {
+            this.newExpense.day = 1; // 預設 Day 1
         }
 
         const d = new Date();
         
-        this.newExpense.amount = this.finalHKDAmount; 
+        this.newExpense.amount = calculatedHKDAmount; // 使用計算出的 HKD 金額
 
         this.activeTrip.expenses.unshift({ 
             id: Date.now() + Math.random(), 
@@ -1424,7 +1433,7 @@
             amount:null, 
             method:'現金', 
             category:'飲食', 
-            day: 1
+            day: 1 // 🔥 確保預設值為 1
         };
         this.inputCurrency = this.activeTrip.currency; 
         this.saveData();
@@ -1671,7 +1680,7 @@
       searchGoogleMaps(query) {
           // 🚨 關鍵修復: 修正 Google Maps 搜尋 URL 格式
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
-          window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
+          window.open(`http://maps.google.com/maps?q=${finalQuery}`, '_blank'); 
       },
 
       mapMarkers: L.layerGroup(),
