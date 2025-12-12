@@ -1062,12 +1062,14 @@
                try {
                    const userRef = db.collection('userTrips').doc(this.currentUser.uid);
                    await userRef.set({
+                       // 深度複製，確保 Firestore 收到純淨的數據
                        trips: JSON.parse(JSON.stringify(this.trips)), 
                        activeTripId: this.activeTripId,
                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
                    });
                } catch (e) {
                    console.error("Firestore 儲存失敗: ", e);
+                   alert('數據同步到雲端失敗，請檢查網路或登入狀態。');
                }
           }
       },
@@ -1369,7 +1371,7 @@
         }
       },
 
-      // === 記帳功能 (V4.8 - 修正刪除邏輯) ===
+      // === 記帳功能 (V4.9 - 強化刪除邏輯與強制更新) ===
       addExpense() {
         // 檢查登入 (保留，這是數據同步的基礎)
         if (!this.currentUser) {
@@ -1378,12 +1380,9 @@
             return;
         }
 
-        // 🔥 V4.6 最小化驗證 (極度放寬嚴謹度)
-
         // 1. 檢查項目名稱：只要有值，即使是空格也允許
         const rawName = this.newExpense.name;
-        if (rawName === null || rawName === undefined || rawName === '') {
-            // 如果連這個最寬鬆的檢查都失敗，則問題出在 v-model 綁定
+        if (rawName === null || rawName === undefined || rawName.trim() === '') {
             return alert('請輸入消費項目名稱。'); 
         }
         
@@ -1403,7 +1402,7 @@
             finalHKDAmountSafe = 0; // 忽略轉換失敗，設為 0
         }
 
-        // 4. Day/Category 邏輯 (保留)
+        // 4. Day/Category 邏輯
         const isPreTrip = this.newExpense.category === '旅行前' || this.newExpense.day === 0;
 
         if (isPreTrip) {
@@ -1441,7 +1440,6 @@
         this.inputCurrency = this.activeTrip.currency; 
         this.saveData();
         
-        // 🔥 成功提示已修正為「距離破產又近一步！」
         alert('距離破產又近一步！'); 
       },
       
@@ -1460,21 +1458,36 @@
                   return;
               }
 
+              // 偵錯輔助：檢查是否有匹配的 ID
+              const itemToDelete = this.activeTrip.expenses.find(exp => exp.id === expenseId);
+              if (!itemToDelete) {
+                   console.error(`刪除失敗：找不到 Expense ID ${expenseId}。可能已刪除或 ID 錯誤。`);
+                   alert('刪除失敗：找不到該項目 ID。請嘗試刷新頁面。');
+                   return;
+              }
+
+
               // 3. 從 Vue 數據中移除該項目
               const initialLength = this.activeTrip.expenses.length;
+              
+              // 核心修正：使用 filter 排除項目
               this.activeTrip.expenses = this.activeTrip.expenses.filter(exp => exp.id !== expenseId);
               
               const finalLength = this.activeTrip.expenses.length;
 
               if (initialLength === finalLength) {
                    // 輔助檢查，看是否 id 匹配有問題
-                   console.warn(`Expense ID ${expenseId} not found in the array for deletion.`);
-                   alert('刪除失敗：找不到該項目 ID。請嘗試刷新頁面。');
+                   console.warn(`Expense ID ${expenseId} 存在於陣列中，但 filter 失敗。`);
+                   alert('刪除操作未能移除本地記錄，可能原因：ID 類型不匹配或數據結構錯誤。');
                    return;
               }
               
               // 4. 強制保存並同步到 Firebase
               this.saveData(); 
+              
+              // 5. 強制觸發 Vue 響應式更新 (用於應對某些瀏覽器/Vue版本無法自動刷新的情況)
+              this.trips = [...this.trips]; 
+              
               alert('消費記錄已刪除並同步。');
           }
       },
@@ -1693,7 +1706,7 @@
       
       searchGoogleMaps(query) {
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
-          // 修正 Google Maps 搜尋 URL 格式
+          // 修正 Google Maps 搜尋 URL 格式 (使用正確的參數)
           window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
       },
 
