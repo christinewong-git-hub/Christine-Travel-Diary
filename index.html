@@ -387,7 +387,7 @@
             <option :value="0">旅行前</option> 
         </select>
 
-        <input v-model="newExpense.name" placeholder="消費項目" class="w-full p-3 rounded-xl bg-slate-50 border-0 mb-3 text-sm">
+        <input v-model.trim="newExpense.name" placeholder="消費項目" class="w-full p-3 rounded-xl bg-slate-50 border-0 mb-3 text-sm">
         
         <div class="flex gap-3 mb-3">
             <select v-model="inputCurrency" class="w-1/4 p-3 rounded-xl bg-slate-50 border-0 text-sm text-slate-600 font-bold text-center">
@@ -743,6 +743,7 @@
         
         chartInstance: null,
         
+        // 🔥 V4.5: 確保 name 初始為空字串，防止 null/undefined 導致的綁定問題
         newExpense: { 
           id: null, 
           name: '', 
@@ -840,7 +841,6 @@
       },
       
       finalHKDAmount() {
-          // 修正：使用 parseFloat 確保即使是字串 '0' 或 '1.2' 也能正常處理
           const amount = parseFloat(this.newExpense.localAmount); 
           if (!this.activeTrip || isNaN(amount) || amount < 0) {
               return 0;
@@ -850,11 +850,9 @@
               return amount;
           }
           
-          // 使用輸入框的值來計算 (因為 activeTrip.exchangeRate 已經在 updateExchangeRate 時同步)
           const rate = this.activeTrip.exchangeRate; 
           if (!rate || rate <= 0) return 0;
           
-          // 確保計算結果是浮點數，並處理可能出現的 NaN
           const result = (amount / rate);
           return isNaN(result) ? 0 : result;
       },
@@ -991,7 +989,6 @@
         if (newTab === 'itinerary-map') {
           setTimeout(() => this.forceUpdateMap(), 500);
         } else if (newTab === 'budget') { 
-          // 🔥 修正: 載入 tempExchangeRate
           this.tempExchangeRate = this.activeTrip?.exchangeRate || 1; 
           this.$nextTick(() => this.updateChart());
         }
@@ -1003,7 +1000,6 @@
             this.inputCurrency = this.activeTrip.currency; 
             this.newExpense.day = 1; 
             this.newExpense.category = '飲食'; 
-            // 🔥 修正: 載入 tempExchangeRate
             this.tempExchangeRate = this.activeTrip.exchangeRate || 1; 
         }
         this.updateChart(); 
@@ -1025,13 +1021,11 @@
             if (user) {
                 this.currentUser = user;
                 this.showLoginModal = false;
-                // 登入成功後，從 Firestore 載入數據
                 this.loadData(); 
             } else {
                 this.currentUser = null;
-                // 未登入時，嘗試載入本地數據並允許瀏覽
-                this.loadInitialOrLocalData(false); // 僅從本地載入，不嘗試上傳
-                this.showLoginModal = false; // 預設隱藏模態框
+                this.loadInitialOrLocalData(false); 
+                this.showLoginModal = false; 
             }
         });
 
@@ -1046,34 +1040,28 @@
           this.activeDay = day;
       },
       
-      // 🔥 saveData 檢查登入狀態
       async saveData() { 
-          // 1. 儲存到 LocalStorage (作為備份)
           localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
           this.updateChart(); 
           
           if (!this.currentUser) {
-              return; // 未登入時，只儲存本地
+              return; 
           }
           
-          // 2. 儲存到雲端 Firestore (只有登入後才執行)
           if (this.currentUser && this.activeTrip) {
                try {
                    const userRef = db.collection('userTrips').doc(this.currentUser.uid);
                    await userRef.set({
-                       trips: JSON.parse(JSON.stringify(this.trips)), // 確保數據是純粹的 JSON
+                       trips: JSON.parse(JSON.stringify(this.trips)), 
                        activeTripId: this.activeTripId,
-                       timestamp: firebase.firestore.FieldValue.serverTimestamp() // 新增時間戳
+                       timestamp: firebase.firestore.FieldValue.serverTimestamp()
                    });
-                   // console.log("數據成功儲存到 Firestore!");
                } catch (e) {
                    console.error("Firestore 儲存失敗: ", e);
-                   // alert("數據儲存到雲端失敗，已儲存至瀏覽器本地。請檢查網路或 Firestore 規則！"); // 避免頻繁彈窗
                }
           }
       },
       
-      // 🔥 loadData: 優先從 Firestore 載入
       async loadData() {
         if (!this.currentUser) {
             this.loadInitialOrLocalData(false);
@@ -1091,16 +1079,13 @@
                     this.activeTripId = data.activeTripId || (this.trips.length > 0 ? this.trips[0].id : null);
                     localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
                 } else {
-                    // console.log("Firestore 數據為空，嘗試載入本地或預設數據。");
                     this.loadInitialOrLocalData(true);
                 }
             } else {
-                // console.log("Firestore 找不到文件，載入本地或預設數據。");
                 this.loadInitialOrLocalData(true);
             }
         } catch (e) {
             console.error("Firestore 讀取失敗: ", e);
-            // alert("數據讀取失敗，已嘗試載入本地數據。請檢查網路或 Firestore 規則！"); // 避免頻繁彈窗
             this.loadInitialOrLocalData(false);
         }
         
@@ -1108,12 +1093,10 @@
           this.fetchWeather();
           this.newExpense.day = 1;
           this.inputCurrency = this.activeTrip.currency; 
-          // 🔥 修正: 初始化 tempExchangeRate
-          this.tempExchangeRate = this.activeTrip.exchangeRate || 1;
+          this.tempExchangeRate = this.activeTrip.exchangeRate || 1; 
         }
       },
       
-      // 🔥 loadInitialOrLocalData: 處理首次登入時的數據
       loadInitialOrLocalData(shouldUpload = false) {
           const savedLocal = localStorage.getItem('christine_travel_diary_v4');
           let parsedTrips = [];
@@ -1141,17 +1124,14 @@
           this.activeTripId = this.trips.length > 0 ? this.trips[0].id : null;
           
           if (shouldUpload && this.currentUser) {
-              // 如果是首次登入，將本地或預設數據上傳到雲端
               this.saveData(); 
           }
 
-          // 🔥 修正: 初始化 tempExchangeRate
           if (this.activeTrip) {
               this.tempExchangeRate = this.activeTrip.exchangeRate || 1;
           }
       },
       
-      // 🔥 清理載入數據，確保所有欄位和 ID 完整
       sanitizeLoadedTrips(rawTrips) {
           return rawTrips.map(trip => {
               if (trip.expenses) {
@@ -1222,8 +1202,8 @@
                 alert('您已登出。');
                 this.trips = [];
                 this.activeTripId = null;
-                this.showLoginModal = false; // 登出後預設隱藏
-                this.loadInitialOrLocalData(false); // 重新載入本地數據
+                this.showLoginModal = false; 
+                this.loadInitialOrLocalData(false); 
             } catch (error) {
                 alert('登出失敗: ' + error.message);
             }
@@ -1232,7 +1212,6 @@
       
       // === API 功能 (匯率修正) ===
 
-      // 🔥 修正: 新增專門用於記帳頁面抓取匯率的方法
       async fetchExchangeRate() {
         if (!this.activeTrip || !this.activeTrip.currency || this.activeTrip.currency === 'HKD') {
             return alert('請先設定目標國家貨幣 (Currency)！');
@@ -1241,17 +1220,13 @@
         const currencyCode = this.activeTrip.currency;
 
         try {
-             // 匯率 API 穩定且免費，故可直接使用
              const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
              const rateData = await rateRes.json();
              
              if (rateData?.rates && rateData.rates[currencyCode]) {
                 const newRate = parseFloat(rateData.rates[currencyCode].toFixed(3));
                 
-                // 直接更新 activeTrip 的匯率
                 this.activeTrip.exchangeRate = newRate;
-                
-                // 同步更新暫存變數
                 this.tempExchangeRate = newRate; 
 
                 this.saveData(); 
@@ -1265,15 +1240,13 @@
         }
       },
       
-      // 🔥 修正: 匯率輸入框的 blur/Enter 處理方法
       updateExchangeRate() {
           const rate = Number(this.tempExchangeRate);
           if (isNaN(rate) || rate <= 0) {
               alert('請輸入有效的數字 (大於 0)');
-              this.tempExchangeRate = this.activeTrip.exchangeRate || 1; // 恢復舊值
+              this.tempExchangeRate = this.activeTrip.exchangeRate || 1; 
               return;
           }
-          // 更新 activeTrip 的實際值
           this.activeTrip.exchangeRate = parseFloat(rate.toFixed(3));
           this.saveData();
       },
@@ -1307,7 +1280,6 @@
           }
           
           try {
-             // 匯率抓取邏輯與 fetchExchangeRate 相同
              const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
              const rateData = await rateRes.json();
              if (rateData?.rates && rateData.rates[currencyCode]) {
@@ -1387,7 +1359,7 @@
         }
       },
 
-      // === 記帳功能 (加入登入檢查) ===
+      // === 記帳功能 (V4.5 強化驗證) ===
       addExpense() {
         if (!this.currentUser) {
             alert("請先登入以同步您的記帳記錄。");
@@ -1395,58 +1367,53 @@
             return;
         }
 
-        // 🔥 關鍵修正 V4.4：優化名稱和金額的驗證，確保 $0 和各種語言名稱都能通過
-
-        // 1. 檢查項目名稱 (V4.4 增強：確保 name 存在且 trim 後非空)
-        const expenseName = this.newExpense.name ? String(this.newExpense.name).trim() : '';
+        // 🔥 1. 檢查項目名稱 (V4.5 強化檢查)
+        const expenseName = String(this.newExpense.name || '').trim(); 
+        
         if (expenseName === '') {
-            return alert('請輸入消費項目名稱。');
+            return alert('請輸入消費項目名稱。 (錯誤碼: V4.5-NAME-E)'); 
         }
         
-        // 2. 檢查金額是否為有效數字 (允許 0 和小數點)
-        // 使用 String() 確保即使是 null/undefined 也能轉換為可 trim 的字串
+        // 🔥 2. 檢查當地金額
         const localAmountStr = String(this.newExpense.localAmount || '');
         
-        // 檢查 localAmount 是否為空字串、只包含空格、或為 null/undefined 
         if (!localAmountStr.trim()) {
-            return alert('請輸入有效的金額 (需 >= 0)。');
+            return alert('請輸入有效的金額 (需 >= 0)。 (錯誤碼: V4.5-AMOUNT-E1)');
         }
         
         const amountValue = parseFloat(localAmountStr);
         
-        // 檢查是否為 NaN 或小於 0 (允許等於 0)
         if (isNaN(amountValue) || amountValue < 0) {
-            return alert('請輸入有效的金額 (需 >= 0)。');
+            return alert('請輸入有效的金額 (需 >= 0)。 (錯誤碼: V4.5-AMOUNT-E2)');
         }
 
-        // 3. 確保至少計算出一個有效的 HKD 金額
+        // 🔥 3. 檢查 HKD 金額計算
         const calculatedHKDAmount = this.finalHKDAmount;
         if (isNaN(calculatedHKDAmount)) {
-             return alert('金額轉換錯誤，請檢查匯率設定。');
+             return alert('金額轉換錯誤，請檢查匯率設定。 (錯誤碼: V4.5-RATE-E)');
         }
         
-        // 4. 確保 Day 0/旅行前 邏輯一致
+        // 4. Day/Category 邏輯
         const isPreTrip = this.newExpense.category === '旅行前' || this.newExpense.day === 0;
 
         if (isPreTrip) {
             this.newExpense.day = 0; 
             this.newExpense.category = '旅行前';
         } else if (!this.newExpense.day || this.newExpense.day === 0) {
-             // 如果 category 不是旅行前，但 day 意外是 0 或 null/undefined，則強制設為 1
             this.newExpense.day = 1; 
         }
 
         const d = new Date();
         
-        this.newExpense.amount = calculatedHKDAmount; // 使用計算出的 HKD 金額
+        this.newExpense.amount = calculatedHKDAmount; 
 
         this.activeTrip.expenses.unshift({ 
             id: Date.now() + Math.random(), 
-            name: expenseName, // 使用已 trim 的名稱
+            name: expenseName, 
             amount: this.newExpense.amount,
             method: this.newExpense.method,
             category: this.newExpense.category,
-            localAmount: amountValue, // 使用解析後的數字
+            localAmount: amountValue, 
             date: `${d.getMonth()+1}/${d.getDate()}`,
             day: this.newExpense.day, 
         });
@@ -1511,11 +1478,9 @@
           
           const csvContent = [
               headers.join(','),
-              // 🚨 修正: 確保 CSV 檔案在 Excel 等程式中正確顯示中文
               ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
           ].join('\n');
           
-          // 添加 BOM 讓 Excel 識別 UTF-8
           const encodedUri = encodeURI("data:text/csv;charset=utf-8,\uFEFF" + csvContent);
           const link = document.createElement("a");
           
@@ -1624,7 +1589,6 @@
 
         if(!this.newShoppingItem.name) return alert('請輸入品名');
         
-        // 允許價格為空
         const onlinePrice = Number(this.newShoppingItem.onlinePrice);
         const localPrice = Number(this.newShoppingItem.localPrice);
 
@@ -1638,12 +1602,10 @@
             image: this.newShoppingItem.image
         }); 
         
-        // 重置欄位
         this.newShoppingItem = { name: '', onlinePrice: null, localPrice: null, quantity: 1, bought: false, image: '' };
         this.saveData();
       },
       
-      // **關鍵修復 V4.1: 採用 Vue 響應式最佳實踐 (splice 替換新物件) 以確保畫面更新**
       toggleBought(item) {
           if (!this.currentUser) {
               alert("請先登入以同步您的購物清單。");
@@ -1652,22 +1614,13 @@
           }
           if (!item || !this.activeTrip) return;
 
-          // 1. 找到該 item 在 shoppingItems 陣列中的確切索引
           const index = this.activeTrip.shoppingItems.findIndex(i => i.id === item.id);
           
           if (index !== -1) {
-              // 2. 更改 bought 狀態
               const newBoughtState = !item.bought;
-
-              // 3. 創建一個新的物件來替換舊的，確保 Vue 偵測到變化
               const newItem = { ...item, bought: newBoughtState };
-              
-              // 4. 使用 splice 替換舊物件
               this.activeTrip.shoppingItems.splice(index, 1, newItem);
-              
               this.saveData(); 
-              
-              // 5. 確保總覽頁面等依賴也被觸發 (非必要，但能提高穩定性)
               this.trips = [...this.trips]; 
           }
       },
@@ -1704,8 +1657,8 @@
       },
       
       searchGoogleMaps(query) {
-          // 🚨 關鍵修復: 修正 Google Maps 搜尋 URL 格式
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
+          // 修正 Google Maps 搜尋 URL 格式
           window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
       },
 
@@ -1716,9 +1669,7 @@
         if (this.activeTab !== 'itinerary-map') return;
         try {
           const container = document.getElementById('map');
-          // 修正: 檢查父級元素是否可見，避免在非當前 Tab 渲染時失敗
           if (!container || container.offsetParent === null) {
-              // console.log("Map container not visible, skipping init.");
               return; 
           }
           if (this.map) { this.map.off(); this.map.remove(); }
@@ -1752,7 +1703,6 @@
           }
           
           if (this.activeTrip.center) {
-              // 隨機偏移，模擬地圖中心附近
               return {
                   lat: this.activeTrip.center.lat + (Math.random() - 0.5) * 0.005,
                   lng: this.activeTrip.center.lng + (Math.random() - 0.5) * 0.005,
@@ -1932,7 +1882,6 @@
             this.newExpense.day = 1; 
             this.newExpense.category = '飲食'; 
             this.inputCurrency = this.activeTrip.currency;
-            // 🔥 修正: 同步 tempExchangeRate
             this.tempExchangeRate = this.activeTrip.exchangeRate; 
             this.updateChart();
         });
@@ -1958,7 +1907,6 @@
             this.newExpense.day = 1; 
             this.newExpense.category = '飲食'; 
             this.inputCurrency = this.activeTrip.currency;
-            // 🔥 修正: 同步 tempExchangeRate
             this.tempExchangeRate = this.activeTrip.exchangeRate; 
             this.updateChart();
         });
