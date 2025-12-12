@@ -62,7 +62,7 @@
         opacity: 0.6 !important; 
         background: rgba(230, 230, 230, 0.5) !important; 
         border: 1px dashed #b7c0ce !important; 
-        box-shadow: none !important; /* 🌟 優化: 移除陰影 */
+        box-shadow: none !important; 
     }
 
     .flight-sky { 
@@ -396,7 +396,7 @@
             </select>
             
             <div class="relative flex-1">
-               <input v-model="newExpense.localAmount" type="number" step="0.01" placeholder="金額 (0或小數點)" class="w-full p-3 rounded-xl bg-slate-50 border-0 text-sm">
+               <input v-model.number="newExpense.localAmount" type="number" step="0.01" placeholder="金額 (0或小數點)" class="w-full p-3 rounded-xl bg-slate-50 border-0 text-sm">
             </div>
 
             <select v-model="newExpense.method" class="w-1/3 p-3 rounded-xl bg-slate-50 border-0 text-sm text-slate-600">
@@ -424,7 +424,8 @@
       
       <div v-if="categorySummary.data && categorySummary.data.length > 0" class="glass-card p-5 animate-fade-in">
           <h3 class="font-bold mb-4 flex items-center gap-2 text-primary"><i class="ri-pie-chart-line"></i> 消費類別分析 (HKD)</h3>
-          <div class="h-64"> <canvas id="expenseChart"></canvas>
+          <div class="h-64">
+              <canvas id="expenseChart"></canvas>
           </div>
           <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
               <span class="text-xs text-slate-400 font-bold uppercase">總花費</span>
@@ -1394,17 +1395,19 @@
             return;
         }
 
-        // 🔥 關鍵修正 V4.3：優化驗證邏輯，允許 0 作為金額
-        
-        // 1. 檢查名稱 (允許中文、英文，檢查是否為空字串或只有空格)
-        if (!this.newExpense.name || this.newExpense.name.trim() === '') {
+        // 🔥 關鍵修正 V4.4：優化名稱和金額的驗證，確保 $0 和各種語言名稱都能通過
+
+        // 1. 檢查項目名稱 (V4.4 增強：確保 name 存在且 trim 後非空)
+        const expenseName = this.newExpense.name ? String(this.newExpense.name).trim() : '';
+        if (expenseName === '') {
             return alert('請輸入消費項目名稱。');
         }
         
         // 2. 檢查金額是否為有效數字 (允許 0 和小數點)
-        const localAmountStr = String(this.newExpense.localAmount);
+        // 使用 String() 確保即使是 null/undefined 也能轉換為可 trim 的字串
+        const localAmountStr = String(this.newExpense.localAmount || '');
         
-        // 檢查 localAmount 是否為空字串或只包含空格
+        // 檢查 localAmount 是否為空字串、只包含空格、或為 null/undefined 
         if (!localAmountStr.trim()) {
             return alert('請輸入有效的金額 (需 >= 0)。');
         }
@@ -1416,13 +1419,13 @@
             return alert('請輸入有效的金額 (需 >= 0)。');
         }
 
-        // 確保至少計算出一個有效的 HKD 金額
+        // 3. 確保至少計算出一個有效的 HKD 金額
         const calculatedHKDAmount = this.finalHKDAmount;
         if (isNaN(calculatedHKDAmount)) {
              return alert('金額轉換錯誤，請檢查匯率設定。');
         }
         
-        // 確保 Day 0/旅行前 邏輯一致
+        // 4. 確保 Day 0/旅行前 邏輯一致
         const isPreTrip = this.newExpense.category === '旅行前' || this.newExpense.day === 0;
 
         if (isPreTrip) {
@@ -1439,7 +1442,7 @@
 
         this.activeTrip.expenses.unshift({ 
             id: Date.now() + Math.random(), 
-            name: this.newExpense.name.trim(), // 清除名稱兩邊空格
+            name: expenseName, // 使用已 trim 的名稱
             amount: this.newExpense.amount,
             method: this.newExpense.method,
             category: this.newExpense.category,
@@ -1454,7 +1457,7 @@
             amount:null, 
             method:'現金', 
             category:'飲食', 
-            day: isPreTrip ? 0 : 1 // 如果上一次是旅行前，保留 0，否則保留 1
+            day: isPreTrip ? 0 : 1 
         };
         this.inputCurrency = this.activeTrip.currency; 
         this.saveData();
