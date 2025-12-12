@@ -1359,7 +1359,7 @@
         }
       },
 
-      // === 記帳功能 (V4.6 最小化驗證) ===
+      // === 記帳功能 (V4.7 最小化驗證 + 幽默提示) ===
       addExpense() {
         // 檢查登入 (保留，這是數據同步的基礎)
         if (!this.currentUser) {
@@ -1370,10 +1370,11 @@
 
         // 🔥 V4.6 最小化驗證 (極度放寬嚴謹度)
 
-        // 1. 檢查項目名稱：只要有值，即使是空格也允許 (只檢查 null/undefined/空字串)
+        // 1. 檢查項目名稱：只要有值，即使是空格也允許
         const rawName = this.newExpense.name;
         if (rawName === null || rawName === undefined || rawName === '') {
-            return alert('請輸入消費項目名稱。(V4.6 寬鬆模式失敗)'); 
+            // 如果連這個最寬鬆的檢查都失敗，則問題出在 v-model 綁定
+            return alert('請輸入消費項目名稱。'); 
         }
         
         // 2. 處理當地金額：如果輸入無效，則強制設為 0
@@ -1409,7 +1410,7 @@
         // 5. 新增數據
         this.activeTrip.expenses.unshift({ 
             id: Date.now() + Math.random(), 
-            name: String(rawName).trim(), // 儲存時還是 trim 一下保持數據整潔
+            name: String(rawName).trim(), 
             amount: this.newExpense.amount,
             method: this.newExpense.method,
             category: this.newExpense.category,
@@ -1430,7 +1431,8 @@
         this.inputCurrency = this.activeTrip.currency; 
         this.saveData();
         
-        alert('新增成功！(V4.6 寬鬆模式)'); 
+        // 🔥 成功提示已修正為「距離破產又近一步！」
+        alert('距離破產又近一步！'); 
       },
       removeExpense(expenseId) {
         if (!this.currentUser) {
