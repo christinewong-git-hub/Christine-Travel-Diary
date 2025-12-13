@@ -1375,7 +1375,7 @@
         }
       },
 
-      // 【修正】記帳功能 - 確保 saveData 總是被呼叫，並正確處理未登入狀態
+      // 🔥 【修正後的記帳功能】
       addExpense() {
         if (!this.currentUser) {
             alert("請先登入，您的記錄將會暫時儲存在本地。"); 
@@ -1401,51 +1401,40 @@
 
         const isPreTrip = this.newExpense.category === '旅行前' || this.newExpense.day === 0;
 
-        if (isPreTrip) {
-            this.newExpense.day = 0; 
-            this.newExpense.category = '旅行前';
-        } else if (!this.newExpense.day || this.newExpense.day === 0) {
-            this.newExpense.day = 1; 
-        }
+        // 確保 Day 和 Category 的一致性
+        const expenseDay = isPreTrip ? 0 : (this.newExpense.day || 1);
+        const expenseCategory = isPreTrip ? '旅行前' : this.newExpense.category;
 
         const d = new Date();
-        this.newExpense.amount = finalHKDAmountSafe; 
 
         const newRecord = { 
+            // 確保 ID 唯一 (數字型別)
             id: Date.now() + Math.random(), 
             name: String(rawName).trim(), 
-            amount: this.newExpense.amount,
+            amount: parseFloat(finalHKDAmountSafe.toFixed(2)), // 確保 amount 是 Number
             method: this.newExpense.method,
-            category: this.newExpense.category,
+            category: expenseCategory,
             localAmount: amountValue, 
             date: `${d.getMonth()+1}/${d.getDate()}`,
-            day: this.newExpense.day, 
+            day: expenseDay, 
         };
 
-        // 1. 創建新的 expenses 陣列並替換 (響應式更新)
+        // 1. 直接替換整個 expenses 陣列以觸發響應式
         if (!this.activeTrip.expenses) this.activeTrip.expenses = [];
-        const newExpenses = [newRecord, ...this.activeTrip.expenses];
-        this.activeTrip.expenses = newExpenses; 
+        this.activeTrip.expenses = [newRecord, ...this.activeTrip.expenses]; 
         
-        // 2. 替換 trips 陣列中的 activeTrip 物件 (確保父級響應式更新)
-        const tripIndex = this.trips.findIndex(t => t.id === this.activeTripId);
-        if (tripIndex !== -1) {
-            const updatedTrip = { ...this.activeTrip, expenses: newExpenses }; 
-            this.trips.splice(tripIndex, 1, updatedTrip); 
-        }
-
-        // 3. 重置 input
+        // 2. 重置 input
         this.newExpense = { 
             name:'', 
             localAmount:null, 
             amount:null, 
             method:'現金', 
-            category:'飲食', 
-            day: isPreTrip ? 0 : 1 
+            category: expenseCategory, 
+            day: expenseDay 
         };
         this.inputCurrency = this.activeTrip.currency; 
         
-        // 4. 使用 $nextTick 確保在 DOM 更新後再儲存數據並強制刷新列表
+        // 3. 使用 $nextTick 確保在 DOM 更新後再儲存數據並強制刷新列表
         this.$nextTick(() => {
             this.saveData(); 
             this.updateChart(); 
@@ -1457,7 +1446,7 @@
         alert('新的記帳記錄已成功新增並更新！'); 
       },
       
-      // 【修正】刪除功能 - 確保 saveData 總是被呼叫，並正確處理未登入狀態
+      // 🔥 【修正後的刪除功能】
       removeExpense(expenseId) {
           if (!this.currentUser) {
               alert("請先登入，您的記錄將會暫時儲存在本地。"); 
@@ -1470,24 +1459,15 @@
                   return;
               }
 
-              const targetIdStr = String(expenseId); 
+              const targetId = expenseId; 
               
-              // 1. 使用 filter 建立一個全新的 expenses 陣列
-              const newExpenses = this.activeTrip.expenses.filter(exp => String(exp.id) !== targetIdStr);
+              // 1. 使用 filter 建立一個全新的 expenses 陣列，確保 Number/String 比較正確
+              // (由於新增時是 Number，故這裡直接用 !== 比較)
+              const newExpenses = this.activeTrip.expenses.filter(exp => exp.id !== targetId);
               
               // 2. 替換整個屬性 (確保 Vue 偵測到 activeTrip.expenses 變動)
               this.activeTrip.expenses = newExpenses;
               
-              // 3. 替換 trips 陣列中的 activeTrip 物件 (確保父級響應式更新)
-              const tripIndex = this.trips.findIndex(t => t.id === this.activeTripId);
-              if (tripIndex !== -1) {
-                  // 創建一個新的 trip 物件，確保 trip 自身被視為變動
-                  const updatedTrip = { ...this.activeTrip, expenses: newExpenses }; 
-                  // 替換 trips 陣列中的元素 (響應式)
-                  this.trips.splice(tripIndex, 1, updatedTrip); 
-              }
-
-              // 4. 使用 $nextTick 確保在 DOM 更新後再儲存數據
               this.$nextTick(() => {
                   this.saveData(); 
                   this.updateChart(); 
