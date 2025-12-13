@@ -40,6 +40,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
   <style>
     body {
       background: linear-gradient(135deg, #C4E1FF 0%, #D2E9FF 33%, #DDDDFF 66%, #FFECF5 100%);
@@ -50,11 +51,10 @@
       -webkit-tap-highlight-color: transparent;
     }
     
-    /* 🔥 標題字體修正: 使用 Playfair Display 且強制單行 */
     header .header-title-container h1 {
         font-family: 'Playfair Display', serif;
-        font-weight: 700; /* 確保字體夠粗 */
-        white-space: nowrap; /* 強制單行 */
+        font-weight: 700; 
+        white-space: nowrap; 
     }
     
     .glass-card {
@@ -66,7 +66,6 @@
       border-radius: 24px;
     }
     
-    /* 購物卡片 (已勾選狀態) - 確保半透明生效 */
     .shopping-card-bought {
         opacity: 0.6 !important; 
         background: rgba(230, 230, 230, 0.5) !important; 
@@ -102,16 +101,13 @@
       box-shadow: 0 10px 30px rgba(151, 203, 255, 0.4);
     }
     
-    /* Weather Themes */
     .weather-sunny { background: linear-gradient(135deg, #FFECF5 0%, #FFD9EC 40%, #ECECFF 100%); }
     .weather-cloudy { background: linear-gradient(135deg, #DDDDFF 0%, #E6E6F2 40%, #D8D8EB 100%); }
     .weather-rainy { background: linear-gradient(135deg, #D8D8EB 0%, #E6E6F2 35%, #C4E1FF 100%); }
 
-    /* For scrollbar-hide in Tailwind v2/v3 */
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-    /* Day Scrollbar Styling */
     .day-selector-scroll {
         scrollbar-width: none; 
         -ms-overflow-style: none; 
@@ -120,18 +116,15 @@
         display: none; 
     }
     
-    /* Shopping Card Image Aspect Ratio */
     .aspect-square {
         aspect-ratio: 1 / 1;
     }
     
-    /* 勾選圖示樣式優化 */
     .tick-icon-white {
         color: white; 
         background-color: transparent; 
     }
 
-    /* 🔥 登入 Modal 樣式 */
     .auth-modal {
         animation: fadeIn 0.3s ease-out;
     }
@@ -717,9 +710,7 @@
   
   const GeocodingCache = {};
   
-  // 🔥 【新增】您的 Firebase 配置
-  // 請將此替換為您從 Firebase 控制台取得的實際配置
-  // ❗️ 請注意: 雖然配置公開，但請確保您的 Firestore 規則是安全的。
+  // 🔥 【修正】您的 Firebase 配置 (使用您提供的 apiKey 等)
   const firebaseConfig = {
     apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM",
     authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
@@ -727,7 +718,7 @@
     storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
     messagingSenderId: "592971246262",
     appId: "1:592971246262:web:f7d0c923b697a26e199417",
-    // measurementId: "G-F6X3YWL2MY" // V8 版本不需要
+    // V8 版本不需要 measurementId
   };
 
   // 🔥 Firebase 初始化 (V8 模式)
@@ -753,7 +744,6 @@
         
         chartInstance: null,
         
-        // 🔥 V4.6: 確保 name 初始為空字串
         newExpense: { 
           id: null, 
           name: '', 
@@ -767,22 +757,20 @@
         
         newShoppingItem: { 
             name: '', 
-            onlinePrice: null, // 預計為 HKD
-            localPrice: null,  // 預計為當地幣別金額
-            quantity: 1,       // 數量欄位
+            onlinePrice: null, 
+            localPrice: null,  
+            quantity: 1,       
             bought: false, 
             image: '' 
         },
         
-        activeDay: 1, // 行程頁面專用
+        activeDay: 1, 
 
-        // 🔥 Firebase/Auth 相關狀態變數
         currentUser: null,       
         loginEmail: '',          
         loginPassword: '',       
         showLoginModal: false, 
 
-        // 🔥 暫存匯率變數 (用於輸入框)
         tempExchangeRate: null,
 
         tabs: [
@@ -905,10 +893,6 @@
           return summary;
       },
       
-      activeBudgetDayText() {
-          return '所有'; 
-      },
-
       groupedAndSortedExpenses() {
           if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return [];
 
@@ -949,25 +933,19 @@
 
       shoppingListWithSavings() {
           if (!this.activeTrip || !this.activeTrip.shoppingItems) return [];
-          const rate = this.activeTrip.exchangeRate || 1; // 1 HKD = X 外幣
+          const rate = this.activeTrip.exchangeRate || 1; 
 
           const processedList = this.activeTrip.shoppingItems.map(item => {
-              // 確保 quantity, localPrice, onlinePrice 是有效數字
               const quantity = Math.max(1, Number(item.quantity) || 1);
               const localPrice = Number(item.localPrice) || 0;
               const onlinePrice = Number(item.onlinePrice) || 0;
               
-              // 1. 計算當地價換算成 HKD 的總額 (單價 / 匯率 * 數量)
-              // 只有當 localPrice 和 rate > 0 時才計算
               const localPriceHKD = (localPrice > 0 && rate > 0) 
                   ? parseFloat(((localPrice / rate) * quantity).toFixed(2)) 
                   : 0;
               
-              // 2. 計算網上價 HKD 的總額
               const onlinePriceHKD = onlinePrice * quantity;
               
-              // 3. 計算總共節省的金額 (網上價 - 當地價換算 HKD)
-              // 只有在兩種價格都存在時才計算價差
               const savingsHKD = (localPriceHKD > 0 && onlinePriceHKD > 0) 
                   ? parseFloat((onlinePriceHKD - localPriceHKD).toFixed(2))
                   : 0;
@@ -975,18 +953,17 @@
               return {
                   ...item,
                   quantity: quantity,
-                  localPriceHKD: localPriceHKD, // 0.00 or actual price
+                  localPriceHKD: localPriceHKD, 
                   onlinePriceHKD: parseFloat(onlinePriceHKD.toFixed(2)),
                   savingsHKD: savingsHKD,
               };
           });
           
-          // 排序邏輯：未買的在前，其次按節省金額降序
           return processedList.sort((a, b) => {
               if (a.bought === b.bought) {
-                  return b.savingsHKD - a.savingsHKD; // 未買的則按節省金額降序
+                  return b.savingsHKD - a.savingsHKD; 
               }
-              return a.bought ? 1 : -1; // false (0) < true (1)，所以未買的在前
+              return a.bought ? 1 : -1; 
           });
       },
 
@@ -1195,7 +1172,7 @@
           return parseFloat(total.toFixed(2));
       },
       
-      // 🔥 登入/註冊/登出方法
+      // === 登入/註冊/登出方法 ===
 
       async loginUser() {
         if (!this.loginEmail || !this.loginPassword) return alert('請輸入電子郵件和密碼');
@@ -1371,38 +1348,31 @@
         }
       },
 
-      // === 記帳功能 (V4.9.3 - 最終強制視圖刷新) ===
+      // 🔥 【修正】記帳功能 (V4.9.4 - 最終強制視圖刷新)
       addExpense() {
-        // 檢查登入 (保留，這是數據同步的基礎)
         if (!this.currentUser) {
             alert("請先登入以同步您的記帳記錄。");
             this.showLoginModal = true;
             return;
         }
 
-        // 1. 檢查項目名稱：只要有值，即使是空格也允許
         const rawName = this.newExpense.name;
         if (rawName === null || rawName === undefined || rawName.trim() === '') {
             return alert('請輸入消費項目名稱。'); 
         }
         
-        // 2. 處理當地金額：如果輸入無效，則強制設為 0
         const localAmountStr = String(this.newExpense.localAmount || '');
         let amountValue = parseFloat(localAmountStr.trim());
-        
         if (isNaN(amountValue) || amountValue < 0) {
-            amountValue = 0; // 忽略無效輸入，直接設為 0
+            amountValue = 0; 
         }
         
-        // 3. 確保 HKD 金額計算：如果計算失敗，則強制設為 0
         const calculatedHKDAmount = this.finalHKDAmount;
         let finalHKDAmountSafe = calculatedHKDAmount;
-        
         if (isNaN(finalHKDAmountSafe) || finalHKDAmountSafe < 0) {
-            finalHKDAmountSafe = 0; // 忽略轉換失敗，設為 0
+            finalHKDAmountSafe = 0; 
         }
 
-        // 4. Day/Category 邏輯
         const isPreTrip = this.newExpense.category === '旅行前' || this.newExpense.day === 0;
 
         if (isPreTrip) {
@@ -1413,10 +1383,8 @@
         }
 
         const d = new Date();
-        
         this.newExpense.amount = finalHKDAmountSafe; 
 
-        // 5. 新增數據 - 創建新的 expense 物件
         const newRecord = { 
             id: Date.now() + Math.random(), 
             name: String(rawName).trim(), 
@@ -1428,12 +1396,19 @@
             day: this.newExpense.day, 
         };
 
-        // ⚠️ V4.9.3 修正：創建一個包含新記錄的新陣列，並替換舊陣列以強制刷新
+        // 1. 創建新的 expenses 陣列並替換 (響應式更新)
         if (!this.activeTrip.expenses) this.activeTrip.expenses = [];
         const newExpenses = [newRecord, ...this.activeTrip.expenses];
-        this.activeTrip.expenses = newExpenses; // 替換舊陣列
+        this.activeTrip.expenses = newExpenses; 
+        
+        // 2. 替換 trips 陣列中的 activeTrip 物件 (確保父級響應式更新)
+        const tripIndex = this.trips.findIndex(t => t.id === this.activeTripId);
+        if (tripIndex !== -1) {
+            const updatedTrip = { ...this.activeTrip, expenses: newExpenses }; 
+            this.trips.splice(tripIndex, 1, updatedTrip); 
+        }
 
-        // 6. 重置 input
+        // 3. 重置 input
         this.newExpense = { 
             name:'', 
             localAmount:null, 
@@ -1444,23 +1419,23 @@
         };
         this.inputCurrency = this.activeTrip.currency; 
         
-        // 7. 強制刷新保險
-        this.$forceUpdate(); 
+        // 4. 使用 $nextTick 確保在 DOM 更新後再儲存數據
+        this.$nextTick(() => {
+            this.saveData(); 
+            this.updateChart(); 
+        });
 
-        this.saveData();
-        
         alert('距離破產又近一步！'); 
       },
       
+      // 🔥 【修正】刪除功能 (V4.9.4 - 最終強制視圖刷新)
       removeExpense(expenseId) {
-          // 1. 檢查登入狀態
           if (!this.currentUser) {
               alert("請先登入以同步您的記帳記錄。");
               this.showLoginModal = true;
               return;
           }
           
-          // 2. 執行確認刪除
           if(confirm('確認刪除這筆消費嗎？')) {
               if (!this.activeTrip || !this.activeTrip.expenses) {
                   console.error("Active trip or expenses not found.");
@@ -1468,30 +1443,27 @@
               }
 
               const targetIdStr = String(expenseId); 
-              const initialLength = this.activeTrip.expenses.length;
               
-              // 1. 保險一：計算新的陣列 (排除目標項目)
+              // 1. 使用 filter 建立一個全新的 expenses 陣列
               const newExpenses = this.activeTrip.expenses.filter(exp => String(exp.id) !== targetIdStr);
               
-              const finalLength = newExpenses.length;
-
-              if (initialLength === finalLength) {
-                   console.warn(`刪除失敗：找不到 Expense ID ${expenseId} (String: ${targetIdStr})。`);
-                   alert('刪除失敗：找不到該項目 ID。請檢查控制台。');
-                   return;
-              }
-              
-              // 2. 替換整個 Vue 響應式屬性（確保視圖強制刷新）
+              // 2. 替換整個屬性 (確保 Vue 偵測到 activeTrip.expenses 變動)
               this.activeTrip.expenses = newExpenses;
               
-              // 3. 保險二：強制觸發父級響應式更新
-              this.trips = [...this.trips]; 
-              
-              // 4. 保險三：最終手段，強制更新所有綁定
-              this.$forceUpdate();
+              // 3. 替換 trips 陣列中的 activeTrip 物件 (確保父級響應式更新)
+              const tripIndex = this.trips.findIndex(t => t.id === this.activeTripId);
+              if (tripIndex !== -1) {
+                  // 創建一個新的 trip 物件，確保 trip 自身被視為變動
+                  const updatedTrip = { ...this.activeTrip, expenses: newExpenses }; 
+                  // 替換 trips 陣列中的元素 (響應式)
+                  this.trips.splice(tripIndex, 1, updatedTrip); 
+              }
 
-              // 5. 強制保存並同步到 Firebase
-              this.saveData(); 
+              // 4. 使用 $nextTick 確保在 DOM 更新後再儲存數據
+              this.$nextTick(() => {
+                  this.saveData(); 
+                  this.updateChart(); 
+              });
               
               alert('消費記錄已刪除並同步。');
           }
@@ -1645,7 +1617,6 @@
         const onlinePrice = Number(this.newShoppingItem.onlinePrice);
         const localPrice = Number(this.newShoppingItem.localPrice);
 
-        // ⚠️ 採用替換陣列的方法
         const newRecord = { 
             id: Date.now() + Math.random(), 
             onlinePrice: isNaN(onlinePrice) ? null : onlinePrice,
@@ -1678,7 +1649,6 @@
               const newBoughtState = !item.bought;
               const newItem = { ...item, bought: newBoughtState };
               
-              // ⚠️ 採用替換陣列元素的方法
               this.activeTrip.shoppingItems.splice(index, 1, newItem);
               
               this.saveData(); 
@@ -1692,7 +1662,6 @@
             return;
         }
         if(confirm('確認刪除此購物項目嗎？')) {
-            // ⚠️ 採用替換陣列的方法
             if (!this.activeTrip.shoppingItems) this.activeTrip.shoppingItems = [];
             const newItems = this.activeTrip.shoppingItems.filter(item => item.id !== itemId);
             this.activeTrip.shoppingItems = newItems;
@@ -1721,7 +1690,6 @@
       
       searchGoogleMaps(query) {
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
-          // 修正 Google Maps 搜尋 URL 格式 (使用正確的參數)
           window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
       },
 
@@ -1828,7 +1796,6 @@
               this.showLoginModal = true;
               return;
           }
-          // ⚠️ 採用替換陣列的方法
           const newItem = { 
               id: Date.now() + Math.random(), 
               day: day, 
@@ -1851,7 +1818,6 @@
               return;
           }
           if(confirm('確認刪除此行程項目嗎？')) {
-              // ⚠️ 採用替換陣列的方法
               if (!this.activeTrip.itinerary) this.activeTrip.itinerary = [];
               const newItinerary = this.activeTrip.itinerary.filter(item => item.id !== itemId);
               this.activeTrip.itinerary = newItinerary;
@@ -1884,7 +1850,6 @@
             };
         });
         
-        // ⚠️ 採用替換陣列的方法
         if (!this.activeTrip.itinerary) this.activeTrip.itinerary = [];
         this.activeTrip.itinerary = [...this.activeTrip.itinerary, ...newItems];
 
@@ -1930,7 +1895,6 @@
         if (!this.tempTrip.title) return;
         if (this.editingTripId) {
           const idx = this.trips.findIndex(t => t.id === this.editingTripId);
-          // ⚠️ 替換陣列中的元素
           if (idx !== -1) {
               this.trips.splice(idx, 1, { ...this.trips[idx], ...this.tempTrip });
           }
@@ -1968,7 +1932,6 @@
         }
         if(this.trips.length<=1) return alert('不能刪除最後一個旅程');
         if(confirm('確認刪除?')) {
-          // ⚠️ 採用替換陣列的方法
           this.trips = this.trips.filter(t=>t.id!==id);
           this.activeTripId = this.trips[0].id;
           this.saveData();
