@@ -713,7 +713,7 @@
   const { createApp } = Vue;
   // **注意: 請將此替換為您實際的 AviationStack Key**
   // 由於安全問題，強烈建議使用後端代理此 Key
-  const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; 
+  const AVIATIONSTACK_KEY = '5bxxxxxxxxx'; 
   
   const GeocodingCache = {};
   
@@ -736,7 +736,7 @@
   const db = app.firestore();
 
 
-  createApp({
+  const vueApp = createApp({
     data() {
       return {
         activeTab: 'info',
@@ -1319,7 +1319,7 @@
 
         const flight = this.activeTrip.flights[type];
         if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
-        if(AVIATIONSTACK_KEY === '5b729556e3ef80e18916fcecbcfd81ba') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
+        if(AVIATIONSTACK_KEY === '5bxxxxxxxxx') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
         
         try {
           const res = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}&flight_date=${flight.date}`);
@@ -1371,7 +1371,7 @@
         }
       },
 
-      // === 記帳功能 (V4.9.2 - 最終強制視圖刷新) ===
+      // === 記帳功能 (V4.9.3 - 最終強制視圖刷新) ===
       addExpense() {
         // 檢查登入 (保留，這是數據同步的基礎)
         if (!this.currentUser) {
@@ -1416,8 +1416,8 @@
         
         this.newExpense.amount = finalHKDAmountSafe; 
 
-        // 5. 新增數據
-        this.activeTrip.expenses.unshift({ 
+        // 5. 新增數據 - 創建新的 expense 物件
+        const newRecord = { 
             id: Date.now() + Math.random(), 
             name: String(rawName).trim(), 
             amount: this.newExpense.amount,
@@ -1426,8 +1426,13 @@
             localAmount: amountValue, 
             date: `${d.getMonth()+1}/${d.getDate()}`,
             day: this.newExpense.day, 
-        });
-        
+        };
+
+        // ⚠️ V4.9.3 修正：創建一個包含新記錄的新陣列，並替換舊陣列以強制刷新
+        if (!this.activeTrip.expenses) this.activeTrip.expenses = [];
+        const newExpenses = [newRecord, ...this.activeTrip.expenses];
+        this.activeTrip.expenses = newExpenses; // 替換舊陣列
+
         // 6. 重置 input
         this.newExpense = { 
             name:'', 
@@ -1438,6 +1443,10 @@
             day: isPreTrip ? 0 : 1 
         };
         this.inputCurrency = this.activeTrip.currency; 
+        
+        // 7. 強制刷新保險
+        this.$forceUpdate(); 
+
         this.saveData();
         
         alert('距離破產又近一步！'); 
@@ -1458,11 +1467,10 @@
                   return;
               }
 
-              // ID 類型強制轉換，確保比較邏輯正確
               const targetIdStr = String(expenseId); 
               const initialLength = this.activeTrip.expenses.length;
               
-              // 1. 計算新的陣列 (排除目標項目)
+              // 1. 保險一：計算新的陣列 (排除目標項目)
               const newExpenses = this.activeTrip.expenses.filter(exp => String(exp.id) !== targetIdStr);
               
               const finalLength = newExpenses.length;
@@ -1476,11 +1484,14 @@
               // 2. 替換整個 Vue 響應式屬性（確保視圖強制刷新）
               this.activeTrip.expenses = newExpenses;
               
-              // 3. 強制保存並同步到 Firebase
-              this.saveData(); 
-              
-              // 4. (備用) 強制觸發 Vue 響應式更新
+              // 3. 保險二：強制觸發父級響應式更新
               this.trips = [...this.trips]; 
+              
+              // 4. 保險三：最終手段，強制更新所有綁定
+              this.$forceUpdate();
+
+              // 5. 強制保存並同步到 Firebase
+              this.saveData(); 
               
               alert('消費記錄已刪除並同步。');
           }
@@ -1634,7 +1645,8 @@
         const onlinePrice = Number(this.newShoppingItem.onlinePrice);
         const localPrice = Number(this.newShoppingItem.localPrice);
 
-        this.activeTrip.shoppingItems.unshift({ 
+        // ⚠️ 採用替換陣列的方法
+        const newRecord = { 
             id: Date.now() + Math.random(), 
             onlinePrice: isNaN(onlinePrice) ? null : onlinePrice,
             localPrice: isNaN(localPrice) ? null : localPrice,
@@ -1642,7 +1654,11 @@
             bought: this.newShoppingItem.bought, 
             name: this.newShoppingItem.name,
             image: this.newShoppingItem.image
-        }); 
+        }; 
+
+        if (!this.activeTrip.shoppingItems) this.activeTrip.shoppingItems = [];
+        this.activeTrip.shoppingItems = [newRecord, ...this.activeTrip.shoppingItems];
+
         
         this.newShoppingItem = { name: '', onlinePrice: null, localPrice: null, quantity: 1, bought: false, image: '' };
         this.saveData();
@@ -1661,7 +1677,10 @@
           if (index !== -1) {
               const newBoughtState = !item.bought;
               const newItem = { ...item, bought: newBoughtState };
+              
+              // ⚠️ 採用替換陣列元素的方法
               this.activeTrip.shoppingItems.splice(index, 1, newItem);
+              
               this.saveData(); 
               this.trips = [...this.trips]; 
           }
@@ -1673,11 +1692,13 @@
             return;
         }
         if(confirm('確認刪除此購物項目嗎？')) {
-            const index = this.activeTrip.shoppingItems.findIndex(item => item.id === itemId);
-            if (index !== -1) {
-                this.activeTrip.shoppingItems.splice(index, 1);
-                this.saveData();
-            }
+            // ⚠️ 採用替換陣列的方法
+            if (!this.activeTrip.shoppingItems) this.activeTrip.shoppingItems = [];
+            const newItems = this.activeTrip.shoppingItems.filter(item => item.id !== itemId);
+            this.activeTrip.shoppingItems = newItems;
+            
+            this.saveData();
+            this.$forceUpdate();
         }
       },
 
@@ -1807,14 +1828,18 @@
               this.showLoginModal = true;
               return;
           }
-          this.activeTrip.itinerary.push({ 
+          // ⚠️ 採用替換陣列的方法
+          const newItem = { 
               id: Date.now() + Math.random(), 
               day: day, 
               time: '10:00', 
               activity: '', 
               location: '',
               mapLink: '' 
-          }); 
+          };
+          if (!this.activeTrip.itinerary) this.activeTrip.itinerary = [];
+          this.activeTrip.itinerary = [...this.activeTrip.itinerary, newItem];
+          
           this.saveData(); 
           this.forceUpdateMap();
       },
@@ -1826,12 +1851,13 @@
               return;
           }
           if(confirm('確認刪除此行程項目嗎？')) {
-              const index = this.activeTrip.itinerary.findIndex(item => item.id === itemId);
-              if(index !== -1) {
-                  this.activeTrip.itinerary.splice(index, 1);
-                  this.saveData(); 
-                  this.forceUpdateMap();
-              }
+              // ⚠️ 採用替換陣列的方法
+              if (!this.activeTrip.itinerary) this.activeTrip.itinerary = [];
+              const newItinerary = this.activeTrip.itinerary.filter(item => item.id !== itemId);
+              this.activeTrip.itinerary = newItinerary;
+              
+              this.saveData(); 
+              this.forceUpdateMap();
           }
       },
       
@@ -1858,7 +1884,10 @@
             };
         });
         
-        this.activeTrip.itinerary.push(...newItems);
+        // ⚠️ 採用替換陣列的方法
+        if (!this.activeTrip.itinerary) this.activeTrip.itinerary = [];
+        this.activeTrip.itinerary = [...this.activeTrip.itinerary, ...newItems];
+
         this.saveData();
         this.showBatchImport = false;
         this.batchImportText = '';
@@ -1901,7 +1930,10 @@
         if (!this.tempTrip.title) return;
         if (this.editingTripId) {
           const idx = this.trips.findIndex(t => t.id === this.editingTripId);
-          this.trips[idx] = { ...this.trips[idx], ...this.tempTrip };
+          // ⚠️ 替換陣列中的元素
+          if (idx !== -1) {
+              this.trips.splice(idx, 1, { ...this.trips[idx], ...this.tempTrip });
+          }
         } else {
           const center = this.tempTrip.center || {lat:35.6, lng:139.6};
           const newTrip = { 
@@ -1936,6 +1968,7 @@
         }
         if(this.trips.length<=1) return alert('不能刪除最後一個旅程');
         if(confirm('確認刪除?')) {
+          // ⚠️ 採用替換陣列的方法
           this.trips = this.trips.filter(t=>t.id!==id);
           this.activeTripId = this.trips[0].id;
           this.saveData();
