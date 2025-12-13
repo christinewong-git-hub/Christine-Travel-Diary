@@ -1033,6 +1033,7 @@
           this.activeDay = day;
       },
       
+      // 【修正】確保 Local Storage 永遠寫入，即使未登入
       async saveData() { 
           localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
           this.updateChart(); 
@@ -1072,6 +1073,7 @@
                 if (data.trips && data.trips.length > 0) {
                     this.trips = this.sanitizeLoadedTrips(data.trips);
                     this.activeTripId = data.activeTripId || (this.trips.length > 0 ? this.trips[0].id : null);
+                    // 登入時也將雲端數據寫回本地，確保一致性
                     localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
                 } else {
                     this.loadInitialOrLocalData(true);
@@ -1354,12 +1356,12 @@
         }
       },
 
-      // 🔥 【修正】記帳功能 (V4.9.5 - 最終強制視圖刷新 + 自動 Refresh)
+      // 【修正】記帳功能 - 確保 saveData 總是被呼叫
       addExpense() {
         if (!this.currentUser) {
-            alert("請先登入以同步您的記帳記錄。");
+            alert("請先登入，您的記錄將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
             this.showLoginModal = true;
-            return;
+            // 移除 return; 確保 saveData() 仍會被呼叫
         }
 
         const rawName = this.newExpense.name;
@@ -1437,12 +1439,12 @@
         alert('新的記帳記錄已成功新增並更新！'); 
       },
       
-      // 🔥 【修正】刪除功能 (V4.9.5 - 最終強制視圖刷新)
+      // 【修正】刪除功能 - 確保 saveData 總是被呼叫
       removeExpense(expenseId) {
           if (!this.currentUser) {
-              alert("請先登入以同步您的記帳記錄。");
+              alert("請先登入，您的記錄將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
               this.showLoginModal = true;
-              return;
+              // 移除 return; 確保 saveData() 仍會被呼叫
           }
           
           if(confirm('確認刪除這筆消費嗎？')) {
@@ -1603,12 +1605,12 @@
           }
       },
       
-      // === 購物功能 (加入登入檢查) ===
+      // === 購物功能 (修正：移除未登入時的 return 阻擋) ===
       handleImageUpload(e) {
         if (!this.currentUser) {
-            alert("請先登入以同步您的圖片資料。");
+            alert("請注意：圖片資料將無法同步到雲端，只會暫時儲存在本地。"); 
             this.showLoginModal = true;
-            return;
+            // 移除 return; 允許繼續上傳到本地
         }
         const file = e.target.files[0];
         if (!file) return;
@@ -1619,9 +1621,9 @@
       },
       addShoppingItem() {
         if (!this.currentUser) {
-            alert("請先登入以同步您的購物清單。");
+            alert("請先登入，您的記錄將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
             this.showLoginModal = true;
-            return;
+            // 移除 return; 確保 saveData() 仍會被呼叫
         }
 
         if(!this.newShoppingItem.name) return alert('請輸入品名');
@@ -1649,9 +1651,9 @@
       
       toggleBought(item) {
           if (!this.currentUser) {
-              alert("請先登入以同步您的購物清單。");
+              alert("請先登入，您的記錄將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
               this.showLoginModal = true;
-              return;
+              // 移除 return; 確保 saveData() 仍會被呼叫
           }
           if (!item || !this.activeTrip) return;
 
@@ -1669,9 +1671,9 @@
       },
       removeShoppingItem(itemId) {
         if (!this.currentUser) {
-            alert("請先登入以同步您的購物清單。");
+            alert("請先登入，您的記錄將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
             this.showLoginModal = true;
-            return;
+            // 移除 return; 確保 saveData() 仍會被呼叫
         }
         if(confirm('確認刪除此購物項目嗎？')) {
             if (!this.activeTrip.shoppingItems) this.activeTrip.shoppingItems = [];
@@ -1683,7 +1685,7 @@
         }
       },
 
-      // === 地圖/行程功能 (加入登入檢查) ===
+      // === 地圖/行程功能 (修正：移除未登入時的 return 阻擋) ===
       openGoogleMaps(item) { 
           if (item.mapLink && item.mapLink.trim()) {
               const url = item.mapLink.trim();
@@ -1804,9 +1806,9 @@
       
       addItineraryItem(day) { 
           if (!this.currentUser) {
-              alert("請先登入以同步您的行程。");
+              alert("請先登入，您的記錄將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
               this.showLoginModal = true;
-              return;
+              // 移除 return; 確保 saveData() 仍會被呼叫
           }
           const newItem = { 
               id: Date.now() + Math.random(), 
@@ -1825,9 +1827,9 @@
       
       removeItineraryItem(itemId) { 
           if (!this.currentUser) {
-              alert("請先登入以同步您的行程。");
+              alert("請先登入，您的記錄將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
               this.showLoginModal = true;
-              return;
+              // 移除 return; 確保 saveData() 仍會被呼叫
           }
           if(confirm('確認刪除此行程項目嗎？')) {
               if (!this.activeTrip.itinerary) this.activeTrip.itinerary = [];
@@ -1841,9 +1843,9 @@
       
       runBatchImport() {
         if (!this.currentUser) {
-            alert("請先登入以同步您的行程。");
+            alert("請先登入，您的記錄將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
             this.showLoginModal = true;
-            return;
+            // 移除 return; 確保 saveData() 仍會被呼叫
         }
 
         if(!this.batchImportText) return alert('請貼上內容');
@@ -1873,12 +1875,12 @@
       },
 
 
-      // === 旅程管理功能 (加入登入檢查) ===
+      // === 旅程管理功能 (修正：移除未登入時的 return 阻擋) ===
       openNewTripModal() { 
         if (!this.currentUser) {
-            alert("請先登入以管理您的旅程。");
+            alert("請先登入，您的旅程將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
             this.showLoginModal = true;
-            return;
+            // 移除 return; 允許繼續操作
         }
         this.editingTripId = null; 
         this.tempTrip = {
@@ -1891,17 +1893,17 @@
       },
       openEditTripModal(trip) { 
         if (!this.currentUser) {
-            alert("請先登入以管理您的旅程。");
+            alert("請先登入，您的旅程將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
             this.showLoginModal = true;
-            return;
+            // 移除 return; 允許繼續操作
         }
         this.editingTripId = trip.id; this.tempTrip = JSON.parse(JSON.stringify(trip)); this.showTripModal = true; 
       },
       saveTrip() {
         if (!this.currentUser) {
-            alert("請先登入以儲存您的旅程。");
+            alert("請先登入，您的旅程將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
             this.showLoginModal = true;
-            return;
+            // 移除 return; 確保 saveData() 仍會被呼叫
         }
 
         if (!this.tempTrip.title) return;
@@ -1938,9 +1940,9 @@
       },
       deleteTrip(id) {
         if (!this.currentUser) {
-            alert("請先登入以管理您的旅程。");
+            alert("請先登入，您的旅程將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
             this.showLoginModal = true;
-            return;
+            // 移除 return; 允許繼續操作
         }
         if(this.trips.length<=1) return alert('不能刪除最後一個旅程');
         if(confirm('確認刪除?')) {
