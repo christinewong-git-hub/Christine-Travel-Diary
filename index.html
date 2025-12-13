@@ -713,7 +713,7 @@
   const { createApp } = Vue;
   // **注意: 請將此替換為您實際的 AviationStack Key**
   // 由於安全問題，強烈建議使用後端代理此 Key
-  const AVIATIONSTACK_KEY = '5bxxxxxxxxx'; 
+  const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; 
   
   const GeocodingCache = {};
   
@@ -1319,7 +1319,7 @@
 
         const flight = this.activeTrip.flights[type];
         if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
-        if(AVIATIONSTACK_KEY === '5bxxxxxxxxx') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
+        if(AVIATIONSTACK_KEY === '5b729556e3ef80e18916fcecbcfd81ba') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
         
         try {
           const res = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}&flight_date=${flight.date}`);
