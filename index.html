@@ -744,6 +744,9 @@
         
         chartInstance: null,
         
+        // 【新增】強制刷新計數器
+        expenseUpdateCounter: 0, 
+
         newExpense: { 
           id: null, 
           name: '', 
@@ -893,7 +896,10 @@
           return summary;
       },
       
+      // 【最終修正】依賴計數器來確保列表強制更新
       groupedAndSortedExpenses() {
+          const counter = this.expenseUpdateCounter; // 依賴計數器
+          
           if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return [];
 
           const expenses = this.activeTrip.expenses.slice() 
@@ -1348,7 +1354,7 @@
         }
       },
 
-      // 🔥 【修正】記帳功能 (V4.9.4 - 最終強制視圖刷新)
+      // 🔥 【修正】記帳功能 (V4.9.5 - 最終強制視圖刷新 + 自動 Refresh)
       addExpense() {
         if (!this.currentUser) {
             alert("請先登入以同步您的記帳記錄。");
@@ -1419,16 +1425,19 @@
         };
         this.inputCurrency = this.activeTrip.currency; 
         
-        // 4. 使用 $nextTick 確保在 DOM 更新後再儲存數據
+        // 4. 使用 $nextTick 確保在 DOM 更新後再儲存數據並強制刷新列表
         this.$nextTick(() => {
             this.saveData(); 
             this.updateChart(); 
+            
+            // **【自動 Refresh 機制】**：遞增計數器，強制列表重新計算
+            this.expenseUpdateCounter++; 
         });
 
-        alert('距離破產又近一步！'); 
+        alert('新的記帳記錄已成功新增並更新！'); 
       },
       
-      // 🔥 【修正】刪除功能 (V4.9.4 - 最終強制視圖刷新)
+      // 🔥 【修正】刪除功能 (V4.9.5 - 最終強制視圖刷新)
       removeExpense(expenseId) {
           if (!this.currentUser) {
               alert("請先登入以同步您的記帳記錄。");
@@ -1463,6 +1472,9 @@
               this.$nextTick(() => {
                   this.saveData(); 
                   this.updateChart(); 
+                  
+                  // **【自動 Refresh 機制】**：遞增計數器，強制列表重新計算
+                  this.expenseUpdateCounter++;
               });
               
               alert('消費記錄已刪除並同步。');
