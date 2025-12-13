@@ -898,11 +898,13 @@
       
       // 【最終修正】依賴計數器來確保列表強制更新
       groupedAndSortedExpenses() {
-          const counter = this.expenseUpdateCounter; // 依賴計數器
+          // 依賴計數器，確保在數據變動時強制重新計算
+          const counter = this.expenseUpdateCounter; 
           
           if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return [];
 
           const expenses = this.activeTrip.expenses.slice() 
+              // 排序：先按 Day 排序 (Day 0 < Day 1)
               .sort((a, b) => (a.day === undefined ? 1 : a.day) - (b.day === undefined ? 1 : b.day));
 
           const result = [];
@@ -966,8 +968,9 @@
           });
           
           return processedList.sort((a, b) => {
+              // 已購買的排在後面
               if (a.bought === b.bought) {
-                  return b.savingsHKD - a.savingsHKD; 
+                  return b.savingsHKD - a.savingsHKD; // 沒買的按節省金額倒序
               }
               return a.bought ? 1 : -1; 
           });
@@ -1035,13 +1038,15 @@
       
       // 【修正】確保 Local Storage 永遠寫入，即使未登入
       async saveData() { 
+          // 1. 永遠將當前數據儲存到本地
           localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
           this.updateChart(); 
           
           if (!this.currentUser) {
-              return; 
+              return; // 未登入，不進行雲端同步
           }
           
+          // 2. 登入時才嘗試同步到 Firebase
           if (this.currentUser && this.activeTrip) {
                try {
                    const userRef = db.collection('userTrips').doc(this.currentUser.uid);
@@ -1076,17 +1081,20 @@
                     // 登入時也將雲端數據寫回本地，確保一致性
                     localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
                 } else {
+                    // Firestore 沒有資料，嘗試載入本地或預設資料，並準備上傳
                     this.loadInitialOrLocalData(true);
                 }
             } else {
+                 // Firestore 沒有文件，嘗試載入本地或預設資料，並準備上傳
                 this.loadInitialOrLocalData(true);
             }
         } catch (e) {
             console.error("Firestore 讀取失敗: ", e);
+            // 讀取雲端失敗，回退到本地數據
             this.loadInitialOrLocalData(false);
         }
         
-        if (this.activeTripId) {
+        if (this.activeTripId && this.activeTrip) {
           this.fetchWeather();
           this.newExpense.day = 1;
           this.inputCurrency = this.activeTrip.currency; 
@@ -1099,6 +1107,7 @@
           let parsedTrips = [];
 
           if (savedLocal) {
+              // 載入本地儲存的資料
               parsedTrips = this.sanitizeLoadedTrips(JSON.parse(savedLocal));
               this.trips = parsedTrips;
           } else {
@@ -1121,6 +1130,7 @@
           this.activeTripId = this.trips.length > 0 ? this.trips[0].id : null;
           
           if (shouldUpload && this.currentUser) {
+              // 如果 Firebase 沒有數據，但在本地找到了，則在登入後上傳
               this.saveData(); 
           }
 
@@ -1130,6 +1140,7 @@
       },
       
       sanitizeLoadedTrips(rawTrips) {
+          // 資料消毒和填充默認值
           return rawTrips.map(trip => {
               if (trip.expenses) {
                   trip.expenses = trip.expenses.map(exp => ({ 
@@ -1162,6 +1173,10 @@
                   }));
               } else {
                   trip.shoppingItems = [];
+              }
+              // 確保 center 存在
+              if (!trip.center) {
+                  trip.center = { lat: 35.6895, lng: 139.6917 }; // Default to Tokyo
               }
               return trip;
           });
@@ -1200,7 +1215,7 @@
                 this.trips = [];
                 this.activeTripId = null;
                 this.showLoginModal = false; 
-                this.loadInitialOrLocalData(false); 
+                this.loadInitialOrLocalData(false); // 登出後重新載入本地數據，不嘗試上傳
             } catch (error) {
                 alert('登出失敗: ' + error.message);
             }
@@ -1217,6 +1232,7 @@
         const currencyCode = this.activeTrip.currency;
 
         try {
+             // 使用 Open-ER 獲取 HKD 到目標貨幣的匯率
              const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
              const rateData = await rateRes.json();
              
@@ -1267,6 +1283,7 @@
           const countryCode = location.address?.country_code?.toUpperCase(); 
           if (countryCode) {
             try {
+              // 嘗試透過國家代碼取得貨幣
               const countryRes = await fetch(`https://restcountries.com/v3.1/alpha/${countryCode}`);
               const countryData = await countryRes.json();
               if (countryData[0]?.currencies) {
@@ -1277,6 +1294,7 @@
           }
           
           try {
+             // 取得匯率
              const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
              const rateData = await rateRes.json();
              if (rateData?.rates && rateData.rates[currencyCode]) {
@@ -1289,7 +1307,7 @@
               this.tempTrip.exchangeRate = 1;
           }
           
-          alert(`成功！\n座標: ${location.lat}, ${location.lon}\n國家: ${this.tempTrip.destination}\n貨幣: ${currencyCode}\n匯率: 1 HKD ≈ ${this.tempTrip.exchangeRate.toFixed(2)} ${currencyCode}`);
+          alert(`成功！\n座標: ${this.tempTrip.center.lat.toFixed(4)}, ${this.tempTrip.center.lng.toFixed(4)}\n國家: ${this.tempTrip.destination}\n貨幣: ${currencyCode}\n匯率: 1 HKD ≈ ${this.tempTrip.exchangeRate.toFixed(2)} ${currencyCode}`);
         } catch (e) {
           console.error(e);
           alert('自動取得失敗，請稍後再試。');
@@ -1318,7 +1336,7 @@
             this.saveData();
             alert(`已更新航班: ${flight.from} -> ${flight.to}`);
           } else {
-            alert('未找到航班資料，請確認 API Key、航班號與日期。');
+            alert('未找到航班資料，請確認 API Key、航班號與日期。使用模擬數據。');
              this.mockFlightData(type);
           }
         } catch(e) {
@@ -1351,17 +1369,17 @@
           
         } catch(e){
           console.error("Weather fetch failed", e);
+          // 失敗時使用模擬數據
           this.weatherData = { temperature: 20 + Math.floor(Math.random()*5), weathercode: 1 };
           this.weatherTheme = 'sunny';
         }
       },
 
-      // 【修正】記帳功能 - 確保 saveData 總是被呼叫
+      // 【修正】記帳功能 - 確保 saveData 總是被呼叫，並正確處理未登入狀態
       addExpense() {
         if (!this.currentUser) {
-            alert("請先登入，您的記錄將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
+            alert("請先登入，您的記錄將會暫時儲存在本地。"); 
             this.showLoginModal = true;
-            // 移除 return; 確保 saveData() 仍會被呼叫
         }
 
         const rawName = this.newExpense.name;
@@ -1439,12 +1457,11 @@
         alert('新的記帳記錄已成功新增並更新！'); 
       },
       
-      // 【修正】刪除功能 - 確保 saveData 總是被呼叫
+      // 【修正】刪除功能 - 確保 saveData 總是被呼叫，並正確處理未登入狀態
       removeExpense(expenseId) {
           if (!this.currentUser) {
-              alert("請先登入，您的記錄將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
+              alert("請先登入，您的記錄將會暫時儲存在本地。"); 
               this.showLoginModal = true;
-              // 移除 return; 確保 saveData() 仍會被呼叫
           }
           
           if(confirm('確認刪除這筆消費嗎？')) {
@@ -1515,6 +1532,7 @@
               (exp.amount || 0).toFixed(2) 
           ]);
           
+          // 使用 \uFEFF 確保中文編碼正確
           const csvContent = [
               headers.join(','),
               ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
@@ -1610,7 +1628,6 @@
         if (!this.currentUser) {
             alert("請注意：圖片資料將無法同步到雲端，只會暫時儲存在本地。"); 
             this.showLoginModal = true;
-            // 移除 return; 允許繼續上傳到本地
         }
         const file = e.target.files[0];
         if (!file) return;
@@ -1621,9 +1638,8 @@
       },
       addShoppingItem() {
         if (!this.currentUser) {
-            alert("請先登入，您的記錄將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
+            alert("請先登入，您的記錄將會暫時儲存在本地。"); 
             this.showLoginModal = true;
-            // 移除 return; 確保 saveData() 仍會被呼叫
         }
 
         if(!this.newShoppingItem.name) return alert('請輸入品名');
@@ -1651,9 +1667,8 @@
       
       toggleBought(item) {
           if (!this.currentUser) {
-              alert("請先登入，您的記錄將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
+              alert("請先登入，您的記錄將會暫時儲存在本地。"); 
               this.showLoginModal = true;
-              // 移除 return; 確保 saveData() 仍會被呼叫
           }
           if (!item || !this.activeTrip) return;
 
@@ -1663,17 +1678,19 @@
               const newBoughtState = !item.bought;
               const newItem = { ...item, bought: newBoughtState };
               
+              // 替換單一項目以觸發響應式
               this.activeTrip.shoppingItems.splice(index, 1, newItem);
               
-              this.saveData(); 
+              // 確保 Vue 偵測到 trips 內數據變動
               this.trips = [...this.trips]; 
+
+              this.saveData(); 
           }
       },
       removeShoppingItem(itemId) {
         if (!this.currentUser) {
-            alert("請先登入，您的記錄將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
+            alert("請先登入，您的記錄將會暫時儲存在本地。"); 
             this.showLoginModal = true;
-            // 移除 return; 確保 saveData() 仍會被呼叫
         }
         if(confirm('確認刪除此購物項目嗎？')) {
             if (!this.activeTrip.shoppingItems) this.activeTrip.shoppingItems = [];
@@ -1681,7 +1698,7 @@
             this.activeTrip.shoppingItems = newItems;
             
             this.saveData();
-            this.$forceUpdate();
+            // 由於 shoppingListWithSavings 是 computed property，數據變動會自動刷新
         }
       },
 
@@ -1702,8 +1719,10 @@
           }
       },
       
+      // 【修正】Google Maps 搜尋連結錯誤
       searchGoogleMaps(query) {
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
+          // 使用正確的 Google Maps 搜尋 URL 格式
           window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
       },
 
@@ -1717,6 +1736,7 @@
           if (!container || container.offsetParent === null) {
               return; 
           }
+          // 清除舊地圖實例
           if (this.map) { this.map.off(); this.map.remove(); }
           
           const center = this.activeTrip.center ? [this.activeTrip.center.lat, this.activeTrip.center.lng] : [35.6895, 139.6917];
@@ -1747,6 +1767,7 @@
               console.warn(`Geocoding failed for: ${location}. Error: ${e}. Route may not be drawn.`);
           }
           
+          // 如果地理編碼失敗，給予一個中心點附近的隨機坐標作為替代
           if (this.activeTrip.center) {
               return {
                   lat: this.activeTrip.center.lat + (Math.random() - 0.5) * 0.005,
@@ -1806,9 +1827,8 @@
       
       addItineraryItem(day) { 
           if (!this.currentUser) {
-              alert("請先登入，您的記錄將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
+              alert("請先登入，您的記錄將會暫時儲存在本地。"); 
               this.showLoginModal = true;
-              // 移除 return; 確保 saveData() 仍會被呼叫
           }
           const newItem = { 
               id: Date.now() + Math.random(), 
@@ -1827,9 +1847,8 @@
       
       removeItineraryItem(itemId) { 
           if (!this.currentUser) {
-              alert("請先登入，您的記錄將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
+              alert("請先登入，您的記錄將會暫時儲存在本地。"); 
               this.showLoginModal = true;
-              // 移除 return; 確保 saveData() 仍會被呼叫
           }
           if(confirm('確認刪除此行程項目嗎？')) {
               if (!this.activeTrip.itinerary) this.activeTrip.itinerary = [];
@@ -1843,9 +1862,8 @@
       
       runBatchImport() {
         if (!this.currentUser) {
-            alert("請先登入，您的記錄將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
+            alert("請先登入，您的記錄將會暫時儲存在本地。"); 
             this.showLoginModal = true;
-            // 移除 return; 確保 saveData() 仍會被呼叫
         }
 
         if(!this.batchImportText) return alert('請貼上內容');
@@ -1878,9 +1896,8 @@
       // === 旅程管理功能 (修正：移除未登入時的 return 阻擋) ===
       openNewTripModal() { 
         if (!this.currentUser) {
-            alert("請先登入，您的旅程將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
+            alert("請先登入，您的旅程將會暫時儲存在本地。"); 
             this.showLoginModal = true;
-            // 移除 return; 允許繼續操作
         }
         this.editingTripId = null; 
         this.tempTrip = {
@@ -1893,17 +1910,15 @@
       },
       openEditTripModal(trip) { 
         if (!this.currentUser) {
-            alert("請先登入，您的旅程將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
+            alert("請先登入，您的旅程將會暫時儲存在本地。"); 
             this.showLoginModal = true;
-            // 移除 return; 允許繼續操作
         }
         this.editingTripId = trip.id; this.tempTrip = JSON.parse(JSON.stringify(trip)); this.showTripModal = true; 
       },
       saveTrip() {
         if (!this.currentUser) {
-            alert("請先登入，您的旅程將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
+            alert("請先登入，您的旅程將會暫時儲存在本地。"); 
             this.showLoginModal = true;
-            // 移除 return; 確保 saveData() 仍會被呼叫
         }
 
         if (!this.tempTrip.title) return;
@@ -1930,19 +1945,21 @@
         this.showTripModal = false;
         
         this.$nextTick(() => {
+            // 確保在切換旅程後重設相關狀態
             this.activeDay = 1;
             this.newExpense.day = 1; 
             this.newExpense.category = '飲食'; 
-            this.inputCurrency = this.activeTrip.currency;
-            this.tempExchangeRate = this.activeTrip.exchangeRate; 
+            if (this.activeTrip) {
+                this.inputCurrency = this.activeTrip.currency;
+                this.tempExchangeRate = this.activeTrip.exchangeRate; 
+            }
             this.updateChart();
         });
       },
       deleteTrip(id) {
         if (!this.currentUser) {
-            alert("請先登入，您的旅程將會暫時儲存在本地。"); // 【修正】改為提醒，不阻擋
+            alert("請先登入，您的旅程將會暫時儲存在本地。"); 
             this.showLoginModal = true;
-            // 移除 return; 允許繼續操作
         }
         if(this.trips.length<=1) return alert('不能刪除最後一個旅程');
         if(confirm('確認刪除?')) {
@@ -1958,8 +1975,10 @@
             this.activeDay = 1;
             this.newExpense.day = 1; 
             this.newExpense.category = '飲食'; 
-            this.inputCurrency = this.activeTrip.currency;
-            this.tempExchangeRate = this.activeTrip.exchangeRate; 
+            if (this.activeTrip) {
+                this.inputCurrency = this.activeTrip.currency;
+                this.tempExchangeRate = this.activeTrip.exchangeRate; 
+            }
             this.updateChart();
         });
       },
