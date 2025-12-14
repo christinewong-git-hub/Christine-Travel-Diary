@@ -41,7 +41,6 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <style>
-    /* (CSS 部分保持不變) */
     body {
       background: linear-gradient(135deg, #C4E1FF 0%, #D2E9FF 33%, #DDDDFF 66%, #FFECF5 100%);
       background-attachment: fixed;
@@ -760,7 +759,6 @@
       };
     },
     computed: {
-      // (Computed 屬性保持不變)
       activeTrip() { return this.trips.find(t => t.id === this.activeTripId) || null; },
       
       totalDays() {
@@ -801,6 +799,8 @@
           if (!this.activeTrip || !this.activeTrip.expenses) {
               return [];
           }
+          // 🔥 依賴 expenseUpdateCounter 以強制重新計算
+          const counter = this.expenseUpdateCounter; 
           return this.activeTrip.expenses; 
       },
 
@@ -872,6 +872,7 @@
       },
       
       groupedAndSortedExpenses() {
+          // 🔥 依賴 expenseUpdateCounter 以強制重新計算
           const counter = this.expenseUpdateCounter; 
           
           if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return [];
@@ -945,10 +946,6 @@
               }
               return a.bought ? 1 : -1; 
           });
-      },
-
-      totalSavings() {
-          return this.shoppingListWithSavings.reduce((sum, item) => sum + item.savingsHKD, 0);
       }
     },
     watch: {
@@ -985,6 +982,7 @@
     mounted() {
       // 🔥🔥🔥 傳統 Firebase 初始化和監聽 🔥🔥🔥
       const firebaseConfig = {
+        // 您的 Firebase 配置資訊
         apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM",
         authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
         projectId: "my-travel-diary-1dbc0",
@@ -1025,32 +1023,37 @@
           this.activeDay = day;
       },
       
-      // 【修復後的傳統 Firebase 寫入 Firestore】
+      // 🔥🔥🔥 核心修復點 1: 強化 saveData 寫入後的同步機制 🔥🔥🔥
       async saveData() { 
           // 1. 永遠將當前數據儲存到本地
           localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
-          this.updateChart(); 
           
           if (!this.currentUser) {
+              this.updateChart(); 
+              this.expenseUpdateCounter++; // 本地模式下也強制更新列表
               return; // 未登入，不進行雲端同步
           }
           
           // 2. 登入時才嘗試同步到 Firebase
           if (this.currentUser && this.activeTrip && typeof firebase !== 'undefined') {
                try {
-                   // 傳統 Firebase 寫入語法
                    const db = firebase.firestore();
                    const userDocRef = db.collection('userTrips').doc(this.currentUser.uid);
                    
                    const dataToWrite = {
                        trips: JSON.parse(JSON.stringify(this.trips)), 
                        activeTripId: this.activeTripId,
-                       timestamp: firebase.firestore.FieldValue.serverTimestamp() // 傳統 Firebase 時間戳
+                       timestamp: firebase.firestore.FieldValue.serverTimestamp() 
                    };
                    
-                   await userDocRef.set(dataToWrite, { merge: true }); // 使用 merge: true 防止覆蓋整個文件
+                   // 等待雲端寫入完成
+                   await userDocRef.set(dataToWrite, { merge: true }); 
                    
                    console.log("Firestore 寫入成功，數據已同步。");
+                   
+                   // 寫入成功後，強制觸發 Vue 狀態更新
+                   this.updateChart();
+                   this.expenseUpdateCounter++; 
 
                } catch (e) {
                    console.error("Firestore 儲存失敗: ", e);
@@ -1185,14 +1188,13 @@
           return parseFloat(total.toFixed(2));
       },
       
-      // === 登入/登出 (修復後的傳統 Firebase 函數) ===
+      // === 登入/登出 (傳統 Firebase 函數，解決登入失效問題) ===
 
       async loginUser() {
         if (!this.loginEmail || !this.loginPassword) return alert('請輸入電子郵件和密碼');
         if (typeof firebase === 'undefined') return alert('Firebase 尚未載入，請檢查網路連線或 CDN 連結。');
 
         try {
-            // 傳統 Firebase 登入語法
             await firebase.auth().signInWithEmailAndPassword(this.loginEmail, this.loginPassword); 
             this.showLoginModal = false;
         } catch (error) {
@@ -1204,7 +1206,6 @@
         if(confirm('確認登出嗎？登出後將無法同步數據。')) {
             if (typeof firebase === 'undefined') return alert('Firebase 尚未載入，請檢查網路連線或 CDN 連結。');
             try {
-                // 傳統 Firebase 登出語法
                 await firebase.auth().signOut(); 
                 alert('您已登出。');
                 this.trips = [];
@@ -1217,6 +1218,91 @@
         }
       },
       
+      // 🔥🔥🔥 核心修復點 2: 強化 addExpense 確保即時更新 🔥🔥🔥
+      addExpense() {
+        if (!this.currentUser) {
+            alert("請先登入，您的記錄將會暫時儲存在本地。"); 
+            this.showLoginModal = true;
+        }
+
+        const rawName = this.newExpense.name;
+        if (rawName === null || rawName === undefined || rawName.trim() === '') {
+            return alert('請輸入消費項目名稱。'); 
+        }
+        
+        const localAmountStr = String(this.newExpense.localAmount || '');
+        let amountValue = parseFloat(localAmountStr.trim());
+        if (isNaN(amountValue) || amountValue < 0) {
+            amountValue = 0; 
+        }
+        
+        const calculatedHKDAmount = this.finalHKDAmount;
+        let finalHKDAmountSafe = calculatedHKDAmount;
+        if (isNaN(finalHKDAmountSafe) || finalHKDAmountSafe < 0) {
+            finalHKDAmountSafe = 0; 
+        }
+
+        const expenseDay = this.newExpense.day;
+        const expenseCategory = (expenseDay === 0 || this.newExpense.category === '旅行前') ? '旅行前' : this.newExpense.category;
+        
+        const d = new Date();
+
+        const newRecord = { 
+            id: Date.now() + Math.random(), 
+            name: String(rawName).trim(), 
+            amount: parseFloat(finalHKDAmountSafe.toFixed(2)), 
+            method: this.newExpense.method,
+            category: expenseCategory,
+            localAmount: amountValue, 
+            date: `${d.getMonth()+1}/${d.getDate()}`,
+            day: expenseDay, 
+        };
+
+        if (!this.activeTrip.expenses) this.activeTrip.expenses = [];
+        // 確保這裡創建了一個新的陣列，以觸發 Vue 的響應式
+        this.activeTrip.expenses = [newRecord, ...this.activeTrip.expenses]; 
+        
+        // 重設表單
+        this.newExpense = { 
+            name:'', 
+            localAmount:null, 
+            amount:null, 
+            method:'現金', 
+            category: expenseCategory, 
+            day: expenseDay 
+        };
+        this.inputCurrency = this.activeTrip.currency; 
+        
+        // 直接呼叫 saveData，讓它處理後續的雲端寫入和狀態更新 (包括 expenseUpdateCounter++)
+        this.saveData(); 
+
+        alert('新的記帳記錄已成功新增並更新！'); 
+      },
+      
+      // 🔥🔥🔥 核心修復點 3: 強化 removeExpense 確保即時更新 🔥🔥🔥
+      removeExpense(expenseId) {
+          if (!this.currentUser) {
+              alert("請先登入，您的記錄將會暫時儲存在本地。"); 
+              this.showLoginModal = true;
+          }
+          
+          if(confirm('確認刪除這筆消費嗎？')) {
+              if (!this.activeTrip || !this.activeTrip.expenses) {
+                  console.error("Active trip or expenses not found.");
+                  return;
+              }
+
+              const targetId = expenseId; 
+              // 這裡創建了一個新的陣列，以觸發 Vue 的響應式
+              const newExpenses = this.activeTrip.expenses.filter(exp => exp.id != targetId); 
+              this.activeTrip.expenses = newExpenses;
+              
+              // 直接呼叫 saveData，讓它處理後續的雲端寫入和狀態更新
+              this.saveData(); 
+              
+              alert('消費記錄已刪除並同步。');
+          }
+      },
       // ... (其他 methods 保持不變) ...
       
       async fetchExchangeRate() {
@@ -1365,94 +1451,6 @@
           this.weatherData = { temperature: 20 + Math.floor(Math.random()*5), weathercode: 1 };
           this.weatherTheme = 'sunny';
         }
-      },
-
-      addExpense() {
-        if (!this.currentUser) {
-            alert("請先登入，您的記錄將會暫時儲存在本地。"); 
-            this.showLoginModal = true;
-        }
-
-        const rawName = this.newExpense.name;
-        if (rawName === null || rawName === undefined || rawName.trim() === '') {
-            return alert('請輸入消費項目名稱。'); 
-        }
-        
-        const localAmountStr = String(this.newExpense.localAmount || '');
-        let amountValue = parseFloat(localAmountStr.trim());
-        if (isNaN(amountValue) || amountValue < 0) {
-            amountValue = 0; 
-        }
-        
-        const calculatedHKDAmount = this.finalHKDAmount;
-        let finalHKDAmountSafe = calculatedHKDAmount;
-        if (isNaN(finalHKDAmountSafe) || finalHKDAmountSafe < 0) {
-            finalHKDAmountSafe = 0; 
-        }
-
-        const expenseDay = this.newExpense.day;
-        const expenseCategory = (expenseDay === 0 || this.newExpense.category === '旅行前') ? '旅行前' : this.newExpense.category;
-        
-        const d = new Date();
-
-        const newRecord = { 
-            id: Date.now() + Math.random(), 
-            name: String(rawName).trim(), 
-            amount: parseFloat(finalHKDAmountSafe.toFixed(2)), 
-            method: this.newExpense.method,
-            category: expenseCategory,
-            localAmount: amountValue, 
-            date: `${d.getMonth()+1}/${d.getDate()}`,
-            day: expenseDay, 
-        };
-
-        if (!this.activeTrip.expenses) this.activeTrip.expenses = [];
-        this.activeTrip.expenses = [newRecord, ...this.activeTrip.expenses]; 
-        
-        // 重設表單
-        this.newExpense = { 
-            name:'', 
-            localAmount:null, 
-            amount:null, 
-            method:'現金', 
-            category: expenseCategory, 
-            day: expenseDay 
-        };
-        this.inputCurrency = this.activeTrip.currency; 
-        
-        this.$nextTick(() => {
-            this.saveData(); 
-            this.updateChart(); 
-            this.expenseUpdateCounter++; 
-        });
-
-        alert('新的記帳記錄已成功新增並更新！'); 
-      },
-      
-      removeExpense(expenseId) {
-          if (!this.currentUser) {
-              alert("請先登入，您的記錄將會暫時儲存在本地。"); 
-              this.showLoginModal = true;
-          }
-          
-          if(confirm('確認刪除這筆消費嗎？')) {
-              if (!this.activeTrip || !this.activeTrip.expenses) {
-                  console.error("Active trip or expenses not found.");
-                  return;
-              }
-
-              const targetId = expenseId; 
-              const newExpenses = this.activeTrip.expenses.filter(exp => exp.id != targetId); 
-              this.activeTrip.expenses = newExpenses;
-              
-              this.$nextTick(() => {
-                  this.saveData(); 
-                  this.updateChart(); 
-                  this.expenseUpdateCounter++;
-              });
-              
-              alert('消費記錄已刪除並同步。');
-          }
       },
 
       exportExpensesToCSV() {
