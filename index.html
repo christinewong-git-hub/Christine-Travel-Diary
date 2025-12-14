@@ -446,12 +446,12 @@
             </button>
         </div>
 
-        <div v-if="groupedAndSortedExpenses.length === 0" class="text-center py-8 bg-white/70 rounded-2xl text-slate-400">
+        <div v-if="activeTrip && activeTrip.expenses.length === 0" class="text-center py-8 bg-white/70 rounded-2xl text-slate-400">
             <i class="ri-money-dollar-circle-line text-4xl mb-2"></i>
             <p class="text-sm font-medium">目前暫無消費記錄。</p>
         </div>
 
-        <div v-for="(item, index) in groupedAndSortedExpenses" :key="item.id || index" class="animate-fade-in">
+        <div v-for="(item, index) in getGroupedAndSortedExpenses()" :key="item.id || index" class="animate-fade-in">
             <div v-if="item.isHeader" class="glass-card bg-primary/20 p-4 mb-3 mt-4 flex justify-between items-center border border-primary font-black shadow-lg">
                 <span class="text-sm text-primary">{{ item.dayLabel }} 總計</span>
                 <span class="text-lg text-primary">{{ item.total.toLocaleString() }} HKD</span>
@@ -718,7 +718,8 @@
         batchImportText: '',
         
         chartInstance: null,
-        expenseUpdateCounter: 0, 
+        // 🔥 刪除: 不再需要依賴這個計數器來強制更新列表
+        // expenseUpdateCounter: 0, 
 
         newExpense: { 
           id: null, 
@@ -795,18 +796,18 @@
         return days;
       },
       
-      filteredExpenses() {
-          if (!this.activeTrip || !this.activeTrip.expenses) {
-              return [];
-          }
-          // 🔥 依賴 expenseUpdateCounter 以強制重新計算
-          const counter = this.expenseUpdateCounter; 
-          return this.activeTrip.expenses; 
-      },
+      // 🔥 刪除: 不再需要這個 computed property 來強制更新，我們直接在 getGroupedAndSortedExpenses() 中處理。
+      // filteredExpenses() {
+      //     if (!this.activeTrip || !this.activeTrip.expenses) {
+      //         return [];
+      //     }
+      //     const counter = this.expenseUpdateCounter; 
+      //     return this.activeTrip.expenses; 
+      // },
 
       totalExpensesHKD() {
-        if (!this.activeTrip) return 0;
-        return this.filteredExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+        if (!this.activeTrip || !this.activeTrip.expenses) return 0;
+        return this.activeTrip.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       },
 
       weatherDesc() {
@@ -834,10 +835,11 @@
       },
       
       categorySummary() {
-          if (!this.activeTrip || !this.filteredExpenses) {
+          // 🔥 這裡的依賴仍然是 this.activeTrip.expenses，但它只影響 Chart，Chart 我們會在 addExpense/removeExpense 後手動更新。
+          if (!this.activeTrip || !this.activeTrip.expenses) {
               return { labels: [], data: [] };
           }
-          const summary = this.filteredExpenses.reduce((acc, expense) => {
+          const summary = this.activeTrip.expenses.reduce((acc, expense) => {
               const category = expense.category || '其他';
               const amount = Number(expense.amount) || 0;
               acc[category] = (acc[category] || 0) + amount;
@@ -854,7 +856,8 @@
           const summary = { '現金': 0, '信用卡': 0, '其他': 0 };
           if (!this.activeTrip) return summary;
 
-          this.filteredExpenses.forEach(exp => {
+          // 🔥 這裡的依賴仍然是 this.activeTrip.expenses
+          this.activeTrip.expenses.forEach(exp => {
               const method = exp.method || '現金'; 
               const amount = Number(exp.amount) || 0;
               if (summary.hasOwnProperty(method)) {
@@ -871,46 +874,11 @@
           return summary;
       },
       
-      groupedAndSortedExpenses() {
-          // 🔥 依賴 expenseUpdateCounter 以強制重新計算
-          const counter = this.expenseUpdateCounter; 
-          
-          if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return [];
-
-          const expenses = this.activeTrip.expenses.slice() 
-              .sort((a, b) => (a.day === undefined ? 1 : a.day) - (b.day === undefined ? 1 : b.day));
-
-          const result = [];
-          
-          const daysGrouped = expenses.reduce((acc, exp) => {
-              const day = exp.day === undefined ? 1 : exp.day;
-              if (!acc[day]) {
-                  acc[day] = [];
-              }
-              acc[day].push(exp);
-              return acc;
-          }, {});
-
-          const sortedDays = Object.keys(daysGrouped).map(Number).sort((a, b) => a - b);
-          
-          for (const day of sortedDays) {
-              const dayExpenses = daysGrouped[day];
-              
-              const total = dayExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
-              
-              result.push({
-                  isHeader: true,
-                  day: day,
-                  dayLabel: day === 0 ? '旅行前 (Day 0)' : `Day ${day}`,
-                  total: parseFloat(total.toFixed(2)),
-                  id: `header-${day}`
-              });
-
-              result.push(...dayExpenses);
-          }
-
-          return result;
-      },
+      // 🔥 刪除: 不再使用這個 Computed Property
+      // groupedAndSortedExpenses() { 
+      //     // ... 刪除原有的複雜分組邏輯 ...
+      //     return result;
+      // },
 
       shoppingListWithSavings() {
           if (!this.activeTrip || !this.activeTrip.shoppingItems) return [];
@@ -946,6 +914,10 @@
               }
               return a.bought ? 1 : -1; 
           });
+      },
+      // 計算總節省
+      totalSavings() {
+        return this.shoppingListWithSavings.reduce((sum, item) => sum + (item.bought ? item.savingsHKD : 0), 0);
       }
     },
     watch: {
@@ -980,7 +952,7 @@
       }
     },
     mounted() {
-      // 🔥🔥🔥 傳統 Firebase 初始化和監聽 🔥🔥🔥
+      // 傳統 Firebase 初始化和監聽
       const firebaseConfig = {
         // 您的 Firebase 配置資訊
         apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM",
@@ -1010,7 +982,6 @@
           console.error("Firebase is not loaded! Please check the CDN links in <head>.");
           this.loadInitialOrLocalData(false); 
       }
-      // ------------------------------------
 
       if (this.activeTrip) {
           this.inputCurrency = this.activeTrip.currency;
@@ -1023,18 +994,17 @@
           this.activeDay = day;
       },
       
-      // 🔥🔥🔥 核心修復點 1: 強化 saveData 寫入後的同步機制 🔥🔥🔥
+      // 核心修復點 1: 強化 saveData 寫入後的同步機制
       async saveData() { 
-          // 1. 永遠將當前數據儲存到本地
           localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
           
           if (!this.currentUser) {
               this.updateChart(); 
-              this.expenseUpdateCounter++; // 本地模式下也強制更新列表
-              return; // 未登入，不進行雲端同步
+              // 🔥 刪除：本地模式下也不再需要 expenseUpdateCounter
+              // this.expenseUpdateCounter++; 
+              return; 
           }
           
-          // 2. 登入時才嘗試同步到 Firebase
           if (this.currentUser && this.activeTrip && typeof firebase !== 'undefined') {
                try {
                    const db = firebase.firestore();
@@ -1046,14 +1016,13 @@
                        timestamp: firebase.firestore.FieldValue.serverTimestamp() 
                    };
                    
-                   // 等待雲端寫入完成
                    await userDocRef.set(dataToWrite, { merge: true }); 
                    
                    console.log("Firestore 寫入成功，數據已同步。");
                    
-                   // 寫入成功後，強制觸發 Vue 狀態更新
                    this.updateChart();
-                   this.expenseUpdateCounter++; 
+                   // 🔥 刪除：雲端寫入後也不再需要 expenseUpdateCounter
+                   // this.expenseUpdateCounter++; 
 
                } catch (e) {
                    console.error("Firestore 儲存失敗: ", e);
@@ -1218,7 +1187,7 @@
         }
       },
       
-      // 🔥🔥🔥 核心修復點 2: 強化 addExpense 確保即時更新 🔥🔥🔥
+      // 🔥 核心修復點 2: addExpense 增加 $forceUpdate()
       addExpense() {
         if (!this.currentUser) {
             alert("請先登入，您的記錄將會暫時儲存在本地。"); 
@@ -1259,7 +1228,6 @@
         };
 
         if (!this.activeTrip.expenses) this.activeTrip.expenses = [];
-        // 確保這裡創建了一個新的陣列，以觸發 Vue 的響應式
         this.activeTrip.expenses = [newRecord, ...this.activeTrip.expenses]; 
         
         // 重設表單
@@ -1273,13 +1241,13 @@
         };
         this.inputCurrency = this.activeTrip.currency; 
         
-        // 直接呼叫 saveData，讓它處理後續的雲端寫入和狀態更新 (包括 expenseUpdateCounter++)
         this.saveData(); 
+        this.$forceUpdate(); // 🔥 強制組件重新渲染
 
         alert('新的記帳記錄已成功新增並更新！'); 
       },
       
-      // 🔥🔥🔥 核心修復點 3: 強化 removeExpense 確保即時更新 🔥🔥🔥
+      // 🔥 核心修復點 3: removeExpense 增加 $forceUpdate()
       removeExpense(expenseId) {
           if (!this.currentUser) {
               alert("請先登入，您的記錄將會暫時儲存在本地。"); 
@@ -1293,16 +1261,59 @@
               }
 
               const targetId = expenseId; 
-              // 這裡創建了一個新的陣列，以觸發 Vue 的響應式
               const newExpenses = this.activeTrip.expenses.filter(exp => exp.id != targetId); 
               this.activeTrip.expenses = newExpenses;
               
-              // 直接呼叫 saveData，讓它處理後續的雲端寫入和狀態更新
               this.saveData(); 
+              this.$forceUpdate(); // 🔥 強制組件重新渲染
               
               alert('消費記錄已刪除並同步。');
           }
       },
+      
+      // 🔥 核心修復點 4: 將複雜的列表生成邏輯移到 Method，避免 Computed 緩存
+      getGroupedAndSortedExpenses() { 
+          if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return [];
+
+          const expenses = this.activeTrip.expenses.slice() 
+              // 按照 Day 升序排序
+              .sort((a, b) => (a.day === undefined ? 1 : a.day) - (b.day === undefined ? 1 : b.day)); 
+
+          const result = [];
+          
+          const daysGrouped = expenses.reduce((acc, exp) => {
+              const day = exp.day === undefined ? 1 : exp.day;
+              if (!acc[day]) {
+                  acc[day] = [];
+              }
+              acc[day].push(exp);
+              return acc;
+          }, {});
+
+          const sortedDays = Object.keys(daysGrouped).map(Number).sort((a, b) => a - b);
+          
+          for (const day of sortedDays) {
+              const dayExpenses = daysGrouped[day];
+              
+              const total = dayExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+              
+              // Day 內部項目：按 ID 降序 (新的在前面)
+              dayExpenses.sort((a, b) => (b.id || 0) - (a.id || 0)); 
+
+              result.push({
+                  isHeader: true,
+                  day: day,
+                  dayLabel: day === 0 ? '旅行前 (Day 0)' : `Day ${day}`,
+                  total: parseFloat(total.toFixed(2)),
+                  id: `header-${day}`
+              });
+
+              result.push(...dayExpenses);
+          }
+
+          return result;
+      },
+      
       // ... (其他 methods 保持不變) ...
       
       async fetchExchangeRate() {
