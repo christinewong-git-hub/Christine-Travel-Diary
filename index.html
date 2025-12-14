@@ -38,7 +38,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script> 
   
   <style>
-    /* ... (CSS 樣式保持不變) ... */
     body {
       background: linear-gradient(135deg, #C4E1FF 0%, #D2E9FF 33%, #DDDDFF 66%, #FFECF5 100%);
       background-attachment: fixed;
@@ -381,10 +380,10 @@
         <h3 class="font-bold mb-4 flex items-center gap-2"><i class="ri-edit-line text-secondary"></i>記一筆</h3>
         
         <select v-model.number="newExpense.day" class="w-full p-3 rounded-xl bg-slate-50 border-0 mb-3 text-sm text-slate-600 font-bold text-center">
+            <option :value="0">旅行前 (Day 0)</option> 
             <option v-for="day in totalDays" :value="day" :key="'new_exp_day_' + day">
                 Day {{ day }}
             </option>
-            <option :value="0">旅行前</option> 
         </select>
 
         <input v-model="newExpense.name" placeholder="消費項目" class="w-full p-3 rounded-xl bg-slate-50 border-0 mb-3 text-sm">
@@ -705,8 +704,8 @@
   // 🔥🔥🔥 Firebase V9/V10+ Modular Imports 🔥🔥🔥
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-  import { getFirestore, collection, doc, getDoc, setDoc, FieldValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js"; // 您的配置中包含 analytics
+  import { getFirestore, collection, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js"; 
   
   // **注意: 請將此替換為您實際的 AviationStack Key**
   const AVIATIONSTACK_KEY = '5bxxxxxxxxx'; 
@@ -728,7 +727,7 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app); // 獲取 Auth 實例
   const db = getFirestore(app); // 獲取 Firestore 實例
-  const analytics = getAnalytics(app); // 獲取 Analytics 實例 (如果不需要可以移除)
+  const analytics = getAnalytics(app); 
 
 
   const vueApp = createApp({
@@ -909,6 +908,7 @@
           const result = [];
           
           const daysGrouped = expenses.reduce((acc, exp) => {
+              // Day 0 (旅行前) 必須分組
               const day = exp.day === undefined ? 1 : exp.day;
               if (!acc[day]) {
                   acc[day] = [];
@@ -1147,6 +1147,7 @@
                   trip.expenses = trip.expenses.map(exp => ({ 
                       id: exp.id || Date.now() + Math.random(), 
                       amount: exp.amount || 0,
+                      // 確保 day 0 (旅行前) 被正確解析
                       day: exp.day === undefined ? 1 : exp.day, 
                       ...exp 
                   }));
@@ -1396,9 +1397,9 @@
             finalHKDAmountSafe = 0; 
         }
 
-        const isPreTrip = this.newExpense.category === '旅行前' || this.newExpense.day === 0;
-        const expenseDay = isPreTrip ? 0 : (this.newExpense.day || 1);
-        const expenseCategory = isPreTrip ? '旅行前' : this.newExpense.category;
+        // 修正邏輯：如果選擇的 day 是 0，或 category 是 '旅行前'，則將 category 設為 '旅行前'，day 設為 0
+        const expenseDay = this.newExpense.day;
+        const expenseCategory = (expenseDay === 0 || this.newExpense.category === '旅行前') ? '旅行前' : this.newExpense.category;
         
         const d = new Date();
 
@@ -1416,6 +1417,7 @@
         if (!this.activeTrip.expenses) this.activeTrip.expenses = [];
         this.activeTrip.expenses = [newRecord, ...this.activeTrip.expenses]; 
         
+        // 重設表單，保持 Day 和 Category 的狀態
         this.newExpense = { 
             name:'', 
             localAmount:null, 
