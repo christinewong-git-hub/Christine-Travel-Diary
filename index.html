@@ -718,8 +718,6 @@
         batchImportText: '',
         
         chartInstance: null,
-        // 🔥 刪除: 不再需要依賴這個計數器來強制更新列表
-        // expenseUpdateCounter: 0, 
 
         newExpense: { 
           id: null, 
@@ -795,15 +793,6 @@
         
         return days;
       },
-      
-      // 🔥 刪除: 不再需要這個 computed property 來強制更新，我們直接在 getGroupedAndSortedExpenses() 中處理。
-      // filteredExpenses() {
-      //     if (!this.activeTrip || !this.activeTrip.expenses) {
-      //         return [];
-      //     }
-      //     const counter = this.expenseUpdateCounter; 
-      //     return this.activeTrip.expenses; 
-      // },
 
       totalExpensesHKD() {
         if (!this.activeTrip || !this.activeTrip.expenses) return 0;
@@ -835,7 +824,6 @@
       },
       
       categorySummary() {
-          // 🔥 這裡的依賴仍然是 this.activeTrip.expenses，但它只影響 Chart，Chart 我們會在 addExpense/removeExpense 後手動更新。
           if (!this.activeTrip || !this.activeTrip.expenses) {
               return { labels: [], data: [] };
           }
@@ -856,7 +844,6 @@
           const summary = { '現金': 0, '信用卡': 0, '其他': 0 };
           if (!this.activeTrip) return summary;
 
-          // 🔥 這裡的依賴仍然是 this.activeTrip.expenses
           this.activeTrip.expenses.forEach(exp => {
               const method = exp.method || '現金'; 
               const amount = Number(exp.amount) || 0;
@@ -874,12 +861,6 @@
           return summary;
       },
       
-      // 🔥 刪除: 不再使用這個 Computed Property
-      // groupedAndSortedExpenses() { 
-      //     // ... 刪除原有的複雜分組邏輯 ...
-      //     return result;
-      // },
-
       shoppingListWithSavings() {
           if (!this.activeTrip || !this.activeTrip.shoppingItems) return [];
           const rate = this.activeTrip.exchangeRate || 1; 
@@ -954,19 +935,18 @@
     mounted() {
       // 傳統 Firebase 初始化和監聽
       const firebaseConfig = {
-        // 您的 Firebase 配置資訊
-        apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM",
+        // 🚨 注意：請在這裡替換為您的 Firebase 配置資訊，否則無法雲端同步！
+        apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM", 
         authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
         projectId: "my-travel-diary-1dbc0",
         storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
         messagingSenderId: "592971246262",
         appId: "1:592971246262:web:f7d0c923b697a26e199417",
       };
-      // 初始化 Firebase
+      
       if (typeof firebase !== 'undefined') {
         firebase.initializeApp(firebaseConfig);
         
-        // 監聽登入狀態
         firebase.auth().onAuthStateChanged(user => {
             if (user) {
                 this.currentUser = user;
@@ -994,17 +974,16 @@
           this.activeDay = day;
       },
       
-      // 核心修復點 1: 強化 saveData 寫入後的同步機制
       async saveData() { 
+          // 1. 本地儲存 (Local Storage)
           localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
           
           if (!this.currentUser) {
               this.updateChart(); 
-              // 🔥 刪除：本地模式下也不再需要 expenseUpdateCounter
-              // this.expenseUpdateCounter++; 
               return; 
           }
           
+          // 2. 雲端同步 (Firestore)
           if (this.currentUser && this.activeTrip && typeof firebase !== 'undefined') {
                try {
                    const db = firebase.firestore();
@@ -1019,19 +998,15 @@
                    await userDocRef.set(dataToWrite, { merge: true }); 
                    
                    console.log("Firestore 寫入成功，數據已同步。");
-                   
                    this.updateChart();
-                   // 🔥 刪除：雲端寫入後也不再需要 expenseUpdateCounter
-                   // this.expenseUpdateCounter++; 
-
                } catch (e) {
                    console.error("Firestore 儲存失敗: ", e);
+                   // 🚨 這裡就是您遇到的錯誤來源，可能是權限或登入狀態問題
                    alert('🚨 數據同步到雲端失敗，請檢查網路、Firebase 規則或登入狀態！');
                }
           }
       },
       
-      // 【修復後的傳統 Firebase 讀取 Firestore】
       async loadData() {
         if (!this.currentUser || typeof firebase === 'undefined') {
             this.loadInitialOrLocalData(false);
@@ -1164,6 +1139,7 @@
         if (typeof firebase === 'undefined') return alert('Firebase 尚未載入，請檢查網路連線或 CDN 連結。');
 
         try {
+            // 使用傳統方式登入，以確保狀態更新
             await firebase.auth().signInWithEmailAndPassword(this.loginEmail, this.loginPassword); 
             this.showLoginModal = false;
         } catch (error) {
@@ -1187,7 +1163,7 @@
         }
       },
       
-      // 🔥 核心修復點 2: addExpense 增加 $forceUpdate()
+      // 🔥 核心修復點 1: addExpense 增加 $forceUpdate()
       addExpense() {
         if (!this.currentUser) {
             alert("請先登入，您的記錄將會暫時儲存在本地。"); 
@@ -1247,7 +1223,7 @@
         alert('新的記帳記錄已成功新增並更新！'); 
       },
       
-      // 🔥 核心修復點 3: removeExpense 增加 $forceUpdate()
+      // 🔥 核心修復點 2: removeExpense 增加 $forceUpdate()
       removeExpense(expenseId) {
           if (!this.currentUser) {
               alert("請先登入，您的記錄將會暫時儲存在本地。"); 
@@ -1271,7 +1247,7 @@
           }
       },
       
-      // 🔥 核心修復點 4: 將複雜的列表生成邏輯移到 Method，避免 Computed 緩存
+      // 🔥 核心修復點 3: 將複雜的列表生成邏輯移到 Method
       getGroupedAndSortedExpenses() { 
           if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return [];
 
@@ -1313,8 +1289,6 @@
 
           return result;
       },
-      
-      // ... (其他 methods 保持不變) ...
       
       async fetchExchangeRate() {
         if (!this.activeTrip || !this.activeTrip.currency || this.activeTrip.currency === 'HKD') {
