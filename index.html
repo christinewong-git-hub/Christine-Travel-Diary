@@ -36,8 +36,12 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script> 
-  
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <style>
+    /* (CSS 部分保持不變) */
     body {
       background: linear-gradient(135deg, #C4E1FF 0%, #D2E9FF 33%, #DDDDFF 66%, #FFECF5 100%);
       background-attachment: fixed;
@@ -698,39 +702,8 @@
 
 </div>
 
-<script type="module">
-  import { createApp } from 'https://unpkg.com/vue@3/dist/vue.global.js';
-  
-  // 🔥🔥🔥 Firebase V9/V10+ Modular Imports 🔥🔥🔥
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-  import { getFirestore, collection, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js"; 
-  
-  // **注意: 請將此替換為您實際的 AviationStack Key**
-  const AVIATIONSTACK_KEY = '5bxxxxxxxxx'; 
-  
-  const GeocodingCache = {};
-  
-  // 🔥 【您的 Firebase 配置】
-  const firebaseConfig = {
-    apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM",
-    authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
-    projectId: "my-travel-diary-1dbc0",
-    storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
-    messagingSenderId: "592971246262",
-    appId: "1:592971246262:web:f7d0c923b697a26e199417",
-    measurementId: "G-F6X3YWL2MY"
-  };
-
-  // 🔥 Firebase 初始化 (V9/V10+ 模塊模式)
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app); // 獲取 Auth 實例
-  const db = getFirestore(app); // 獲取 Firestore 實例
-  const analytics = getAnalytics(app); 
-
-
-  const vueApp = createApp({
+<script> 
+  const vueApp = Vue.createApp({
     data() {
       return {
         activeTab: 'info',
@@ -787,6 +760,7 @@
       };
     },
     computed: {
+      // (Computed 屬性保持不變)
       activeTrip() { return this.trips.find(t => t.id === this.activeTripId) || null; },
       
       totalDays() {
@@ -908,7 +882,6 @@
           const result = [];
           
           const daysGrouped = expenses.reduce((acc, exp) => {
-              // Day 0 (旅行前) 必須分組
               const day = exp.day === undefined ? 1 : exp.day;
               if (!acc[day]) {
                   acc[day] = [];
@@ -1010,8 +983,21 @@
       }
     },
     mounted() {
-      // 監聽 Firebase 登入狀態 (使用 V9/V10+ 函數)
-      onAuthStateChanged(auth, user => {
+      // 🔥🔥🔥 傳統 Firebase 初始化和監聽 🔥🔥🔥
+      const firebaseConfig = {
+        apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM",
+        authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
+        projectId: "my-travel-diary-1dbc0",
+        storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
+        messagingSenderId: "592971246262",
+        appId: "1:592971246262:web:f7d0c923b697a26e199417",
+      };
+      // 初始化 Firebase
+      if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        
+        // 監聽登入狀態
+        firebase.auth().onAuthStateChanged(user => {
             if (user) {
                 this.currentUser = user;
                 this.showLoginModal = false;
@@ -1022,6 +1008,11 @@
                 this.showLoginModal = false; 
             }
         });
+      } else {
+          console.error("Firebase is not loaded! Please check the CDN links in <head>.");
+          this.loadInitialOrLocalData(false); 
+      }
+      // ------------------------------------
 
       if (this.activeTrip) {
           this.inputCurrency = this.activeTrip.currency;
@@ -1034,7 +1025,7 @@
           this.activeDay = day;
       },
       
-      // 【V9/V10+ 寫入 Firestore】
+      // 【修復後的傳統 Firebase 寫入 Firestore】
       async saveData() { 
           // 1. 永遠將當前數據儲存到本地
           localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
@@ -1045,22 +1036,21 @@
           }
           
           // 2. 登入時才嘗試同步到 Firebase
-          if (this.currentUser && this.activeTrip) {
+          if (this.currentUser && this.activeTrip && typeof firebase !== 'undefined') {
                try {
-                   // V9/V10+ 使用 doc, setDoc
-                   const userDocRef = doc(db, 'userTrips', this.currentUser.uid);
+                   // 傳統 Firebase 寫入語法
+                   const db = firebase.firestore();
+                   const userDocRef = db.collection('userTrips').doc(this.currentUser.uid);
                    
                    const dataToWrite = {
                        trips: JSON.parse(JSON.stringify(this.trips)), 
                        activeTripId: this.activeTripId,
-                       // V9/V10+ 使用 serverTimestamp()
-                       timestamp: serverTimestamp() 
+                       timestamp: firebase.firestore.FieldValue.serverTimestamp() // 傳統 Firebase 時間戳
                    };
                    
-                   // 完全覆蓋寫入 (解決 timestamp 更新但內容不更新的問題)
-                   await setDoc(userDocRef, dataToWrite); 
+                   await userDocRef.set(dataToWrite, { merge: true }); // 使用 merge: true 防止覆蓋整個文件
                    
-                   console.log("Firestore 寫入成功，數據已完全覆蓋。");
+                   console.log("Firestore 寫入成功，數據已同步。");
 
                } catch (e) {
                    console.error("Firestore 儲存失敗: ", e);
@@ -1069,19 +1059,19 @@
           }
       },
       
-      // 【V9/V10+ 讀取 Firestore】
+      // 【修復後的傳統 Firebase 讀取 Firestore】
       async loadData() {
-        if (!this.currentUser) {
+        if (!this.currentUser || typeof firebase === 'undefined') {
             this.loadInitialOrLocalData(false);
             return;
         }
 
         try {
-            // V9/V10+ 使用 doc, getDoc
-            const docRef = doc(db, 'userTrips', this.currentUser.uid);
-            const docSnap = await getDoc(docRef);
+            const db = firebase.firestore();
+            const docRef = db.collection('userTrips').doc(this.currentUser.uid);
+            const docSnap = await docRef.get();
             
-            if (docSnap.exists()) {
+            if (docSnap.exists) {
                 const data = docSnap.data();
                 
                 if (data.trips && data.trips.length > 0) {
@@ -1147,7 +1137,6 @@
                   trip.expenses = trip.expenses.map(exp => ({ 
                       id: exp.id || Date.now() + Math.random(), 
                       amount: exp.amount || 0,
-                      // 確保 day 0 (旅行前) 被正確解析
                       day: exp.day === undefined ? 1 : exp.day, 
                       ...exp 
                   }));
@@ -1196,13 +1185,15 @@
           return parseFloat(total.toFixed(2));
       },
       
-      // === 登入/登出 (V9/V10+ 函數) ===
+      // === 登入/登出 (修復後的傳統 Firebase 函數) ===
 
       async loginUser() {
         if (!this.loginEmail || !this.loginPassword) return alert('請輸入電子郵件和密碼');
+        if (typeof firebase === 'undefined') return alert('Firebase 尚未載入，請檢查網路連線或 CDN 連結。');
+
         try {
-            // V9/V10+ 使用 signInWithEmailAndPassword(auth, email, password)
-            await signInWithEmailAndPassword(auth, this.loginEmail, this.loginPassword); 
+            // 傳統 Firebase 登入語法
+            await firebase.auth().signInWithEmailAndPassword(this.loginEmail, this.loginPassword); 
             this.showLoginModal = false;
         } catch (error) {
             alert('登入失敗: ' + error.message);
@@ -1211,9 +1202,10 @@
 
       async logoutUser() {
         if(confirm('確認登出嗎？登出後將無法同步數據。')) {
+            if (typeof firebase === 'undefined') return alert('Firebase 尚未載入，請檢查網路連線或 CDN 連結。');
             try {
-                // V9/V10+ 使用 signOut(auth)
-                await signOut(auth); 
+                // 傳統 Firebase 登出語法
+                await firebase.auth().signOut(); 
                 alert('您已登出。');
                 this.trips = [];
                 this.activeTripId = null;
@@ -1225,8 +1217,8 @@
         }
       },
       
-      // ... (其餘 methods 保持不變，因為它們不依賴 Firebase 導入) ...
-
+      // ... (其他 methods 保持不變) ...
+      
       async fetchExchangeRate() {
         if (!this.activeTrip || !this.activeTrip.currency || this.activeTrip.currency === 'HKD') {
             return alert('請先設定目標國家貨幣 (Currency)！');
@@ -1322,6 +1314,7 @@
 
         const flight = this.activeTrip.flights[type];
         if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
+        const AVIATIONSTACK_KEY = '5bxxxxxxxxx'; // 您的 API Key
         if(AVIATIONSTACK_KEY === '5bxxxxxxxxx') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
         
         try {
@@ -1397,7 +1390,6 @@
             finalHKDAmountSafe = 0; 
         }
 
-        // 修正邏輯：如果選擇的 day 是 0，或 category 是 '旅行前'，則將 category 設為 '旅行前'，day 設為 0
         const expenseDay = this.newExpense.day;
         const expenseCategory = (expenseDay === 0 || this.newExpense.category === '旅行前') ? '旅行前' : this.newExpense.category;
         
@@ -1417,7 +1409,7 @@
         if (!this.activeTrip.expenses) this.activeTrip.expenses = [];
         this.activeTrip.expenses = [newRecord, ...this.activeTrip.expenses]; 
         
-        // 重設表單，保持 Day 和 Category 的狀態
+        // 重設表單
         this.newExpense = { 
             name:'', 
             localAmount:null, 
@@ -1707,6 +1699,7 @@
       },
       
       async geocodeLocation(location) {
+          const GeocodingCache = {};
           if (GeocodingCache[location]) return GeocodingCache[location];
           
           try {
