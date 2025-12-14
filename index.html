@@ -936,7 +936,7 @@
       // 傳統 Firebase 初始化和監聽
       const firebaseConfig = {
         // 🚨 注意：請在這裡替換為您的 Firebase 配置資訊，否則無法雲端同步！
-        apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM", 
+        apiKey: "AIzaSyCeFnypnf5WdO9mIsuLwGZIsEv123QcuM", // 務必更換為您的 Key
         authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
         projectId: "my-travel-diary-1dbc0",
         storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
@@ -974,19 +974,22 @@
           this.activeDay = day;
       },
       
+      // 🔥 核心修復和安全檢查點：saveData 函數
       async saveData() { 
-          // 1. 本地儲存 (Local Storage)
+          // 1. 本地儲存 (Local Storage) - 始終執行
           localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
           
           if (!this.currentUser) {
+              console.log("用戶未登入，只執行本地儲存。");
               this.updateChart(); 
-              return; 
+              return; // 未登入則直接返回，不嘗試雲端寫入
           }
           
-          // 2. 雲端同步 (Firestore)
+          // 2. 雲端同步 (Firestore) - 僅在登入狀態下執行
           if (this.currentUser && this.activeTrip && typeof firebase !== 'undefined') {
                try {
                    const db = firebase.firestore();
+                   // 寫入到以用戶 UID 為名的文件 (與 Firestore 規則匹配)
                    const userDocRef = db.collection('userTrips').doc(this.currentUser.uid);
                    
                    const dataToWrite = {
@@ -995,14 +998,15 @@
                        timestamp: firebase.firestore.FieldValue.serverTimestamp() 
                    };
                    
+                   // 使用 set 配合 merge: true，確保只更新所需字段
                    await userDocRef.set(dataToWrite, { merge: true }); 
                    
                    console.log("Firestore 寫入成功，數據已同步。");
                    this.updateChart();
                } catch (e) {
                    console.error("Firestore 儲存失敗: ", e);
-                   // 🚨 這裡就是您遇到的錯誤來源，可能是權限或登入狀態問題
-                   alert('🚨 數據同步到雲端失敗，請檢查網路、Firebase 規則或登入狀態！');
+                   // 🚨 這是關鍵的錯誤提示，提示用戶檢查後端設定
+                   alert('🚨 數據同步到雲端失敗，請檢查網路、Firebase 規則或登入狀態！詳細錯誤請見 Console。');
                }
           }
       },
@@ -1024,15 +1028,19 @@
                 if (data.trips && data.trips.length > 0) {
                     this.trips = this.sanitizeLoadedTrips(data.trips);
                     this.activeTripId = data.activeTripId || (this.trips.length > 0 ? this.trips[0].id : null);
+                    // 同步到本地儲存
                     localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
                 } else {
+                    // 如果 Firestore 文件存在但沒有 trips 數據，則從本地或預設數據載入
                     this.loadInitialOrLocalData(true);
                 }
             } else {
+                // 如果 Firestore 文件不存在，則從本地或預設數據載入，並準備上傳
                 this.loadInitialOrLocalData(true);
             }
         } catch (e) {
             console.error("Firestore 讀取失敗: ", e);
+            // 讀取失敗時，回退到本地數據
             this.loadInitialOrLocalData(false);
         }
         
@@ -1052,6 +1060,7 @@
               parsedTrips = this.sanitizeLoadedTrips(JSON.parse(savedLocal));
               this.trips = parsedTrips;
           } else {
+              // 預設數據
               const defaultItinerary = [{ id: Date.now(), day: 1, time: '10:00', activity: '到達機場', location: 'Narita Airport', mapLink: '' }];
               this.trips = [{
                 id: Date.now(), title: 'Japan Trip', destination: 'Japan', city: 'Tokyo', currency: 'JPY',
@@ -1080,6 +1089,7 @@
       
       sanitizeLoadedTrips(rawTrips) {
           return rawTrips.map(trip => {
+              // 確保所有陣列存在且有預設值
               if (trip.expenses) {
                   trip.expenses = trip.expenses.map(exp => ({ 
                       id: exp.id || Date.now() + Math.random(), 
@@ -1139,7 +1149,6 @@
         if (typeof firebase === 'undefined') return alert('Firebase 尚未載入，請檢查網路連線或 CDN 連結。');
 
         try {
-            // 使用傳統方式登入，以確保狀態更新
             await firebase.auth().signInWithEmailAndPassword(this.loginEmail, this.loginPassword); 
             this.showLoginModal = false;
         } catch (error) {
@@ -1166,7 +1175,8 @@
       // 🔥 核心修復點 1: addExpense 增加 $forceUpdate()
       addExpense() {
         if (!this.currentUser) {
-            alert("請先登入，您的記錄將會暫時儲存在本地。"); 
+            // 提示，但不阻止本地新增
+            alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
             this.showLoginModal = true;
         }
 
@@ -1218,7 +1228,7 @@
         this.inputCurrency = this.activeTrip.currency; 
         
         this.saveData(); 
-        this.$forceUpdate(); // 🔥 強制組件重新渲染
+        this.$forceUpdate(); // 🔥 強制組件重新渲染 (確保列表更新)
 
         alert('新的記帳記錄已成功新增並更新！'); 
       },
@@ -1226,7 +1236,7 @@
       // 🔥 核心修復點 2: removeExpense 增加 $forceUpdate()
       removeExpense(expenseId) {
           if (!this.currentUser) {
-              alert("請先登入，您的記錄將會暫時儲存在本地。"); 
+              alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
               this.showLoginModal = true;
           }
           
@@ -1241,7 +1251,7 @@
               this.activeTrip.expenses = newExpenses;
               
               this.saveData(); 
-              this.$forceUpdate(); // 🔥 強制組件重新渲染
+              this.$forceUpdate(); // 🔥 強制組件重新渲染 (確保列表更新)
               
               alert('消費記錄已刪除並同步。');
           }
@@ -1574,7 +1584,7 @@
       },
       addShoppingItem() {
         if (!this.currentUser) {
-            alert("請先登入，您的記錄將會暫時儲存在本地。"); 
+            alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
             this.showLoginModal = true;
         }
 
@@ -1603,7 +1613,7 @@
       
       toggleBought(item) {
           if (!this.currentUser) {
-              alert("請先登入，您的記錄將會暫時儲存在本地。"); 
+              alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
               this.showLoginModal = true;
           }
           if (!item || !this.activeTrip) return;
@@ -1614,6 +1624,7 @@
               const newBoughtState = !item.bought;
               const newItem = { ...item, bought: newBoughtState };
               
+              // 使用 Vue.set 或直接替換整個陣列以確保響應式更新
               this.activeTrip.shoppingItems.splice(index, 1, newItem);
               
               this.trips = [...this.trips]; 
@@ -1623,7 +1634,7 @@
       },
       removeShoppingItem(itemId) {
         if (!this.currentUser) {
-            alert("請先登入，您的記錄將會暫時儲存在本地。"); 
+            alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
             this.showLoginModal = true;
         }
         if(confirm('確認刪除此購物項目嗎？')) {
@@ -1756,7 +1767,7 @@
       
       addItineraryItem(day) { 
           if (!this.currentUser) {
-              alert("請先登入，您的記錄將會暫時儲存在本地。"); 
+              alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
               this.showLoginModal = true;
           }
           const newItem = { 
@@ -1776,7 +1787,7 @@
       
       removeItineraryItem(itemId) { 
           if (!this.currentUser) {
-              alert("請先登入，您的記錄將會暫時儲存在本地。"); 
+              alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
               this.showLoginModal = true;
           }
           if(confirm('確認刪除此行程項目嗎？')) {
@@ -1791,7 +1802,7 @@
       
       runBatchImport() {
         if (!this.currentUser) {
-            alert("請先登入，您的記錄將會暫時儲存在本地。"); 
+            alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
             this.showLoginModal = true;
         }
 
@@ -1824,7 +1835,7 @@
 
       openNewTripModal() { 
         if (!this.currentUser) {
-            alert("請先登入，您的旅程將會暫時儲存在本地。"); 
+            alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
             this.showLoginModal = true;
         }
         this.editingTripId = null; 
@@ -1838,14 +1849,14 @@
       },
       openEditTripModal(trip) { 
         if (!this.currentUser) {
-            alert("請先登入，您的旅程將會暫時儲存在本地。"); 
+            alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
             this.showLoginModal = true;
         }
         this.editingTripId = trip.id; this.tempTrip = JSON.parse(JSON.stringify(trip)); this.showTripModal = true; 
       },
       saveTrip() {
         if (!this.currentUser) {
-            alert("請先登入，您的旅程將會暫時儲存在本地。"); 
+            alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
             this.showLoginModal = true;
         }
 
@@ -1885,7 +1896,7 @@
       },
       deleteTrip(id) {
         if (!this.currentUser) {
-            alert("請先登入，您的旅程將會暫時儲存在本地。"); 
+            alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
             this.showLoginModal = true;
         }
         if(this.trips.length<=1) return alert('不能刪除最後一個旅程');
