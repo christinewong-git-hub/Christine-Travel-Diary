@@ -40,6 +40,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
   <style>
     body {
       background: linear-gradient(135deg, #C4E1FF 0%, #D2E9FF 33%, #DDDDFF 66%, #FFECF5 100%);
@@ -933,11 +934,11 @@
       }
     },
     mounted() {
-      // 傳統 Firebase 初始化和監聽
       // ----------------------------------------------------------------------
-      // 🔥 Firebase 專案配置 (已根據用戶提供的新資訊更新)
+      // 🔥 Firebase 專案配置 - 請確保您的 API Key 在 Google Cloud Console 中沒有被限制
       // ----------------------------------------------------------------------
       const firebaseConfig = {
+        // 請將此處替換為您專案的真實 API Key
         apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM",
         authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
         projectId: "my-travel-diary-1dbc0",
@@ -948,7 +949,8 @@
       };
       // ----------------------------------------------------------------------
       
-      if (typeof firebase !== 'undefined') {
+      // 檢查 Firebase 是否已載入（v8 命名空間模式）
+      if (typeof firebase !== 'undefined' && typeof firebase.initializeApp === 'function') {
         firebase.initializeApp(firebaseConfig);
         
         firebase.auth().onAuthStateChanged(user => {
@@ -963,7 +965,7 @@
             }
         });
       } else {
-          console.error("Firebase is not loaded! Please check the CDN links in <head>.");
+          console.error("Firebase SDK v8 is not loaded! Please check the CDN links in <head>.");
           this.loadInitialOrLocalData(false); 
       }
 
@@ -990,14 +992,8 @@
           }
           
           // 2. 雲端同步 (Firestore) - 僅在登入狀態下執行
-          if (this.currentUser && this.activeTrip && typeof firebase !== 'undefined') {
+          if (this.currentUser && this.activeTrip && typeof firebase !== 'undefined' && firebase.firestore) {
                try {
-                   // 檢查 Firestore 是否已載入
-                   if (!firebase.firestore) {
-                        console.error("Firestore SDK 尚未載入。");
-                        return;
-                   }
-                   
                    const db = firebase.firestore();
                    // 寫入到以用戶 UID 為名的文件 (與 Firestore 規則匹配)
                    const userDocRef = db.collection('userTrips').doc(this.currentUser.uid);
@@ -1022,17 +1018,12 @@
       },
       
       async loadData() {
-        if (!this.currentUser || typeof firebase === 'undefined') {
+        if (!this.currentUser || typeof firebase === 'undefined' || !firebase.firestore) {
             this.loadInitialOrLocalData(false);
             return;
         }
 
         try {
-             if (!firebase.firestore) {
-                console.error("Firestore SDK 尚未載入。");
-                this.loadInitialOrLocalData(false);
-                return;
-             }
             const db = firebase.firestore();
             const docRef = db.collection('userTrips').doc(this.currentUser.uid);
             const docSnap = await docRef.get();
@@ -1168,8 +1159,8 @@
             this.showLoginModal = false;
         } catch (error) {
             // 處理 API Key Not Valid 錯誤
-            if (error.code === 'auth/invalid-api-key') {
-                alert('登入失敗：API 金鑰無效！請檢查 Google Cloud Console 上的金鑰限制或您的程式碼中的 apiKey。');
+            if (error.code === 'auth/invalid-api-key' || error.message.includes("API key not valid")) {
+                alert('🚨 登入失敗：API 金鑰無效！\n\n請立即前往 Google Cloud Console > 憑證，檢查此金鑰的限制（應用程式限制和 API 限制），確保其允許使用 Google Identity Toolkit API。');
             } else {
                 alert('登入失敗: ' + error.message);
             }
@@ -1688,7 +1679,8 @@
       
       searchGoogleMaps(query) {
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
-          window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); // 修復了 Google Maps 連結
+          // 修正 Google Maps 網址，確保正確開啟
+          window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
       },
 
       mapMarkers: L.layerGroup(),
