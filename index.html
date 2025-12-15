@@ -937,8 +937,8 @@
       // 🔥 核心修復點：使用您提供的真實 Firebase 配置
       // ----------------------------------------------------------------------
       const firebaseConfig = {
-        // 請將此處替換為您專案的真實 API Key
-        apiKey: "AIzaSyCeFnypnf5WdO9mIsuLwGZIsEv123QcuM",
+        // 使用您提供的 API Key
+        apiKey: "AIzaSyCeFnypnf5WdO9mIsuLwGZIsEv123QcuM", 
         authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
         projectId: "my-travel-diary-1dbc0",
         storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
@@ -1159,7 +1159,8 @@
         } catch (error) {
             // 處理 API Key Not Valid 錯誤
             if (error.code === 'auth/invalid-api-key' || error.message.includes("API key not valid") || error.message.includes("API_KEY_INVALID")) {
-                alert('🚨 登入失敗：API 金鑰無效！\n\n請立即前往 Google Cloud Console > 憑證，檢查此金鑰的限制（應用程式限制和 API 限制），確保其允許使用 Google Identity Toolkit API，並且您的網址已加入白名單 (http://localhost/*)。');
+                // 修正後的提示：引導用戶檢查應用程式限制
+                alert('🚨 登入失敗：API 金鑰無效或限制錯誤！\n\n請立即前往 Google Cloud Console > 憑證，檢查此金鑰的 **應用程式限制** (HTTP 參照網址) 是否已包含 `http://localhost/*` 及 `http://127.0.0.1/*`。');
             } else {
                 alert('登入失敗: ' + error.message);
             }
@@ -1677,7 +1678,7 @@
       searchGoogleMaps(query) {
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
           // 修正 Google Maps 網址，確保正確開啟
-          window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
+          window.open(`http://maps.google.com/?q=${finalQuery}`, '_blank'); 
       },
 
       mapMarkers: L.layerGroup(),
