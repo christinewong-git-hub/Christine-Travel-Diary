@@ -938,7 +938,7 @@
       // ----------------------------------------------------------------------
       const firebaseConfig = {
         // 請將此處替換為您專案的真實 API Key
-        apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM",
+        apiKey: "AIzaSyCeFnypnf5WdO9mIsuLwGZIsEv123QcuM",
         authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
         projectId: "my-travel-diary-1dbc0",
         storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
@@ -1182,7 +1182,7 @@
         }
       },
       
-      // 🔥 核心修復點 1: addExpense 增加 $forceUpdate() 和陣列替換
+      // 🔥 核心修復點 1: addExpense 移除 $forceUpdate()，依賴陣列替換
       addExpense() {
         if (!this.activeTrip) return alert('請先創建或選擇一個旅程。');
         
@@ -1240,12 +1240,11 @@
         this.inputCurrency = this.activeTrip.currency; 
         
         this.saveData(); 
-        this.$forceUpdate(); // 🔥 強制組件重新渲染 (確保列表更新)
-
+        // 移除 this.$forceUpdate();
         alert('距離破產又近一步！'); 
       },
       
-      // 🔥 核心修復點 2: removeExpense 增加 $forceUpdate() 和陣列替換
+      // 🔥 核心修復點 2: removeExpense 移除 $forceUpdate()，依賴陣列替換
       removeExpense(expenseId) {
           if (!this.currentUser) {
               alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
@@ -1264,8 +1263,7 @@
               this.activeTrip.expenses = newExpenses;
               
               this.saveData(); 
-              this.$forceUpdate(); // 🔥 強制組件重新渲染 (確保列表更新)
-              
+              // 移除 this.$forceUpdate();
               alert('消費記錄已刪除並同步。');
           }
       },
@@ -1679,7 +1677,7 @@
       searchGoogleMaps(query) {
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
           // 修正 Google Maps 網址，確保正確開啟
-          window.open(`https://www.google.com/maps/search/${finalQuery}`, '_blank'); 
+          window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
       },
 
       mapMarkers: L.layerGroup(),
