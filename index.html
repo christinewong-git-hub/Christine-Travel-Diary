@@ -40,7 +40,6 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-  
   <style>
     body {
       background: linear-gradient(135deg, #C4E1FF 0%, #D2E9FF 33%, #DDDDFF 66%, #FFECF5 100%);
@@ -703,19 +702,6 @@
 </div>
 
 <script> 
-  // 🔥 修正 2: 將 Firebase 配置移到 Vue 應用程式之外，確保初始化在 Vue 之前
-  const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM",
-    authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
-    projectId: "my-travel-diary-1dbc0",
-    storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
-    messagingSenderId: "592971246262",
-    appId: "1:592971246262:web:f7d0c923b697a26e199417",
-    measurementId: "G-F6X3YWL2MY" 
-  };
-  
-  const VUE_APP_NAME = 'christine_travel_diary_v4'; // 本地儲存 Key
-
   const vueApp = Vue.createApp({
     data() {
       return {
@@ -947,15 +933,24 @@
       }
     },
     mounted() {
+      // ----------------------------------------------------------------------
+      // 🔥 核心修復點：使用您提供的真實 Firebase 配置
+      // ----------------------------------------------------------------------
+      const firebaseConfig = {
+        // 請將此處替換為您專案的真實 API Key
+        apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM",
+        authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
+        projectId: "my-travel-diary-1dbc0",
+        storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
+        messagingSenderId: "592971246262",
+        appId: "1:592971246262:web:f7d0c923b697a26e199417",
+        measurementId: "G-F6X3YWL2MY" 
+      };
+      // ----------------------------------------------------------------------
+      
       // 檢查 Firebase 是否已載入（v8 命名空間模式）
       if (typeof firebase !== 'undefined' && typeof firebase.initializeApp === 'function') {
-        
-        // 🔥 檢查 API Key 是否為範例 (您提供的 API Key 是範例)
-        if (FIREBASE_CONFIG.apiKey === "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM") {
-             console.warn("🚨 警告：您使用的是範例 API Key。請將 FIREBASE_CONFIG 替換為您的真實配置，否則 Firebase 雲端同步將失敗！");
-        }
-        
-        firebase.initializeApp(FIREBASE_CONFIG);
+        firebase.initializeApp(firebaseConfig);
         
         firebase.auth().onAuthStateChanged(user => {
             if (user) {
@@ -984,35 +979,38 @@
           this.activeDay = day;
       },
       
-      // 🔥 修正 4：saveData 確保深度複製避免響應式代理導致的同步失敗
+      // 🔥 核心修復和安全檢查點：saveData 函數
       async saveData() { 
           // 1. 本地儲存 (Local Storage) - 始終執行
-          localStorage.setItem(VUE_APP_NAME, JSON.stringify(this.trips));
-          this.updateChart(); 
+          localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
           
           if (!this.currentUser) {
               console.log("用戶未登入，只執行本地儲存。");
+              this.updateChart(); 
               return; // 未登入則直接返回，不嘗試雲端寫入
           }
           
           // 2. 雲端同步 (Firestore) - 僅在登入狀態下執行
-          if (this.currentUser && typeof firebase !== 'undefined' && firebase.firestore) {
+          if (this.currentUser && this.activeTrip && typeof firebase !== 'undefined' && firebase.firestore) {
                try {
                    const db = firebase.firestore();
+                   // 寫入到以用戶 UID 為名的文件 (與 Firestore 規則匹配)
                    const userDocRef = db.collection('userTrips').doc(this.currentUser.uid);
                    
-                   // 關鍵修正: 深度複製 this.trips，確保傳給 Firestore 的是純淨的 JS 對象
                    const dataToWrite = {
                        trips: JSON.parse(JSON.stringify(this.trips)), 
                        activeTripId: this.activeTripId,
                        timestamp: firebase.firestore.FieldValue.serverTimestamp() 
                    };
                    
+                   // 使用 set 配合 merge: true，確保只更新所需字段
                    await userDocRef.set(dataToWrite, { merge: true }); 
                    
                    console.log("Firestore 寫入成功，數據已同步。");
+                   this.updateChart();
                } catch (e) {
                    console.error("Firestore 儲存失敗: ", e);
+                   // 🚨 這是關鍵的錯誤提示，提示用戶檢查後端設定
                    alert('🚨 數據同步到雲端失敗，請檢查網路、Firebase 規則或登入狀態！詳細錯誤請見 Console。');
                }
           }
@@ -1035,15 +1033,19 @@
                 if (data.trips && data.trips.length > 0) {
                     this.trips = this.sanitizeLoadedTrips(data.trips);
                     this.activeTripId = data.activeTripId || (this.trips.length > 0 ? this.trips[0].id : null);
-                    localStorage.setItem(VUE_APP_NAME, JSON.stringify(this.trips));
+                    // 同步到本地儲存
+                    localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
                 } else {
+                    // 如果 Firestore 文件存在但沒有 trips 數據，則從本地或預設數據載入
                     this.loadInitialOrLocalData(true);
                 }
             } else {
+                // 如果 Firestore 文件不存在，則從本地或預設數據載入，並準備上傳
                 this.loadInitialOrLocalData(true);
             }
         } catch (e) {
             console.error("Firestore 讀取失敗: ", e);
+            // 讀取失敗時，回退到本地數據
             this.loadInitialOrLocalData(false);
         }
         
@@ -1056,7 +1058,7 @@
       },
       
       loadInitialOrLocalData(shouldUpload = false) {
-          const savedLocal = localStorage.getItem(VUE_APP_NAME);
+          const savedLocal = localStorage.getItem('christine_travel_diary_v4');
           let parsedTrips = [];
 
           if (savedLocal) {
@@ -1147,32 +1149,20 @@
       
       // === 登入/登出 (傳統 Firebase 函數，解決登入失效問題) ===
 
-      // 🔥 修正 3：loginUser 確保無論成功或失敗都關閉模態框
       async loginUser() {
         if (!this.loginEmail || !this.loginPassword) return alert('請輸入電子郵件和密碼');
-        if (typeof firebase === 'undefined' || !firebase.auth) {
-            this.showLoginModal = false; // 失敗時關閉
-            return alert('Firebase 驗證 SDK 尚未載入，請檢查 CDN 連結。');
-        }
-        
-        // 檢查 API Key
-        if (FIREBASE_CONFIG.apiKey === "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM") {
-            this.showLoginModal = false; // 失敗時關閉
-            return alert('🚨 登入失敗：您使用的是範例 API Key，請替換為您的真實金鑰！');
-        }
+        if (typeof firebase === 'undefined' || !firebase.auth) return alert('Firebase 驗證 SDK 尚未載入，請檢查 CDN 連結。');
 
         try {
             await firebase.auth().signInWithEmailAndPassword(this.loginEmail, this.loginPassword); 
-            // 成功後，onAuthStateChanged 會被觸發，它會處理 loadData 和關閉模態框
+            this.showLoginModal = false;
         } catch (error) {
-            console.error("登入失敗: ", error);
             // 處理 API Key Not Valid 錯誤
             if (error.code === 'auth/invalid-api-key' || error.message.includes("API key not valid") || error.message.includes("API_KEY_INVALID")) {
                 alert('🚨 登入失敗：API 金鑰無效！\n\n請立即前往 Google Cloud Console > 憑證，檢查此金鑰的限制（應用程式限制和 API 限制），確保其允許使用 Google Identity Toolkit API，並且您的網址已加入白名單 (http://localhost/*)。');
             } else {
                 alert('登入失敗: ' + error.message);
             }
-            this.showLoginModal = false; // 🔥 關鍵修正：登入失敗後關閉模態框
         }
       },
 
@@ -1192,6 +1182,7 @@
         }
       },
       
+      // 🔥 核心修復點 1: addExpense 增加 $forceUpdate() 和陣列替換
       addExpense() {
         if (!this.activeTrip) return alert('請先創建或選擇一個旅程。');
         
@@ -1249,11 +1240,12 @@
         this.inputCurrency = this.activeTrip.currency; 
         
         this.saveData(); 
-        this.$forceUpdate(); 
+        this.$forceUpdate(); // 🔥 強制組件重新渲染 (確保列表更新)
 
         alert('距離破產又近一步！'); 
       },
       
+      // 🔥 核心修復點 2: removeExpense 增加 $forceUpdate() 和陣列替換
       removeExpense(expenseId) {
           if (!this.currentUser) {
               alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
@@ -1272,12 +1264,13 @@
               this.activeTrip.expenses = newExpenses;
               
               this.saveData(); 
-              this.$forceUpdate(); 
+              this.$forceUpdate(); // 🔥 強制組件重新渲染 (確保列表更新)
               
               alert('消費記錄已刪除並同步。');
           }
       },
       
+      // 🔥 核心修復點 3: 將複雜的列表生成邏輯移到 Method (已在原代碼中)
       getGroupedAndSortedExpenses() { 
           if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return [];
 
@@ -1683,10 +1676,10 @@
           }
       },
       
-      // 🔥 修正 5：修正 Google Maps 搜尋的 URL 格式
       searchGoogleMaps(query) {
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
-          window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
+          // 修正 Google Maps 網址，確保正確開啟
+          window.open(`https://www.google.com/maps/search/${finalQuery}`, '_blank'); 
       },
 
       mapMarkers: L.layerGroup(),
