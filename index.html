@@ -934,7 +934,7 @@
     },
     mounted() {
       // ----------------------------------------------------------------------
-      // 🔥 核心修復點：使用您提供的真實 Firebase 配置
+      // 🔥 核心配置點：請確認此處的金鑰與您 Google Cloud Console 的 **瀏覽器金鑰** 完全一致
       // ----------------------------------------------------------------------
       const firebaseConfig = {
         // 使用您提供的 API Key
@@ -1675,10 +1675,11 @@
           }
       },
       
+      // 🔥 核心修復點 4: 修正 Google Maps 網址語法錯誤
       searchGoogleMaps(query) {
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
-          // 修正 Google Maps 網址，確保正確開啟
-          window.open(`http://maps.google.com/?q=${finalQuery}`, '_blank'); 
+          // 修正為正確的 Google Maps 搜尋 URL
+          window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
       },
 
       mapMarkers: L.layerGroup(),
