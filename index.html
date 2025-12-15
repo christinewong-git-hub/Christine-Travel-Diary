@@ -40,7 +40,6 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-  
   <style>
     body {
       background: linear-gradient(135deg, #C4E1FF 0%, #D2E9FF 33%, #DDDDFF 66%, #FFECF5 100%);
@@ -1159,8 +1158,8 @@
             this.showLoginModal = false;
         } catch (error) {
             // 處理 API Key Not Valid 錯誤
-            if (error.code === 'auth/invalid-api-key' || error.message.includes("API key not valid")) {
-                alert('🚨 登入失敗：API 金鑰無效！\n\n請立即前往 Google Cloud Console > 憑證，檢查此金鑰的限制（應用程式限制和 API 限制），確保其允許使用 Google Identity Toolkit API。');
+            if (error.code === 'auth/invalid-api-key' || error.message.includes("API key not valid") || error.message.includes("API_KEY_INVALID")) {
+                alert('🚨 登入失敗：API 金鑰無效！\n\n請立即前往 Google Cloud Console > 憑證，檢查此金鑰的限制（應用程式限制和 API 限制），確保其允許使用 Google Identity Toolkit API，並且您的網址已加入白名單 (http://localhost/*)。');
             } else {
                 alert('登入失敗: ' + error.message);
             }
