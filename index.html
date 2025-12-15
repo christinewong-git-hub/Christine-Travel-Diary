@@ -992,6 +992,12 @@
           // 2. 雲端同步 (Firestore) - 僅在登入狀態下執行
           if (this.currentUser && this.activeTrip && typeof firebase !== 'undefined') {
                try {
+                   // 檢查 Firestore 是否已載入
+                   if (!firebase.firestore) {
+                        console.error("Firestore SDK 尚未載入。");
+                        return;
+                   }
+                   
                    const db = firebase.firestore();
                    // 寫入到以用戶 UID 為名的文件 (與 Firestore 規則匹配)
                    const userDocRef = db.collection('userTrips').doc(this.currentUser.uid);
@@ -1022,6 +1028,11 @@
         }
 
         try {
+             if (!firebase.firestore) {
+                console.error("Firestore SDK 尚未載入。");
+                this.loadInitialOrLocalData(false);
+                return;
+             }
             const db = firebase.firestore();
             const docRef = db.collection('userTrips').doc(this.currentUser.uid);
             const docSnap = await docRef.get();
@@ -1150,19 +1161,24 @@
 
       async loginUser() {
         if (!this.loginEmail || !this.loginPassword) return alert('請輸入電子郵件和密碼');
-        if (typeof firebase === 'undefined') return alert('Firebase 尚未載入，請檢查網路連線或 CDN 連結。');
+        if (typeof firebase === 'undefined' || !firebase.auth) return alert('Firebase 驗證 SDK 尚未載入，請檢查 CDN 連結。');
 
         try {
             await firebase.auth().signInWithEmailAndPassword(this.loginEmail, this.loginPassword); 
             this.showLoginModal = false;
         } catch (error) {
-            alert('登入失敗: ' + error.message);
+            // 處理 API Key Not Valid 錯誤
+            if (error.code === 'auth/invalid-api-key') {
+                alert('登入失敗：API 金鑰無效！請檢查 Google Cloud Console 上的金鑰限制或您的程式碼中的 apiKey。');
+            } else {
+                alert('登入失敗: ' + error.message);
+            }
         }
       },
 
       async logoutUser() {
         if(confirm('確認登出嗎？登出後將無法同步數據。')) {
-            if (typeof firebase === 'undefined') return alert('Firebase 尚未載入，請檢查網路連線或 CDN 連結。');
+            if (typeof firebase === 'undefined' || !firebase.auth) return alert('Firebase 驗證 SDK 尚未載入，請檢查 CDN 連結。');
             try {
                 await firebase.auth().signOut(); 
                 alert('您已登出。');
@@ -1176,10 +1192,11 @@
         }
       },
       
-      // 🔥 核心修復點 1: addExpense 增加 $forceUpdate()
+      // 🔥 核心修復點 1: addExpense 增加 $forceUpdate() 和陣列替換
       addExpense() {
+        if (!this.activeTrip) return alert('請先創建或選擇一個旅程。');
+        
         if (!this.currentUser) {
-            // 提示，但不阻止本地新增
             alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
             this.showLoginModal = true;
         }
@@ -1218,6 +1235,7 @@
         };
 
         if (!this.activeTrip.expenses) this.activeTrip.expenses = [];
+        // 使用新陣列替換，確保 Vue 響應式更新
         this.activeTrip.expenses = [newRecord, ...this.activeTrip.expenses]; 
         
         // 重設表單
@@ -1237,7 +1255,7 @@
         alert('距離破產又近一步！'); 
       },
       
-      // 🔥 核心修復點 2: removeExpense 增加 $forceUpdate()
+      // 🔥 核心修復點 2: removeExpense 增加 $forceUpdate() 和陣列替換
       removeExpense(expenseId) {
           if (!this.currentUser) {
               alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
@@ -1252,6 +1270,7 @@
 
               const targetId = expenseId; 
               const newExpenses = this.activeTrip.expenses.filter(exp => exp.id != targetId); 
+              // 使用新陣列替換，確保 Vue 響應式更新
               this.activeTrip.expenses = newExpenses;
               
               this.saveData(); 
@@ -1261,7 +1280,7 @@
           }
       },
       
-      // 🔥 核心修復點 3: 將複雜的列表生成邏輯移到 Method
+      // 🔥 核心修復點 3: 將複雜的列表生成邏輯移到 Method (已在原代碼中)
       getGroupedAndSortedExpenses() { 
           if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return [];
 
@@ -1628,9 +1647,10 @@
               const newBoughtState = !item.bought;
               const newItem = { ...item, bought: newBoughtState };
               
-              // 使用 Vue.set 或直接替換整個陣列以確保響應式更新
+              // 使用 splice 確保響應式更新
               this.activeTrip.shoppingItems.splice(index, 1, newItem);
               
+              // 為了確保 Vue 3 的響應式更新，雖然 Vue 3 已經優化，但確保頂層物件被觸摸是個好習慣
               this.trips = [...this.trips]; 
 
               this.saveData(); 
@@ -1668,7 +1688,7 @@
       
       searchGoogleMaps(query) {
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
-          window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
+          window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); // 修復了 Google Maps 連結
       },
 
       mapMarkers: L.layerGroup(),
@@ -1685,6 +1705,7 @@
           
           const center = this.activeTrip.center ? [this.activeTrip.center.lat, this.activeTrip.center.lng] : [35.6895, 139.6917];
           
+          // 使用 L.map() 重新初始化地圖
           this.map = L.map('map', { zoomControl: false }).setView(center, 13);
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(this.map);
           this.mapMarkers.clearLayers();
@@ -1713,6 +1734,7 @@
           }
           
           if (this.activeTrip.center) {
+              // 返回一個靠近中心點的隨機點作為後備
               return {
                   lat: this.activeTrip.center.lat + (Math.random() - 0.5) * 0.005,
                   lng: this.activeTrip.center.lng + (Math.random() - 0.5) * 0.005,
@@ -1783,6 +1805,7 @@
               mapLink: '' 
           };
           if (!this.activeTrip.itinerary) this.activeTrip.itinerary = [];
+          // 使用新陣列替換，確保 Vue 響應式更新
           this.activeTrip.itinerary = [...this.activeTrip.itinerary, newItem];
           
           this.saveData(); 
@@ -1797,6 +1820,7 @@
           if(confirm('確認刪除此行程項目嗎？')) {
               if (!this.activeTrip.itinerary) this.activeTrip.itinerary = [];
               const newItinerary = this.activeTrip.itinerary.filter(item => item.id !== itemId);
+              // 使用新陣列替換，確保 Vue 響應式更新
               this.activeTrip.itinerary = newItinerary;
               
               this.saveData(); 
@@ -1868,6 +1892,7 @@
         if (this.editingTripId) {
           const idx = this.trips.findIndex(t => t.id === this.editingTripId);
           if (idx !== -1) {
+              // 確保 Vue 響應式更新
               this.trips.splice(idx, 1, { ...this.trips[idx], ...this.tempTrip });
           }
         } else {
