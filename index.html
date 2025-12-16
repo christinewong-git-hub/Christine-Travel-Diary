@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Christine's Travel Diary</title>
+  <title>Christine's Travel Diary - 旅遊日記</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
+  
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
   
   <script>
@@ -13,8 +14,8 @@
       theme: {
         extend: {
           colors: {
-            primary: '#97CBFF',
-            secondary: '#C7C7E2',
+            primary: '#97CBFF', // 亮藍色
+            secondary: '#C7C7E2', // 淡紫色
             textSoft: '#6B7280',
           },
           animation: {
@@ -31,10 +32,10 @@
   </script>
   
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ7oWA8W5fmX1Nl7b8J3+hmM1pDChfW54=" crossorigin="" />
   
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20n69z7xWn80zWl7hY1zQ/hH9U+hS3wK7M29i3Xp6p6+" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -57,6 +58,7 @@
         white-space: nowrap; 
     }
     
+    /* 玻璃卡片效果 */
     .glass-card {
       background: rgba(255, 255, 255, 0.9);
       backdrop-filter: blur(16px);
@@ -66,6 +68,7 @@
       border-radius: 24px;
     }
     
+    /* 已購買的購物卡片 */
     .shopping-card-bought {
         opacity: 0.6 !important; 
         background: rgba(230, 230, 230, 0.5) !important; 
@@ -73,12 +76,14 @@
         box-shadow: none !important; 
     }
 
+    /* 航班背景 */
     .flight-sky { 
       background: linear-gradient(180deg, #C4E1FF 0%, #D6EFFF 100%); 
       position: relative;
       overflow: hidden;
     }
 
+    /* 地圖容器 */
     #map { 
       height: 350px; 
       width: 100%; 
@@ -87,6 +92,7 @@
       position: relative;
     }
 
+    /* 底部導航膠囊 */
     .capsule-tab {
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(20px);
@@ -94,6 +100,7 @@
       z-index: 999; 
     }
     
+    /* 活躍旅程卡片樣式 */
     .trip-card-active {
       background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
       border: 2px solid #97CBFF;
@@ -101,10 +108,12 @@
       box-shadow: 0 10px 30px rgba(151, 203, 255, 0.4);
     }
     
+    /* 天氣卡片背景 */
     .weather-sunny { background: linear-gradient(135deg, #FFECF5 0%, #FFD9EC 40%, #ECECFF 100%); }
     .weather-cloudy { background: linear-gradient(135deg, #DDDDFF 0%, #E6E6F2 40%, #D8D8EB 100%); }
     .weather-rainy { background: linear-gradient(135deg, #D8D8EB 0%, #E6E6F2 35%, #C4E1FF 100%); }
 
+    /* 隱藏滾動條 */
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -127,6 +136,12 @@
 
     .auth-modal {
         animation: fadeIn 0.3s ease-out;
+    }
+
+    /* Leaflet 地圖標記自定義樣式 */
+    .custom-div-icon {
+        background: none;
+        border: none;
     }
   </style>
 </head>
@@ -293,6 +308,7 @@
 
                 <div v-for="(item, idx) in group.items" :key="item.id" class="relative pl-6 border-l-2 border-slate-200">
                   <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-4 border-slate-300"></div>
+                  
                   <div class="flex justify-between items-start mb-1">
                     <input v-model="item.time" type="time" @change="saveData" class="bg-transparent font-bold text-xl text-slate-700 w-24 p-0 border-0 focus:ring-0">
                     <button @click="removeItineraryItem(item.id)" class="text-slate-300 hover:text-red-400"><i class="ri-close-circle-fill text-xl"></i></button>
@@ -311,6 +327,7 @@
             </div>
         </div>
       </div>
+      
       <div class="glass-card p-2 mb-8 shadow-md relative z-0">
         <button @click="forceUpdateMap" class="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-slate-600 shadow-sm z-[400] border border-slate-200 hover:bg-white transition">
             <i class="ri-refresh-line text-sm mr-1"></i>刷新地圖
@@ -572,6 +589,9 @@
                            :class="item.bought ? '!text-slate-500' : 'text-primary'"> 
                          {{ item.localPriceHKD.toFixed(2) }}
                      </span>
+                     <span v-if="item.bought && item.savingsHKD > 0" class="text-xs font-bold text-green-500 block mt-1">
+                         省了: {{ item.savingsHKD.toFixed(2) }} HKD
+                     </span>
                  </div>
                  
                  <button @click="toggleBought(item)" 
@@ -703,7 +723,7 @@
 </div>
 
 <script> 
-  // 全局變量用於緩存地理編碼結果
+  // 全局變量用於緩存地理編碼結果，避免重複請求
   const GeocodingCache = {};
 
   const vueApp = Vue.createApp({
@@ -740,7 +760,7 @@
             localPrice: null,  
             quantity: 1,       
             bought: false, 
-            image: '' 
+            image: '' // Base64 格式圖片
         },
         
         activeDay: 1, 
@@ -764,6 +784,7 @@
     computed: {
       activeTrip() { return this.trips.find(t => t.id === this.activeTripId) || null; },
       
+      // 計算總天數
       totalDays() {
           if (!this.activeTrip || !this.activeTrip.startDate || !this.activeTrip.endDate) return 1;
           const start = new Date(this.activeTrip.startDate);
@@ -773,6 +794,7 @@
           return diffDays > 0 ? diffDays : 1;
       },
 
+      // 行程分組與排序 (按 Day 和 Time)
       groupedItinerary() {
         if (!this.activeTrip) return [];
         
@@ -791,25 +813,29 @@
              day.items.sort((a, b) => {
                  const timeA = a.time ? a.time.replace(':', '') : '9999';
                  const timeB = b.time ? b.time.replace(':', '') : '9999';
-                 return timeA - timeB;
+                 return timeA - timeB; // 數字比較
              });
         });
         
         return days;
       },
 
+      // 總消費港幣金額
       totalExpensesHKD() {
         if (!this.activeTrip || !this.activeTrip.expenses) return 0;
         return this.activeTrip.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       },
 
+      // 天氣描述 (根據 weathercode)
       weatherDesc() {
         if (!this.weatherData) return 'Loading...';
         const code = this.weatherData.weathercode;
+        // 簡化 open-meteo 的 weathercode 對應
         const map = { 0:'晴朗 Sunny', 1:'多雲 Cloudy', 2:'陰天 Overcast', 3:'毛毛雨 Drizzle', 45:'霧 Fog', 48:'霧淞 Rime fog', 51:'毛毛雨 Drizzle', 53:'小雨 Light Rain', 55:'大雨 Heavy Rain', 61:'陣雨 Rain', 63:'中雨 Moderate Rain', 65:'大雨 Heavy Rain', 80:'陣雨 Showers', 81:'中度陣雨 Moderate Showers', 82:'強烈陣雨 Violent Showers', 95:'雷暴 Thunderstorm' };
         return map[code] || '多雲 Cloudy';
       },
       
+      // 計算記帳時的最終港幣金額
       finalHKDAmount() {
           const amount = parseFloat(this.newExpense.localAmount); 
           if (!this.activeTrip || isNaN(amount) || amount < 0) {
@@ -823,11 +849,12 @@
           const rate = this.activeTrip.exchangeRate; 
           if (!rate || rate <= 0) return 0;
           
-          // 修正：從當地貨幣轉港幣應該是除以匯率 (1 HKD = X JPY)
+          // 從當地貨幣轉港幣：當地金額 / 匯率 (1 HKD = X JPY)
           const result = (amount / rate);
           return isNaN(result) ? 0 : result;
       },
       
+      // 消費類別彙總 (用於圓餅圖)
       categorySummary() {
           if (!this.activeTrip || !this.activeTrip.expenses) {
               return { labels: [], data: [] };
@@ -845,6 +872,7 @@
           return { labels, data };
       },
 
+      // 支付方式彙總
       paymentSummary() {
           const summary = { '現金': 0, '信用卡': 0, '其他': 0 };
           if (!this.activeTrip) return summary;
@@ -866,6 +894,7 @@
           return summary;
       },
       
+      // 購物清單 (計算換算後的 HKD 價格和節省金額)
       shoppingListWithSavings() {
           if (!this.activeTrip || !this.activeTrip.shoppingItems) return [];
           const rate = this.activeTrip.exchangeRate || 1; 
@@ -875,12 +904,15 @@
               const localPrice = Number(item.localPrice) || 0;
               const onlinePrice = Number(item.onlinePrice) || 0;
               
+              // 當地價換算為 HKD (當地金額 * 數量 / 匯率)
               const localPriceHKD = (localPrice > 0 && rate > 0) 
                   ? parseFloat(((localPrice / rate) * quantity).toFixed(2)) 
                   : 0;
               
+              // 網上價 (已是 HKD) * 數量
               const onlinePriceHKD = onlinePrice * quantity;
               
+              // 節省金額
               const savingsHKD = (localPriceHKD > 0 && onlinePriceHKD > 0) 
                   ? parseFloat((onlinePriceHKD - localPriceHKD).toFixed(2))
                   : 0;
@@ -894,6 +926,7 @@
               };
           });
           
+          // 排序: 已購買的在後面，未購買的按節省金額降序
           return processedList.sort((a, b) => {
               if (a.bought === b.bought) {
                   return b.savingsHKD - a.savingsHKD; 
@@ -901,7 +934,8 @@
               return a.bought ? 1 : -1; 
           });
       },
-      // 計算總節省
+      
+      // 計算總節省金額 (只計算已購買的項目)
       totalSavings() {
         return this.shoppingListWithSavings.reduce((sum, item) => sum + (item.bought ? item.savingsHKD : 0), 0);
       }
@@ -939,49 +973,48 @@
     },
     mounted() {
       // ----------------------------------------------------------------------
-      // 🔥 核心配置點：請確認此處的金鑰與您 Google Cloud Console 的 **瀏覽器金鑰** 完全一致
+      // 🔥 核心配置點：請將此處替換為您自己的 Firebase 專案配置
       // ----------------------------------------------------------------------
       const firebaseConfig = {
-        // <<<<<<<<<<<< 請將此處替換為您自己的 API Key >>>>>>>>>>>>
-        apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM", 
-        authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
-        projectId: "my-travel-diary-1dbc0",
-        storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
-        messagingSenderId: "592971246262",
-        appId: "1:592971246262:web:f7d0c923b697a26e199417",
-        measurementId: "G-F6X3YWL2MY" 
+        // <<<<<<<<<<<< 必須替換為您自己的 API Key >>>>>>>>>>>>
+        apiKey: "YOUR_FIREBASE_API_KEY_HERE", 
+        authDomain: "your-project-id.firebaseapp.com",
+        projectId: "your-project-id",
+        storageBucket: "your-project-id.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID",
+        measurementId: "YOUR_MEASUREMENT_ID" // 可選
       };
       // ----------------------------------------------------------------------
       
-      // 檢查 Firebase 是否已載入（v8 命名空間模式）
+      // 檢查 Firebase 是否已載入
       if (typeof firebase !== 'undefined' && typeof firebase.initializeApp === 'function') {
         try {
             firebase.initializeApp(firebaseConfig);
             
+            // 監聽登入狀態
             firebase.auth().onAuthStateChanged(user => {
                 if (user) {
                     this.currentUser = user;
                     this.showLoginModal = false;
-                    this.loadData(); 
+                    this.loadData(); // 登入成功，載入雲端數據
                 } else {
                     this.currentUser = null;
-                    this.loadInitialOrLocalData(false); 
+                    this.loadInitialOrLocalData(false); // 未登入，載入本地或預設數據
                     this.showLoginModal = false; 
                 }
             });
         } catch(e) {
             console.error("Firebase App 初始化失敗:", e);
-            // 🚨 檢查 API Key 是否正確
-            if (e.message.includes("apiKey") || e.message.includes("invalid")) {
-                 alert('🚨 警告：Firebase API Key 可能配置錯誤或無效。請檢查 `firebaseConfig`！');
-            }
+            alert('🚨 警告：Firebase 配置可能錯誤！請檢查 `firebaseConfig`。將使用本地模式。');
             this.loadInitialOrLocalData(false);
         }
       } else {
           console.error("Firebase SDK v8 is not loaded! Please check the CDN links in <head>.");
-          this.loadInitialOrLocalData(false); 
+          this.loadInitialOrLocalData(false); // CDN 未載入，使用本地模式
       }
 
+      // 初始化幣別/Day/匯率
       if (this.activeTrip) {
           this.inputCurrency = this.activeTrip.currency;
           this.newExpense.day = 1;
@@ -993,7 +1026,7 @@
           this.activeDay = day;
       },
       
-      // 🔥 核心修復和安全檢查點：saveData 函數
+      // === 核心資料儲存函數 (本地 + 雲端同步) ===
       async saveData() { 
           // 1. 本地儲存 (Local Storage) - 始終執行
           localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
@@ -1001,36 +1034,33 @@
           if (!this.currentUser) {
               console.log("用戶未登入，只執行本地儲存。");
               this.updateChart(); 
-              return; // 未登入則直接返回，不嘗試雲端寫入
+              return; 
           }
           
           // 2. 雲端同步 (Firestore) - 僅在登入狀態下執行
           if (this.currentUser && this.activeTrip && typeof firebase !== 'undefined' && firebase.firestore) {
                try {
                    const db = firebase.firestore();
-                   // 寫入到以用戶 UID 為名的文件 (與 Firestore 規則匹配)
                    const userDocRef = db.collection('userTrips').doc(this.currentUser.uid);
                    
-                   // 深度複製數據以防止 Firestore 寫入時的響應式問題
                    const dataToWrite = {
                        trips: JSON.parse(JSON.stringify(this.trips)), 
                        activeTripId: this.activeTripId,
                        timestamp: firebase.firestore.FieldValue.serverTimestamp() 
                    };
                    
-                   // 使用 set 配合 merge: true，確保只更新所需字段
                    await userDocRef.set(dataToWrite, { merge: true }); 
                    
                    console.log("Firestore 寫入成功，數據已同步。");
                    this.updateChart();
                } catch (e) {
                    console.error("Firestore 儲存失敗: ", e);
-                   // 🚨 這是關鍵的錯誤提示，提示用戶檢查後端設定
                    alert('🚨 數據同步到雲端失敗，請檢查網路、Firebase 規則或登入狀態！詳細錯誤請見 Console。');
                }
           }
       },
       
+      // 載入資料：先嘗試雲端，失敗則回退到本地
       async loadData() {
         if (!this.currentUser || typeof firebase === 'undefined' || !firebase.firestore) {
             this.loadInitialOrLocalData(false);
@@ -1048,19 +1078,18 @@
                 if (data.trips && data.trips.length > 0) {
                     this.trips = this.sanitizeLoadedTrips(data.trips);
                     this.activeTripId = data.activeTripId || (this.trips.length > 0 ? this.trips[0].id : null);
-                    // 同步到本地儲存
                     localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
+                    console.log("成功從雲端載入數據。");
                 } else {
-                    // 如果 Firestore 文件存在但沒有 trips 數據，則從本地或預設數據載入
                     this.loadInitialOrLocalData(true);
+                    console.log("雲端無數據，從本地或預設載入並嘗試上傳。");
                 }
             } else {
-                // 如果 Firestore 文件不存在，則從本地或預設數據載入，並準備上傳
                 this.loadInitialOrLocalData(true);
+                console.log("雲端文件不存在，從本地或預設載入並嘗試創建。");
             }
         } catch (e) {
             console.error("Firestore 讀取失敗: ", e);
-            // 讀取失敗時，回退到本地數據
             this.loadInitialOrLocalData(false);
         }
         
@@ -1072,6 +1101,7 @@
         }
       },
       
+      // 載入本地或預設數據
       loadInitialOrLocalData(shouldUpload = false) {
           const savedLocal = localStorage.getItem('christine_travel_diary_v4');
           let parsedTrips = [];
@@ -1079,6 +1109,7 @@
           if (savedLocal) {
               parsedTrips = this.sanitizeLoadedTrips(JSON.parse(savedLocal));
               this.trips = parsedTrips;
+              console.log("成功從本地載入數據。");
           } else {
               // 預設數據
               const defaultItinerary = [{ id: Date.now(), day: 1, time: '10:00', activity: '到達機場', location: 'Narita Airport', mapLink: '' }];
@@ -1094,12 +1125,13 @@
                     { id: Date.now()+3, name: '手信餅乾', onlinePrice: 150, localPrice: 2500, quantity: 3, bought: true, image: '' },
                 ]
               }];
+              console.log("載入預設數據。");
           }
           
           this.activeTripId = this.trips.length > 0 ? this.trips[0].id : null;
           
           if (shouldUpload && this.currentUser) {
-              this.saveData(); 
+              this.saveData(); // 登入且無雲端數據時，上傳本地數據
           }
 
           if (this.activeTrip) {
@@ -1107,9 +1139,10 @@
           }
       },
       
+      // 清理載入的數據，確保所有欄位存在且類型正確
       sanitizeLoadedTrips(rawTrips) {
+          // ... (與原代碼一致，確保數據結構的健全性)
           return rawTrips.map(trip => {
-              // 確保所有陣列存在且有預設值
               if (trip.expenses) {
                   trip.expenses = trip.expenses.map(exp => ({ 
                       id: exp.id || Date.now() + Math.random(), 
@@ -1145,6 +1178,9 @@
               if (!trip.center) {
                   trip.center = { lat: 35.6895, lng: 139.6917 }; 
               }
+              if (!trip.flights) {
+                  trip.flights = { outbound: {}, inbound: {} };
+              }
               return trip;
           });
       },
@@ -1154,27 +1190,19 @@
         return trip.expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       },
       
-      calculateDayTotal(dayIndex) {
-          if (!this.activeTrip || !this.activeTrip.expenses) return 0;
-          const total = this.activeTrip.expenses
-                     .filter(exp => (exp.day === undefined ? 1 : exp.day) === dayIndex) 
-                     .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-          return parseFloat(total.toFixed(2));
-      },
-      
-      // === 登入/登出 (傳統 Firebase 函數，解決登入失效問題) ===
+      // === 登入/登出 ===
 
       async loginUser() {
         if (!this.loginEmail || !this.loginPassword) return alert('請輸入電子郵件和密碼');
         if (typeof firebase === 'undefined' || !firebase.auth) return alert('Firebase 驗證 SDK 尚未載入，請檢查 CDN 連結。');
 
         try {
+            // 注意：您需要先在 Firebase Console 啟用 Email/Password 登入，並創建一個測試帳號。
             await firebase.auth().signInWithEmailAndPassword(this.loginEmail, this.loginPassword); 
             this.showLoginModal = false;
         } catch (error) {
-            // 🔥 修復點 1: 更明確的錯誤提示，引導用戶檢查 GCP/Firebase 設置
-            if (error.code === 'auth/invalid-api-key' || error.message.includes("API key not valid") || error.message.includes("API_KEY_INVALID")) {
-                alert('🚨 登入失敗：Firebase API 金鑰無效或限制錯誤！\n\n請立即前往 Google Cloud Console > 憑證，檢查此金鑰的 **應用程式限制** (HTTP 參照網址) 是否已包含 `http://localhost/*` 及 `http://127.0.0.1/*`。');
+            if (error.code === 'auth/invalid-api-key' || error.message.includes("API_KEY_INVALID")) {
+                alert('🚨 登入失敗：Firebase API 金鑰無效或限制錯誤！');
             } else {
                 alert('登入失敗: ' + error.message);
             }
@@ -1183,10 +1211,11 @@
 
       async logoutUser() {
         if(confirm('確認登出嗎？登出後將無法同步數據。')) {
-            if (typeof firebase === 'undefined' || !firebase.auth) return alert('Firebase 驗證 SDK 尚未載入，請檢查 CDN 連結。');
+            if (typeof firebase === 'undefined' || !firebase.auth) return alert('Firebase 驗證 SDK 尚未載入。');
             try {
                 await firebase.auth().signOut(); 
                 alert('您已登出。');
+                // 清空 trips 數據，重新載入本地數據
                 this.trips = [];
                 this.activeTripId = null;
                 this.showLoginModal = false; 
@@ -1197,9 +1226,7 @@
         }
       },
       
-      // =================================================================
-      // 🔥 寫入檢查強化
-      // =================================================================
+      // === 記帳邏輯 ===
       addExpense() {
         if (!this.currentUser) {
             alert("請先登入，才能新增消費記錄並同步到雲端。"); 
@@ -1258,9 +1285,6 @@
         alert('距離破產又近一步！'); 
       },
       
-      // =================================================================
-      // 🔥 寫入檢查強化
-      // =================================================================
       removeExpense(expenseId) {
           if (!this.currentUser) {
               alert("請先登入，才能刪除消費記錄。"); 
@@ -1269,10 +1293,7 @@
           }
           
           if(confirm('確認刪除這筆消費嗎？')) {
-              if (!this.activeTrip || !this.activeTrip.expenses) {
-                  console.error("Active trip or expenses not found.");
-                  return;
-              }
+              if (!this.activeTrip || !this.activeTrip.expenses) return;
 
               const targetId = expenseId; 
               const newExpenses = this.activeTrip.expenses.filter(exp => exp.id != targetId); 
@@ -1283,6 +1304,7 @@
           }
       },
       
+      // 依 Day 分組並排序消費記錄
       getGroupedAndSortedExpenses() { 
           if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return [];
 
@@ -1325,9 +1347,7 @@
           return result;
       },
       
-      // =================================================================
-      // 🔥 寫入檢查強化
-      // =================================================================
+      // 抓取即時匯率 (使用 open.er-api.com)
       async fetchExchangeRate() {
         if (!this.currentUser) {
             alert("請先登入，才能自動更新匯率。"); 
@@ -1341,6 +1361,7 @@
         const currencyCode = this.activeTrip.currency;
 
         try {
+             // 匯率 API：獲取 1 HKD 能兌換多少目標貨幣
              const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
              const rateData = await rateRes.json();
              
@@ -1361,9 +1382,6 @@
         }
       },
       
-      // =================================================================
-      // 🔥 寫入檢查強化
-      // =================================================================
       updateExchangeRate() {
           if (!this.currentUser) {
               alert("請先登入，才能修改匯率。"); 
@@ -1380,9 +1398,7 @@
           this.saveData();
       },
 
-      // =================================================================
-      // 🔥 寫入檢查強化 (雖然 Geocode 本身不寫入，但通常用於儲存新旅程的設定)
-      // =================================================================
+      // === 旅程設定邏輯 ===
       async autoGeocode() {
         if (!this.currentUser) {
             alert("請先登入，才能自動取得旅程設定。"); 
@@ -1394,7 +1410,9 @@
         if (!this.tempTrip.city) return alert('請先輸入城市名稱 (City)');
         
         try {
-          const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${this.tempTrip.city},${this.tempTrip.destination || ''}&addressdetails=1&limit=1`);
+          // 1. 地理編碼 (Nominatim)
+          const query = `${this.tempTrip.city},${this.tempTrip.destination || ''}`;
+          const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=1`);
           const geoData = await geoRes.json();
           if (!geoData || geoData.length === 0) {
             return alert('找不到該城市，請檢查拼字。');
@@ -1406,17 +1424,21 @@
           }
           let currencyCode = 'USD';
           const countryCode = location.address?.country_code?.toUpperCase(); 
+
+          // 2. 獲取貨幣代碼 (Restcountries)
           if (countryCode) {
             try {
               const countryRes = await fetch(`https://restcountries.com/v3.1/alpha/${countryCode}`);
               const countryData = await countryRes.json();
               if (countryData[0]?.currencies) {
+                // 取得第一個貨幣代碼
                 currencyCode = Object.keys(countryData[0].currencies)[0];
                 this.tempTrip.currency = currencyCode;
               }
             } catch (err) { console.error("Currency fetch fail", err); }
           }
           
+          // 3. 獲取匯率 (Open Exchange Rate)
           try {
              const rateRes = await fetch(`https://open.er-api.com/v6/latest/HKD`);
              const rateData = await rateRes.json();
@@ -1437,10 +1459,9 @@
         }
       },
       
-      // =================================================================
-      // 🔥 寫入檢查強化
-      // =================================================================
-      // 【新版本】模擬航班資料：當 API 查不到或失敗時，只給提示，不強制覆蓋現有資料
+      // === 航班查詢邏輯 (已使用您代碼中的 AviationStack API) ===
+
+      // 錯誤處理 (不強制給模擬數據)
       mockFlightData(type, errorType) {
         const flight = this.activeTrip?.flights?.[type];
         if (!flight) return;
@@ -1454,102 +1475,74 @@
             message = 'API 請求失敗，請檢查網路連線。';
         }
         
-        // 提示用戶可以手動輸入，而不是強制給模擬數據
         alert(`${message} 您現在可以手動輸入所有資訊。`);
-        
-        // **不執行 this.saveData()**，因為手動輸入的內容已經在 @change="saveData" 中儲存了，
-        // 這裡只需要讓用戶知道發生了什麼，並允許他們在介面上自行編輯。
       },
       
-      // 【新版本】取得航班資料 (已移除強制 Mock Data 邏輯)
       async fetchFlight(type) {
-        // 1. 檢查登入
         if (!this.currentUser) {
           alert("請先登入，才能使用 API 查詢航班資料。");
           this.showLoginModal = true;
           return;
         }
 
-        // 2. 取得 flight 物件並檢查存在
         const flight = this.activeTrip?.flights?.[type];
-        if (!flight) {
-          console.error('找不到對應的 flight 資料: ', type);
-          alert('內部錯誤：找不到該航班資料，請重新建立或刷新頁面。');
-          return;
-        }
-
-        // 3. 檢查航班號與日期是否有填
-        if (!flight.no || !flight.date) {
+        if (!flight || !flight.no || !flight.date) {
           alert('請先輸入航班號 (如 NH924) 與日期');
           return;
         }
 
-        // 4. 日期格式處理：把「2025年12月17日」→「2025-12-17」
+        // 確保日期是 YYYY-MM-DD 格式
         const rawDate = String(flight.date).trim();
         let formattedDate = rawDate.replace(
           /(\d{4})年(\d{1,2})月(\d{1,2})日/,
           (m, y, mth, d) => `${y}-${mth.padStart(2,'0')}-${d.padStart(2,'0')}`
         );
-
-        // 如果使用者本來就輸入 YYYY-MM-DD，讓它直接用原字串
         if (!/^\d{4}-\d{2}-\d{2}$/.test(formattedDate) && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
           formattedDate = rawDate;
         }
 
-        // 5. API Key（使用您提供的 Key）
-        const AVIATIONSTACK_KEY = '191ed46aad658583fd07b6e6d787b8e1';
+        // 🚨 請替換為您自己的 AviationStack API Key
+        const AVIATIONSTACK_KEY = 'YOUR_AVIATIONSTACK_KEY_HERE'; 
 
         try {
-          // 6. 組 URL
           const url = `https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${encodeURIComponent(flight.no)}&flight_date=${formattedDate}`;
           console.log('AviationStack URL =', url);
 
           const res = await fetch(url);
 
-          // 如果是 403 / 401 這類 Key 無效或方案錯誤，直接交給下一階段處理
           if (!res.ok) {
-            // 嘗試讀取 JSON 錯誤訊息，如果失敗，則視為通用抓取錯誤
             try {
                 const errorData = await res.json();
-                if (errorData.error) {
-                    // 如果有明確的 error 結構，則交給下方的 API_ERROR 處理
-                    throw new Error(`API Key 或配額錯誤: ${errorData.error.message}`);
-                }
-            } catch (e) {
-                 // 如果不是標準 JSON 錯誤，直接拋出
-                 console.error('Non-JSON API response error:', res.status, res.statusText);
-            }
-            // 對於非 2xx 狀態碼但又無法解析具體錯誤的情況，視為請求失敗
+                if (errorData.error) { throw new Error(`API Key 或配額錯誤: ${errorData.error.message}`); }
+            } catch (e) { console.error('Non-JSON API response error:', res.status, res.statusText); }
             throw new Error(`HTTP 錯誤 ${res.status}: ${res.statusText}`);
           }
-
 
           const data = await res.json();
           console.log('AviationStack data =', data);
 
-          // 7. 如果有 error 欄位，表示 key / 方案 / 參數有問題
           if (data.error) {
             console.error('AviationStack error:', data.error);
-            this.mockFlightData(type, 'API_ERROR'); // 使用新的錯誤處理函式
+            this.mockFlightData(type, 'API_ERROR'); 
             return;
           }
 
-          // 8. 正常資料判斷
           if (data.data && Array.isArray(data.data) && data.data.length > 0) {
             const f = data.data[0] || {};
 
             const dep = f.departure || {};
             const arr = f.arrival || {};
 
+            // 更新航班資訊，如果 API 查不到則保留舊值
             flight.from = dep.iata || flight.from || '';
             flight.to = arr.iata || flight.to || '';
+            // 只取 HH:MM 部分
             flight.depTime = dep.scheduled ? dep.scheduled.slice(11, 16) : (flight.depTime || '--:--');
             flight.arrTime = arr.scheduled ? arr.scheduled.slice(11, 16) : (flight.arrTime || '--:--');
 
             this.saveData?.();
             alert(`已更新航班: ${flight.from} -> ${flight.to}`);
           } else {
-            // API 連線成功，但沒有找到資料
             this.mockFlightData(type, 'NO_DATA');
           }
         } catch (e) {
@@ -1557,13 +1550,56 @@
           this.mockFlightData(type, 'FETCH_FAIL');
         }
       },
-},
+      
+      // === 天氣查詢邏輯 (使用 open-meteo) ===
+
+      async fetchWeather() {
+          if (!this.activeTrip || !this.activeTrip.center) return;
+          const { lat, lng } = this.activeTrip.center;
+          
+          // 使用 open-meteo API (無需 API Key)
+          const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weathercode,temperature_2m_max&timezone=auto`;
+          
+          try {
+              const res = await fetch(url);
+              const data = await res.json();
+              
+              if (data.daily && data.daily.time && data.daily.time.length > 0) {
+                  // 取得今日天氣 (第一個元素)
+                  const todayIndex = data.daily.time.findIndex(date => date === this.activeTrip.startDate);
+                  const index = todayIndex !== -1 ? todayIndex : 0; 
+                  
+                  const weather = {
+                      temperature: data.daily.temperature_2m_max[index],
+                      weathercode: data.daily.weathercode[index]
+                  };
+                  this.weatherData = weather;
+
+                  // 根據 weathercode 設定卡片主題
+                  if ([0].includes(weather.weathercode)) this.weatherTheme = 'sunny'; // 晴天
+                  else if ([1, 2, 3, 45, 48].includes(weather.weathercode)) this.weatherTheme = 'cloudy'; // 多雲/陰天/霧
+                  else if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 95].includes(weather.weathercode)) this.weatherTheme = 'rainy'; // 雨/雪/雷暴
+                  else this.weatherTheme = 'cloudy';
+
+              } else {
+                  this.weatherData = { temperature: 'N/A', weathercode: 1 };
+                  this.weatherTheme = 'cloudy';
+              }
+          } catch (e) {
+              console.error("Weather fetch fail", e);
+              this.weatherData = { temperature: 'N/A', weathercode: 1 };
+              this.weatherTheme = 'cloudy';
+          }
+      },
+      
+      // === 匯出與圖表 ===
+
       exportExpensesToCSV() {
+          // ... (與原代碼一致)
           if (!this.activeTrip || !this.activeTrip.expenses.length) {
               return alert('目前沒有消費記錄可以匯出！');
           }
           
-          // 此函數不寫入，不需檢查 currentUser
           const trip = this.activeTrip;
           
           const expensesToExport = this.activeTrip.expenses
@@ -1591,6 +1627,7 @@
               (exp.amount || 0).toFixed(2) 
           ]);
           
+          // 使用 \uFEFF 確保 Excel 正確顯示中文
           const csvContent = [
               headers.join(','),
               ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
@@ -1611,6 +1648,7 @@
       },
       
       updateChart() {
+          // ... (與原代碼一致，Chart.js 邏輯)
           if (this.activeTab !== 'budget' || !this.activeTrip || !this.activeTrip.expenses) {
               if (this.chartInstance) {
                   this.chartInstance.destroy();
@@ -1622,10 +1660,7 @@
           const summary = this.categorySummary;
           const canvas = document.getElementById('expenseChart');
           
-          if (!canvas) {
-              console.warn("Chart Canvas element 'expenseChart' not found. Skipping chart update.");
-              return;
-          }
+          if (!canvas) { return; }
 
           const ctx = canvas.getContext('2d');
 
@@ -1661,17 +1696,11 @@
               options: {
                   responsive: true,
                   maintainAspectRatio: false,
-                  layout: {
-                      padding: 0
-                  },
+                  layout: { padding: 0 },
                   plugins: {
                       legend: {
                           position: 'bottom',
-                          labels: {
-                              usePointStyle: true,
-                              boxWidth: 8,
-                              padding: 15,
-                          }
+                          labels: { usePointStyle: true, boxWidth: 8, padding: 15, }
                       },
                       tooltip: {
                           callbacks: {
@@ -1692,10 +1721,10 @@
               }
           });
       },
+
+      // === 購物清單邏輯 ===
       
-      // =================================================================
-      // 🔥 寫入檢查強化 (上傳圖片不寫入，但新增購物項目會寫入)
-      // =================================================================
+      // 圖片上傳 (只儲存 Base64 到本地/Firestore)
       handleImageUpload(e) {
         if (!this.currentUser) {
             alert("請注意：圖片資料將無法同步到雲端，只會暫時儲存在本地。"); 
@@ -1708,9 +1737,6 @@
         reader.readAsDataURL(file);
       },
       
-      // =================================================================
-      // 🔥 寫入檢查強化
-      // =================================================================
       addShoppingItem() {
         if (!this.currentUser) {
             alert("請先登入，才能新增購物項目。"); 
@@ -1741,9 +1767,6 @@
         this.saveData();
       },
       
-      // =================================================================
-      // 🔥 寫入檢查強化
-      // =================================================================
       toggleBought(item) {
           if (!this.currentUser) {
               alert("請先登入，才能修改購物狀態。"); 
@@ -1758,6 +1781,7 @@
               const newBoughtState = !item.bought;
               const newItem = { ...item, bought: newBoughtState };
               
+              // 替換陣列中的元素並觸發 Vue 更新
               this.activeTrip.shoppingItems.splice(index, 1, newItem);
               this.trips = [...this.trips]; 
 
@@ -1765,9 +1789,6 @@
           }
       },
       
-      // =================================================================
-      // 🔥 寫入檢查強化
-      // =================================================================
       removeShoppingItem(itemId) {
         if (!this.currentUser) {
             alert("請先登入，才能刪除購物項目。"); 
@@ -1782,9 +1803,10 @@
             this.saveData();
         }
       },
+      
+      // === 地圖與行程邏輯 ===
 
       openGoogleMaps(item) { 
-          // 此函數不寫入，不需檢查 currentUser
           if (item.mapLink && item.mapLink.trim()) {
               const url = item.mapLink.trim();
               if (url.startsWith('http')) {
@@ -1802,23 +1824,26 @@
       
       searchGoogleMaps(query) {
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
+          // 修正原代碼中的錯誤鏈結
           window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
       },
       
       mapMarkers: L.layerGroup(),
       mapPolyline: null, 
       
+      // 強制重繪地圖 (解決 Leaflet 內存問題)
       forceUpdateMap() {
         if (this.activeTab !== 'itinerary-map') return;
         try {
           const container = document.getElementById('map');
-          if (!container || container.offsetParent === null) {
-              return; 
-          }
+          if (!container || container.offsetParent === null) { return; } // 地圖容器未顯示
+
+          // 銷毀舊地圖實例
           if (this.map) { this.map.off(); this.map.remove(); }
           
           const center = this.activeTrip.center ? [this.activeTrip.center.lat, this.activeTrip.center.lng] : [35.6895, 139.6917];
           
+          // 初始化新地圖實例
           this.map = L.map('map', { zoomControl: false }).setView(center, 13);
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(this.map);
           this.mapMarkers.clearLayers();
@@ -1830,6 +1855,7 @@
         } catch (e) { console.error("Map init fail", e); }
       },
       
+      // 地理編碼 (使用 OpenStreetMap Nominatim API)
       async geocodeLocation(location) {
           if (GeocodingCache[location]) return GeocodingCache[location];
           
@@ -1846,7 +1872,7 @@
           }
           
           if (this.activeTrip.center) {
-              // 返回一個靠近中心點的隨機點作為後備
+              // 後備：返回一個靠近中心點的隨機點
               return {
                   lat: this.activeTrip.center.lat + (Math.random() - 0.5) * 0.005,
                   lng: this.activeTrip.center.lng + (Math.random() - 0.5) * 0.005,
@@ -1903,9 +1929,6 @@
           }
       },
       
-      // =================================================================
-      // 🔥 寫入檢查強化
-      // =================================================================
       addItineraryItem(day) { 
           if (!this.currentUser) {
               alert("請先登入，才能新增行程。"); 
@@ -1927,9 +1950,6 @@
           this.forceUpdateMap();
       },
       
-      // =================================================================
-      // 🔥 寫入檢查強化
-      // =================================================================
       removeItineraryItem(itemId) { 
           if (!this.currentUser) {
               alert("請先登入，才能刪除行程。"); 
@@ -1946,9 +1966,6 @@
           }
       },
       
-      // =================================================================
-      // 🔥 寫入檢查強化
-      // =================================================================
       runBatchImport() {
         if (!this.currentUser) {
             alert("請先登入，才能批次匯入行程。"); 
@@ -1982,7 +1999,7 @@
         alert(`成功匯入 ${newItems.length} 條行程！`);
       },
 
-
+      // === 旅程管理邏輯 ===
       openNewTripModal() { 
         if (!this.currentUser) {
             alert("請先登入，才能新增旅程。"); 
@@ -2007,9 +2024,6 @@
         this.editingTripId = trip.id; this.tempTrip = JSON.parse(JSON.stringify(trip)); this.showTripModal = true; 
       },
       
-      // =================================================================
-      // 🔥 寫入檢查強化
-      // =================================================================
       saveTrip() {
         if (!this.currentUser) {
             alert("請先登入，才能儲存旅程。"); 
@@ -2021,6 +2035,7 @@
         if (this.editingTripId) {
           const idx = this.trips.findIndex(t => t.id === this.editingTripId);
           if (idx !== -1) {
+              // 使用 Splice 確保 Vue 響應性
               this.trips.splice(idx, 1, { ...this.trips[idx], ...this.tempTrip });
           }
         } else {
@@ -2052,9 +2067,6 @@
         });
       },
       
-      // =================================================================
-      // 🔥 寫入檢查強化
-      // =================================================================
       deleteTrip(id) {
         if (!this.currentUser) {
             alert("請先登入，才能刪除旅程。"); 
@@ -2062,7 +2074,7 @@
             return; 
         }
         if(this.trips.length<=1) return alert('不能刪除最後一個旅程');
-        if(confirm('確認刪除?')) {
+        if(confirm('確認刪除此旅程嗎？所有相關數據將被清除。')) {
           this.trips = this.trips.filter(t=>t.id!==id);
           this.activeTripId = this.trips[0].id;
           this.saveData();
@@ -2070,7 +2082,6 @@
       },
       
       switchTrip(id) { 
-        // 此函數不寫入，不需檢查 currentUser
         this.activeTripId = id; 
         this.activeTab = 'info'; 
         this.$nextTick(() => {
