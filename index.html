@@ -35,7 +35,7 @@
   
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script> 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -1512,76 +1512,89 @@
       },
 
       updateChart() {
-    if (this.activeTab !== 'budget') return;
-    if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return;
-    
-    const summary = this.categorySummary;
-    const ctx = document.getElementById('expenseChart');
-          
-          if (!ctx) return;
+  // 只在記帳頁、而且有 activeTrip 時先畫
+  if (this.activeTab !== 'budget') return;
+  if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) {
+    // 如果冇任何支出，又已經有 chart，就清空
+    if (this.chartInstance) {
+      this.chartInstance.data.labels = [];
+      this.chartInstance.data.datasets[0].data = [];
+      this.chartInstance.update();
+    }
+    return;
+  }
 
-          const categoryColors = {
-              '飲食': '#FFD9EC', 
-              '購物': '#C7C7E2', 
-              '交通': '#97CBFF',
-              '娛樂': '#A4D8B9', 
-              '其他': '#F5E6CC',
-              '旅行前': '#8A2BE2', 
-          };
-          
-          const backgroundColors = summary.labels.map(label => 
-              categoryColors[label] || '#97CBFF'
-          );
+  const summary = this.categorySummary;
+  const canvas = document.getElementById('expenseChart');
+  if (!canvas) return; // DOM 未 render 完就唔畫
 
+  const ctx = canvas.getContext('2d');
 
-          const chartData = {
-              labels: summary.labels,
-              datasets: [{
-                  data: summary.data,
-                  backgroundColor: backgroundColors,
-                  hoverOffset: 10,
-                  borderWidth: 0,
-              }]
-          };
+  const categoryColors = {
+    '飲食': '#FFD9EC',
+    '購物': '#C7C7E2',
+    '交通': '#97CBFF',
+    '娛樂': '#A4D8B9',
+    '其他': '#F5E6CC',
+    '旅行前': '#8A2BE2',
+  };
 
-          if (this.chartInstance) {
-              this.chartInstance.data = chartData;
-              this.chartInstance.update();
-          } else {
-              this.chartInstance = new Chart(ctx, {
-                  type: 'doughnut',
-                  data: chartData,
-                  options: {
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                          legend: {
-                              position: 'bottom',
-                              labels: {
-                                  usePointStyle: true,
-                                  boxWidth: 8,
-                                  padding: 15,
-                              }
-                          },
-                          tooltip: {
-                              callbacks: {
-                                  label: (context) => {
-                                      let label = context.label || '';
-                                      if (label) { label += ': '; }
-                                      if (context.parsed !== null) {
-                                          const total = summary.data.reduce((a, b) => a + b, 0);
-                                          const percentage = (context.parsed * 100 / total).toFixed(1);
-                                          label += `${context.parsed.toFixed(2)} HKD (${percentage}%)`;
-                                      }
-                                      return label;
-                                  }
-                              }
-                          }
-                      }
-                  }
-              });
-          }
+  const backgroundColors = summary.labels.map(label =>
+    categoryColors[label] || '#97CBFF'
+  );
+
+  const total = summary.data.reduce((a, b) => a + b, 0) || 1;
+
+  if (!this.chartInstance) {
+    // 第一次建立 chart
+    this.chartInstance = new Chart(ctx, {
+      type: 'doughnut',
+       {
+        labels: summary.labels,
+        datasets: [{
+           summary.data,
+          backgroundColor: backgroundColors,
+          hoverOffset: 10,
+          borderWidth: 0,
+        }]
       },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              usePointStyle: true,
+              boxWidth: 8,
+              padding: 15,
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                let label = context.label || '';
+                if (label) label += ': ';
+                if (context.parsed !== null) {
+                  const value = context.parsed;
+                  const percentage = (value * 100 / total).toFixed(1);
+                  label += `${value.toFixed(2)} HKD (${percentage}%)`;
+                }
+                return label;
+              }
+            }
+          }
+        }
+      }
+    });
+  } else {
+    // 之後只更新資料
+    this.chartInstance.data.labels = summary.labels;
+    this.chartInstance.data.datasets[0].data = summary.data;
+    this.chartInstance.data.datasets[0].backgroundColor = backgroundColors;
+    this.chartInstance.update();
+  }
+},
       
       handleImageUpload(e) {
         if (!this.currentUser) {
