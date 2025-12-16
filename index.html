@@ -993,7 +993,7 @@
           this.activeDay = day;
       },
       
-      // 🔥 核心修復和安全檢查點：saveData 函數 (優化了 Vue 響應式觸發)
+      // 🔥 核心修復和安全檢查點：saveData 函數
       async saveData() { 
           // 1. 本地儲存 (Local Storage) - 始終執行
           localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
@@ -1197,15 +1197,17 @@
         }
       },
       
-      // 🔥 核心修復點 1: addExpense 移除 $forceUpdate()，依賴陣列替換
+      // =================================================================
+      // 🔥 寫入檢查強化
+      // =================================================================
       addExpense() {
+        if (!this.currentUser) {
+            alert("請先登入，才能新增消費記錄並同步到雲端。"); 
+            this.showLoginModal = true;
+            return; 
+        }
         if (!this.activeTrip) return alert('請先創建或選擇一個旅程。');
         
-        if (!this.currentUser) {
-            alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
-            this.showLoginModal = true;
-        }
-
         const rawName = this.newExpense.name;
         if (rawName === null || rawName === undefined || rawName.trim() === '') {
             return alert('請輸入消費項目名稱。'); 
@@ -1240,10 +1242,8 @@
         };
 
         if (!this.activeTrip.expenses) this.activeTrip.expenses = [];
-        // 使用新陣列替換，確保 Vue 響應式更新
         this.activeTrip.expenses = [newRecord, ...this.activeTrip.expenses]; 
         
-        // 重設表單
         this.newExpense = { 
             name:'', 
             localAmount:null, 
@@ -1258,11 +1258,14 @@
         alert('距離破產又近一步！'); 
       },
       
-      // 🔥 核心修復點 2: removeExpense 移除 $forceUpdate()，依賴陣列替換
+      // =================================================================
+      // 🔥 寫入檢查強化
+      // =================================================================
       removeExpense(expenseId) {
           if (!this.currentUser) {
-              alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
+              alert("請先登入，才能刪除消費記錄。"); 
               this.showLoginModal = true;
+              return; 
           }
           
           if(confirm('確認刪除這筆消費嗎？')) {
@@ -1273,7 +1276,6 @@
 
               const targetId = expenseId; 
               const newExpenses = this.activeTrip.expenses.filter(exp => exp.id != targetId); 
-              // 使用新陣列替換，確保 Vue 響應式更新
               this.activeTrip.expenses = newExpenses;
               
               this.saveData(); 
@@ -1281,7 +1283,6 @@
           }
       },
       
-      // 🔥 核心修復點 3: 將複雜的列表生成邏輯移到 Method (已在原代碼中)
       getGroupedAndSortedExpenses() { 
           if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return [];
 
@@ -1324,7 +1325,15 @@
           return result;
       },
       
+      // =================================================================
+      // 🔥 寫入檢查強化
+      // =================================================================
       async fetchExchangeRate() {
+        if (!this.currentUser) {
+            alert("請先登入，才能自動更新匯率。"); 
+            this.showLoginModal = true;
+            return; 
+        }
         if (!this.activeTrip || !this.activeTrip.currency || this.activeTrip.currency === 'HKD') {
             return alert('請先設定目標國家貨幣 (Currency)！');
         }
@@ -1352,7 +1361,15 @@
         }
       },
       
+      // =================================================================
+      // 🔥 寫入檢查強化
+      // =================================================================
       updateExchangeRate() {
+          if (!this.currentUser) {
+              alert("請先登入，才能修改匯率。"); 
+              this.showLoginModal = true;
+              return; 
+          }
           const rate = Number(this.tempExchangeRate);
           if (isNaN(rate) || rate <= 0) {
               alert('請輸入有效的數字 (大於 0)');
@@ -1363,7 +1380,16 @@
           this.saveData();
       },
 
+      // =================================================================
+      // 🔥 寫入檢查強化 (雖然 Geocode 本身不寫入，但通常用於儲存新旅程的設定)
+      // =================================================================
       async autoGeocode() {
+        if (!this.currentUser) {
+            alert("請先登入，才能自動取得旅程設定。"); 
+            this.showLoginModal = true;
+            return; 
+        }
+
         if (!this.tempTrip.title) return alert('請先輸入旅程標題 (Title)');
         if (!this.tempTrip.city) return alert('請先輸入城市名稱 (City)');
         
@@ -1410,9 +1436,13 @@
           alert('自動取得失敗，請稍後再試。');
         }
       },
+      
+      // =================================================================
+      // 🔥 寫入檢查強化
+      // =================================================================
       async fetchFlight(type) {
         if (!this.currentUser) {
-            alert("請先登入以同步航班資料。");
+            alert("請先登入，才能使用 API 查詢航班資料。");
             this.showLoginModal = true;
             return;
         }
@@ -1478,6 +1508,7 @@
               return alert('目前沒有消費記錄可以匯出！');
           }
           
+          // 此函數不寫入，不需檢查 currentUser
           const trip = this.activeTrip;
           
           const expensesToExport = this.activeTrip.expenses
@@ -1524,13 +1555,8 @@
           alert(`「${fileName}」匯出成功！`);
       },
       
-      // =================================================================
-      // 🔥 已修復代碼：強化 updateChart 函數的穩定性 (Chart.js 錯誤)
-      // =================================================================
       updateChart() {
-          // 1. 安全檢查：如果不在「記帳」頁面，或沒有旅行數據，直接返回。
           if (this.activeTab !== 'budget' || !this.activeTrip || !this.activeTrip.expenses) {
-              // 確保在不必要時銷毀實例
               if (this.chartInstance) {
                   this.chartInstance.destroy();
                   this.chartInstance = null;
@@ -1541,7 +1567,6 @@
           const summary = this.categorySummary;
           const canvas = document.getElementById('expenseChart');
           
-          // 2. 關鍵安全檢查：如果 canvas 元素不存在，則不執行
           if (!canvas) {
               console.warn("Chart Canvas element 'expenseChart' not found. Skipping chart update.");
               return;
@@ -1562,13 +1587,11 @@
               categoryColors[label] || '#97CBFF'
           );
 
-          // 3. 檢查並銷毀舊的圖表實例 (修復 TypeError: Cannot set properties of undefined)
           if (this.chartInstance) {
               this.chartInstance.destroy();
               this.chartInstance = null; 
           }
 
-          // 4. 重新初始化圖表
           this.chartInstance = new Chart(ctx, {
               type: 'doughnut',
               data: { 
@@ -1614,13 +1637,13 @@
               }
           });
       },
+      
       // =================================================================
-
-
+      // 🔥 寫入檢查強化 (上傳圖片不寫入，但新增購物項目會寫入)
+      // =================================================================
       handleImageUpload(e) {
         if (!this.currentUser) {
             alert("請注意：圖片資料將無法同步到雲端，只會暫時儲存在本地。"); 
-            this.showLoginModal = true;
         }
         const file = e.target.files[0];
         if (!file) return;
@@ -1629,10 +1652,15 @@
         reader.onload = (evt) => { this.newShoppingItem.image = evt.target.result; };
         reader.readAsDataURL(file);
       },
+      
+      // =================================================================
+      // 🔥 寫入檢查強化
+      // =================================================================
       addShoppingItem() {
         if (!this.currentUser) {
-            alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
+            alert("請先登入，才能新增購物項目。"); 
             this.showLoginModal = true;
+            return; 
         }
 
         if(!this.newShoppingItem.name) return alert('請輸入品名');
@@ -1658,10 +1686,14 @@
         this.saveData();
       },
       
+      // =================================================================
+      // 🔥 寫入檢查強化
+      // =================================================================
       toggleBought(item) {
           if (!this.currentUser) {
-              alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
+              alert("請先登入，才能修改購物狀態。"); 
               this.showLoginModal = true;
+              return; 
           }
           if (!item || !this.activeTrip) return;
 
@@ -1671,19 +1703,21 @@
               const newBoughtState = !item.bought;
               const newItem = { ...item, bought: newBoughtState };
               
-              // 使用 splice 確保響應式更新
               this.activeTrip.shoppingItems.splice(index, 1, newItem);
-              
-              // 為了確保 Vue 3 的響應式更新，雖然 Vue 3 已經優化，但確保頂層物件被觸摸是個好習慣
               this.trips = [...this.trips]; 
 
               this.saveData(); 
           }
       },
+      
+      // =================================================================
+      // 🔥 寫入檢查強化
+      // =================================================================
       removeShoppingItem(itemId) {
         if (!this.currentUser) {
-            alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
+            alert("請先登入，才能刪除購物項目。"); 
             this.showLoginModal = true;
+            return; 
         }
         if(confirm('確認刪除此購物項目嗎？')) {
             if (!this.activeTrip.shoppingItems) this.activeTrip.shoppingItems = [];
@@ -1695,6 +1729,7 @@
       },
 
       openGoogleMaps(item) { 
+          // 此函數不寫入，不需檢查 currentUser
           if (item.mapLink && item.mapLink.trim()) {
               const url = item.mapLink.trim();
               if (url.startsWith('http')) {
@@ -1710,16 +1745,11 @@
           }
       },
       
-      // =================================================================
-      // 🔥 已修復代碼：修正 Google Maps 網址語法錯誤 (Uncaught SyntaxError)
-      // =================================================================
       searchGoogleMaps(query) {
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
-          // 修正為正確的 JavaScript 模板字串語法 (使用 ${...}) 和標準 Google Maps 搜尋 URL
           window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
       },
-      // =================================================================
-
+      
       mapMarkers: L.layerGroup(),
       mapPolyline: null, 
       
@@ -1734,7 +1764,6 @@
           
           const center = this.activeTrip.center ? [this.activeTrip.center.lat, this.activeTrip.center.lng] : [35.6895, 139.6917];
           
-          // 使用 L.map() 重新初始化地圖
           this.map = L.map('map', { zoomControl: false }).setView(center, 13);
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(this.map);
           this.mapMarkers.clearLayers();
@@ -1819,10 +1848,14 @@
           }
       },
       
+      // =================================================================
+      // 🔥 寫入檢查強化
+      // =================================================================
       addItineraryItem(day) { 
           if (!this.currentUser) {
-              alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
+              alert("請先登入，才能新增行程。"); 
               this.showLoginModal = true;
+              return; 
           }
           const newItem = { 
               id: Date.now() + Math.random(), 
@@ -1833,22 +1866,24 @@
               mapLink: '' 
           };
           if (!this.activeTrip.itinerary) this.activeTrip.itinerary = [];
-          // 使用新陣列替換，確保 Vue 響應式更新
           this.activeTrip.itinerary = [...this.activeTrip.itinerary, newItem];
           
           this.saveData(); 
           this.forceUpdateMap();
       },
       
+      // =================================================================
+      // 🔥 寫入檢查強化
+      // =================================================================
       removeItineraryItem(itemId) { 
           if (!this.currentUser) {
-              alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
+              alert("請先登入，才能刪除行程。"); 
               this.showLoginModal = true;
+              return; 
           }
           if(confirm('確認刪除此行程項目嗎？')) {
               if (!this.activeTrip.itinerary) this.activeTrip.itinerary = [];
               const newItinerary = this.activeTrip.itinerary.filter(item => item.id !== itemId);
-              // 使用新陣列替換，確保 Vue 響應式更新
               this.activeTrip.itinerary = newItinerary;
               
               this.saveData(); 
@@ -1856,10 +1891,14 @@
           }
       },
       
+      // =================================================================
+      // 🔥 寫入檢查強化
+      // =================================================================
       runBatchImport() {
         if (!this.currentUser) {
-            alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
+            alert("請先登入，才能批次匯入行程。"); 
             this.showLoginModal = true;
+            return; 
         }
 
         if(!this.batchImportText) return alert('請貼上內容');
@@ -1891,8 +1930,9 @@
 
       openNewTripModal() { 
         if (!this.currentUser) {
-            alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
+            alert("請先登入，才能新增旅程。"); 
             this.showLoginModal = true;
+            return; 
         }
         this.editingTripId = null; 
         this.tempTrip = {
@@ -1905,22 +1945,27 @@
       },
       openEditTripModal(trip) { 
         if (!this.currentUser) {
-            alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
+            alert("請先登入，才能編輯旅程。"); 
             this.showLoginModal = true;
+            return; 
         }
         this.editingTripId = trip.id; this.tempTrip = JSON.parse(JSON.stringify(trip)); this.showTripModal = true; 
       },
+      
+      // =================================================================
+      // 🔥 寫入檢查強化
+      // =================================================================
       saveTrip() {
         if (!this.currentUser) {
-            alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
+            alert("請先登入，才能儲存旅程。"); 
             this.showLoginModal = true;
+            return;
         }
 
         if (!this.tempTrip.title) return;
         if (this.editingTripId) {
           const idx = this.trips.findIndex(t => t.id === this.editingTripId);
           if (idx !== -1) {
-              // 確保 Vue 響應式更新
               this.trips.splice(idx, 1, { ...this.trips[idx], ...this.tempTrip });
           }
         } else {
@@ -1951,10 +1996,15 @@
             this.updateChart();
         });
       },
+      
+      // =================================================================
+      // 🔥 寫入檢查強化
+      // =================================================================
       deleteTrip(id) {
         if (!this.currentUser) {
-            alert("您目前使用本地模式，請先登入以同步記錄到雲端。"); 
+            alert("請先登入，才能刪除旅程。"); 
             this.showLoginModal = true;
+            return; 
         }
         if(this.trips.length<=1) return alert('不能刪除最後一個旅程');
         if(confirm('確認刪除?')) {
@@ -1963,7 +2013,9 @@
           this.saveData();
         }
       },
+      
       switchTrip(id) { 
+        // 此函數不寫入，不需檢查 currentUser
         this.activeTripId = id; 
         this.activeTab = 'info'; 
         this.$nextTick(() => {
