@@ -1512,10 +1512,11 @@
       },
 
       updateChart() {
-          if (this.activeTab !== 'budget') return;
-          
-          const summary = this.categorySummary;
-          const ctx = document.getElementById('expenseChart');
+    if (this.activeTab !== 'budget') return;
+    if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) return;
+    
+    const summary = this.categorySummary;
+    const ctx = document.getElementById('expenseChart');
           
           if (!ctx) return;
 
