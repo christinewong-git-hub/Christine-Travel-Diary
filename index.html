@@ -1592,43 +1592,6 @@
           this.chartInstance.update();
         }
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              usePointStyle: true,
-              boxWidth: 8,
-              padding: 15,
-            }
-          },
-          tooltip: {
-            callbacks: {
-              label: (context) => {
-                let label = context.label || '';
-                if (label) label += ': ';
-                if (context.parsed !== null) {
-                  const value = context.parsed;
-                  const percentage = (value * 100 / total).toFixed(1);
-                  label += `${value.toFixed(2)} HKD (${percentage}%)`;
-                }
-                return label;
-              }
-            }
-          }
-        }
-      }
-    });
-  } else {
-    // 之後只更新資料
-    this.chartInstance.data.labels = summary.labels;
-    this.chartInstance.data.datasets[0].data = summary.data;
-    this.chartInstance.data.datasets[0].backgroundColor = backgroundColors;
-    this.chartInstance.update();
-  }
-},
       
       handleImageUpload(e) {
         if (!this.currentUser) {
