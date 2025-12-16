@@ -1440,7 +1440,7 @@
       // =================================================================
       // 🔥 寫入檢查強化
       // =================================================================
-      async fetchFlight(type) {
+            async fetchFlight(type) {
         if (!this.currentUser) {
             alert("請先登入，才能使用 API 查詢航班資料。");
             this.showLoginModal = true;
@@ -1450,8 +1450,10 @@
         const flight = this.activeTrip.flights[type];
         if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
         // <<<<<<<<<<<< 請將此處替換為您自己的 AviationStack API Key >>>>>>>>>>>>
-        const AVIATIONSTACK_KEY = '191ed46aad658583fd07b6e6d787b8e1'; 
-        if(AVIATIONSTACK_KEY === '191ed4xxxxxxxxxx') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
+        const AVIATIONSTACK_KEY = '191ed46aadxxxxx'; 
+        // --------------------------------------------------------------------------
+        // 🌟 原本阻止程式碼繼續執行的判斷句已被移除
+        // --------------------------------------------------------------------------
         
         try {
           const res = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}&flight_date=${flight.date}`);
@@ -1474,15 +1476,7 @@
           this.mockFlightData(type);
         }
       },
-      mockFlightData(type) {
-          const flight = this.activeTrip.flights[type];
-          const isOutbound = type === 'outbound';
-          flight.from = isOutbound ? 'HKG' : 'NRT';
-          flight.to = isOutbound ? 'NRT' : 'HKG';
-          flight.depTime = isOutbound ? '09:00' : '14:30';
-          flight.arrTime = isOutbound ? '14:30' : '20:30';
-          this.saveData();
-      },
+
       async fetchWeather() {
         if(!this.activeTrip?.center) return;
         try {
