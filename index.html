@@ -1450,8 +1450,8 @@
         const flight = this.activeTrip.flights[type];
         if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
         // <<<<<<<<<<<< 請將此處替換為您自己的 AviationStack API Key >>>>>>>>>>>>
-        const AVIATIONSTACK_KEY = '5b729556e3ef80e18916fcecbcfd81ba'; 
-        if(AVIATIONSTACK_KEY === '5b7295xxxxxxxxxx') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
+        const AVIATIONSTACK_KEY = '191ed46aad658583fd07b6e6d787b8e1'; 
+        if(AVIATIONSTACK_KEY === '191ed4xxxxxxxxxx') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
         
         try {
           const res = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}&flight_date=${flight.date}`);
