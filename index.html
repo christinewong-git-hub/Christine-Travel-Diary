@@ -40,6 +40,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
   <style>
     body {
       background: linear-gradient(135deg, #C4E1FF 0%, #D2E9FF 33%, #DDDDFF 66%, #FFECF5 100%);
@@ -941,7 +942,7 @@
       // 🔥 核心配置點：請確認此處的金鑰與您 Google Cloud Console 的 **瀏覽器金鑰** 完全一致
       // ----------------------------------------------------------------------
       const firebaseConfig = {
-        // 使用您提供的 API Key
+        // <<<<<<<<<<<< 請將此處替換為您自己的 API Key >>>>>>>>>>>>
         apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM", 
         authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
         projectId: "my-travel-diary-1dbc0",
@@ -1254,7 +1255,6 @@
         this.inputCurrency = this.activeTrip.currency; 
         
         this.saveData(); 
-        // 移除 this.$forceUpdate();
         alert('距離破產又近一步！'); 
       },
       
@@ -1277,7 +1277,6 @@
               this.activeTrip.expenses = newExpenses;
               
               this.saveData(); 
-              // 移除 this.$forceUpdate();
               alert('消費記錄已刪除並同步。');
           }
       },
@@ -1420,7 +1419,8 @@
 
         const flight = this.activeTrip.flights[type];
         if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
-        const AVIATIONSTACK_KEY = '5bxxxxxxxxx'; // 您的 API Key
+        // <<<<<<<<<<<< 請將此處替換為您自己的 AviationStack API Key >>>>>>>>>>>>
+        const AVIATIONSTACK_KEY = '5bxxxxxxxxx'; 
         if(AVIATIONSTACK_KEY === '5bxxxxxxxxx') return alert('請將 AVIATIONSTACK_KEY 替換為您的有效 Key，目前使用模擬數據！');
         
         try {
@@ -1525,7 +1525,7 @@
       },
       
       // =================================================================
-      // 🔥 已替換代碼：修復建議 B - 強化 updateChart 函數的穩定性 (Chart.js 錯誤)
+      // 🔥 已修復代碼：強化 updateChart 函數的穩定性 (Chart.js 錯誤)
       // =================================================================
       updateChart() {
           // 1. 安全檢查：如果不在「記帳」頁面，或沒有旅行數據，直接返回。
@@ -1562,7 +1562,7 @@
               categoryColors[label] || '#97CBFF'
           );
 
-          // 3. 檢查並銷毀舊的圖表實例
+          // 3. 檢查並銷毀舊的圖表實例 (修復 TypeError: Cannot set properties of undefined)
           if (this.chartInstance) {
               this.chartInstance.destroy();
               this.chartInstance = null; 
@@ -1711,11 +1711,11 @@
       },
       
       // =================================================================
-      // 🔥 已替換代碼：修復建議 A - 修正 Google Maps 網址語法錯誤
+      // 🔥 已修復代碼：修正 Google Maps 網址語法錯誤 (Uncaught SyntaxError)
       // =================================================================
       searchGoogleMaps(query) {
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
-          // 修正為正確的 JavaScript 模板字串語法：使用 `${}` 來插值變數
+          // 修正為正確的 JavaScript 模板字串語法 (使用 ${...}) 和標準 Google Maps 搜尋 URL
           window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
       },
       // =================================================================
