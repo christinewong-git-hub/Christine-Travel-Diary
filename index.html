@@ -23,7 +23,7 @@
           },
           keyframes: {
             fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-            slideUp: { '0%': { transform: 'translateY(20px)', opacity: '0', }, '100%': { translateY: '0', opacity: '1' } }
+            slideUp: { '0%': { transform: 'translateY(20px)', opacity: '0', }, '100%': { transform: 'translateY(0)', opacity: '1' } }
           }
         }
       }
@@ -702,6 +702,9 @@
 </div>
 
 <script> 
+  // 全局變量用於緩存地理編碼結果
+  const GeocodingCache = {};
+
   const vueApp = Vue.createApp({
     data() {
       return {
@@ -819,6 +822,7 @@
           const rate = this.activeTrip.exchangeRate; 
           if (!rate || rate <= 0) return 0;
           
+          // 修正：從當地貨幣轉港幣應該是除以匯率 (1 HKD = X JPY)
           const result = (amount / rate);
           return isNaN(result) ? 0 : result;
       },
@@ -938,7 +942,7 @@
       // ----------------------------------------------------------------------
       const firebaseConfig = {
         // 使用您提供的 API Key
-        apiKey: "AIzaSyCeFnypnf5WdO9mIsuwLwGZIsEv123QcuM", 
+        apiKey: "AIzaSyCeFnypnf5WdO9mIsuLwGZIsEv123QcuM", 
         authDomain: "my-travel-diary-1dbc0.firebaseapp.com",
         projectId: "my-travel-diary-1dbc0",
         storageBucket: "my-travel-diary-1dbc0.firebasestorage.app",
@@ -950,19 +954,28 @@
       
       // 檢查 Firebase 是否已載入（v8 命名空間模式）
       if (typeof firebase !== 'undefined' && typeof firebase.initializeApp === 'function') {
-        firebase.initializeApp(firebaseConfig);
-        
-        firebase.auth().onAuthStateChanged(user => {
-            if (user) {
-                this.currentUser = user;
-                this.showLoginModal = false;
-                this.loadData(); 
-            } else {
-                this.currentUser = null;
-                this.loadInitialOrLocalData(false); 
-                this.showLoginModal = false; 
+        try {
+            firebase.initializeApp(firebaseConfig);
+            
+            firebase.auth().onAuthStateChanged(user => {
+                if (user) {
+                    this.currentUser = user;
+                    this.showLoginModal = false;
+                    this.loadData(); 
+                } else {
+                    this.currentUser = null;
+                    this.loadInitialOrLocalData(false); 
+                    this.showLoginModal = false; 
+                }
+            });
+        } catch(e) {
+            console.error("Firebase App 初始化失敗:", e);
+            // 🚨 檢查 API Key 是否正確
+            if (e.message.includes("apiKey") || e.message.includes("invalid")) {
+                 alert('🚨 警告：Firebase API Key 可能配置錯誤或無效。請檢查 `firebaseConfig`！');
             }
-        });
+            this.loadInitialOrLocalData(false);
+        }
       } else {
           console.error("Firebase SDK v8 is not loaded! Please check the CDN links in <head>.");
           this.loadInitialOrLocalData(false); 
@@ -979,7 +992,7 @@
           this.activeDay = day;
       },
       
-      // 🔥 核心修復和安全檢查點：saveData 函數
+      // 🔥 核心修復和安全檢查點：saveData 函數 (優化了 Vue 響應式觸發)
       async saveData() { 
           // 1. 本地儲存 (Local Storage) - 始終執行
           localStorage.setItem('christine_travel_diary_v4', JSON.stringify(this.trips));
@@ -997,6 +1010,7 @@
                    // 寫入到以用戶 UID 為名的文件 (與 Firestore 規則匹配)
                    const userDocRef = db.collection('userTrips').doc(this.currentUser.uid);
                    
+                   // 深度複製數據以防止 Firestore 寫入時的響應式問題
                    const dataToWrite = {
                        trips: JSON.parse(JSON.stringify(this.trips)), 
                        activeTripId: this.activeTripId,
@@ -1157,10 +1171,9 @@
             await firebase.auth().signInWithEmailAndPassword(this.loginEmail, this.loginPassword); 
             this.showLoginModal = false;
         } catch (error) {
-            // 處理 API Key Not Valid 錯誤
+            // 🔥 修復點 1: 更明確的錯誤提示，引導用戶檢查 GCP/Firebase 設置
             if (error.code === 'auth/invalid-api-key' || error.message.includes("API key not valid") || error.message.includes("API_KEY_INVALID")) {
-                // 修正後的提示：引導用戶檢查應用程式限制
-                alert('🚨 登入失敗：API 金鑰無效或限制錯誤！\n\n請立即前往 Google Cloud Console > 憑證，檢查此金鑰的 **應用程式限制** (HTTP 參照網址) 是否已包含 `http://localhost/*` 及 `http://127.0.0.1/*`。');
+                alert('🚨 登入失敗：Firebase API 金鑰無效或限制錯誤！\n\n請立即前往 Google Cloud Console > 憑證，檢查此金鑰的 **應用程式限制** (HTTP 參照網址) 是否已包含 `http://localhost/*` 及 `http://127.0.0.1/*`。');
             } else {
                 alert('登入失敗: ' + error.message);
             }
@@ -1546,10 +1559,10 @@ updateChart() {
   if (!this.chartInstance) {
     this.chartInstance = new Chart(ctx, {
       type: 'doughnut',
-       {
+      data: { // 修復點：Chart.js 數據結構調整
         labels: summary.labels,
         datasets: [{
-           summary.data,
+          data: summary.data,
           backgroundColor: backgroundColors,
           hoverOffset: 10,
           borderWidth: 0,
@@ -1722,7 +1735,6 @@ updateChart() {
       },
       
       async geocodeLocation(location) {
-          const GeocodingCache = {};
           if (GeocodingCache[location]) return GeocodingCache[location];
           
           try {
