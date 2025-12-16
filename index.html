@@ -1440,7 +1440,7 @@
       // =================================================================
       // 🔥 寫入檢查強化
       // =================================================================
-            async fetchFlight(type) {
+      async fetchFlight(type) {
         if (!this.currentUser) {
             alert("請先登入，才能使用 API 查詢航班資料。");
             this.showLoginModal = true;
@@ -1449,15 +1449,28 @@
 
         const flight = this.activeTrip.flights[type];
         if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
+        
+        // ★★★ 程式碼變動開始：日期格式處理 (YYYY-MM-DD) ★★★
+        // Original flight.date format might be "2025年12月17日". 
+        // We need to convert it to "2025-12-17" for AviationStack API.
+        const apiDate = flight.date
+            .replace(/[年月]/g, '-')
+            .replace(/[日]/g, '')
+            .replace(/--+/g, '-'); // Prevent multiple hyphens 
+        
+        // Remove trailing hyphen if present
+        const formattedDate = apiDate.endsWith('-') ? apiDate.slice(0, -1) : apiDate;
+        // ★★★ 程式碼變動結束：日期格式處理 ★★★
+
         // <<<<<<<<<<<< 請將此處替換為您自己的 AviationStack API Key >>>>>>>>>>>>
         const AVIATIONSTACK_KEY = '191ed46aad658583fd07b6e6d787b8e1'; 
-        // --------------------------------------------------------------------------
-        // 🌟 原本阻止程式碼繼續執行的判斷句已被移除
-        // --------------------------------------------------------------------------
         
         try {
-          const res = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}&flight_date=${flight.date}`);
+          // Use the formattedDate in the API call
+          const url = `https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}&flight_date=${formattedDate}`;
+          const res = await fetch(url);
           const data = await res.json();
+          
           if (data.data && data.data.length > 0) {
             const f = data.data[0]; 
             flight.from = f.departure.iata;
@@ -1467,16 +1480,17 @@
             this.saveData();
             alert(`已更新航班: ${flight.from} -> ${flight.to}`);
           } else {
-            alert('未找到航班資料，請確認 API Key、航班號與日期。使用模擬數據。');
+            // This alert usually means valid Key but no flight data found.
+            alert('未找到航班資料，請確認 API Key、**航班號是否為 IATA 格式 (例如 NH924)** 與日期。使用模擬數據。');
              this.mockFlightData(type);
           }
         } catch(e) {
           console.error(e);
+          // This alert usually means invalid Key or network failure.
           alert('API 請求失敗，請檢查 Key 是否正確或網路連線。使用模擬數據。');
           this.mockFlightData(type);
         }
       },
-
       async fetchWeather() {
         if(!this.activeTrip?.center) return;
         try {
