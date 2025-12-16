@@ -1523,91 +1523,100 @@
           
           alert(`「${fileName}」匯出成功！`);
       },
-updateChart() {
-  // 只在記帳頁、而且有 activeTrip 和支出時先畫
-  if (this.activeTab !== 'budget') return;
-  if (!this.activeTrip || !this.activeTrip.expenses || this.activeTrip.expenses.length === 0) {
-    if (this.chartInstance) {
-      this.chartInstance.data.labels = [];
-      this.chartInstance.data.datasets[0].data = [];
-      this.chartInstance.update();
-    }
-    return;
-  }
-
-  const summary = this.categorySummary;
-  const canvas = document.getElementById('expenseChart');
-  if (!canvas) return;
-
-  const ctx = canvas.getContext('2d');
-
-  const categoryColors = {
-    '飲食': '#FFD9EC',
-    '購物': '#C7C7E2',
-    '交通': '#97CBFF',
-    '娛樂': '#A4D8B9',
-    '其他': '#F5E6CC',
-    '旅行前': '#8A2BE2',
-  };
-
-  const backgroundColors = summary.labels.map(label =>
-    categoryColors[label] || '#97CBFF'
-  );
-
-  const total = summary.data.reduce((a, b) => a + b, 0) || 1;
-
-  if (!this.chartInstance) {
-    this.chartInstance = new Chart(ctx, {
-      type: 'doughnut',
-      data: { // 修復點：Chart.js 數據結構調整
-        labels: summary.labels,
-        datasets: [{
-          data: summary.data,
-          backgroundColor: backgroundColors,
-          hoverOffset: 10,
-          borderWidth: 0,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        layout: {
-          padding: 0
-        },
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              usePointStyle: true,
-              boxWidth: 8,
-              padding: 15,
-            }
-          },
-          tooltip: {
-            callbacks: {
-              label: (context) => {
-                let label = context.label || '';
-                if (label) label += ': ';
-                if (context.parsed !== null) {
-                  const value = context.parsed;
-                  const total = summary.data.reduce((a, b) => a + b, 0) || 1;
-                  const percentage = (value * 100 / total).toFixed(1);
-                  label += `${value.toFixed(2)} HKD (${percentage}%)`;
-                }
-                return label;
+      
+      // =================================================================
+      // 🔥 已替換代碼：修復建議 B - 強化 updateChart 函數的穩定性 (Chart.js 錯誤)
+      // =================================================================
+      updateChart() {
+          // 1. 安全檢查：如果不在「記帳」頁面，或沒有旅行數據，直接返回。
+          if (this.activeTab !== 'budget' || !this.activeTrip || !this.activeTrip.expenses) {
+              // 確保在不必要時銷毀實例
+              if (this.chartInstance) {
+                  this.chartInstance.destroy();
+                  this.chartInstance = null;
               }
-            }
+              return;
           }
-        }
-      }
-    });
-  } else {
-    this.chartInstance.data.labels = summary.labels;
-    this.chartInstance.data.datasets[0].data = summary.data;
-    this.chartInstance.data.datasets[0].backgroundColor = backgroundColors;
-    this.chartInstance.update();
-  }
-},
+
+          const summary = this.categorySummary;
+          const canvas = document.getElementById('expenseChart');
+          
+          // 2. 關鍵安全檢查：如果 canvas 元素不存在，則不執行
+          if (!canvas) {
+              console.warn("Chart Canvas element 'expenseChart' not found. Skipping chart update.");
+              return;
+          }
+
+          const ctx = canvas.getContext('2d');
+
+          const categoryColors = {
+              '飲食': '#FFD9EC',
+              '購物': '#C7C7E2',
+              '交通': '#97CBFF',
+              '娛樂': '#A4D8B9',
+              '其他': '#F5E6CC',
+              '旅行前': '#8A2BE2',
+          };
+
+          const backgroundColors = summary.labels.map(label =>
+              categoryColors[label] || '#97CBFF'
+          );
+
+          // 3. 檢查並銷毀舊的圖表實例
+          if (this.chartInstance) {
+              this.chartInstance.destroy();
+              this.chartInstance = null; 
+          }
+
+          // 4. 重新初始化圖表
+          this.chartInstance = new Chart(ctx, {
+              type: 'doughnut',
+              data: { 
+                  labels: summary.labels,
+                  datasets: [{
+                      data: summary.data,
+                      backgroundColor: backgroundColors,
+                      hoverOffset: 10,
+                      borderWidth: 0,
+                  }]
+              },
+              options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  layout: {
+                      padding: 0
+                  },
+                  plugins: {
+                      legend: {
+                          position: 'bottom',
+                          labels: {
+                              usePointStyle: true,
+                              boxWidth: 8,
+                              padding: 15,
+                          }
+                      },
+                      tooltip: {
+                          callbacks: {
+                              label: (context) => {
+                                  let label = context.label || '';
+                                  if (label) label += ': ';
+                                  if (context.parsed !== null) {
+                                      const value = context.parsed;
+                                      const total = summary.data.reduce((a, b) => a + b, 0) || 1;
+                                      const percentage = (value * 100 / total).toFixed(1);
+                                      label += `${value.toFixed(2)} HKD (${percentage}%)`;
+                                  }
+                                  return label;
+                              }
+                          }
+                      }
+                  }
+              }
+          });
+      },
+      // =================================================================
+
+
       handleImageUpload(e) {
         if (!this.currentUser) {
             alert("請注意：圖片資料將無法同步到雲端，只會暫時儲存在本地。"); 
@@ -1701,12 +1710,15 @@ updateChart() {
           }
       },
       
-      // 🔥 核心修復點 4: 修正 Google Maps 網址語法錯誤
+      // =================================================================
+      // 🔥 已替換代碼：修復建議 A - 修正 Google Maps 網址語法錯誤
+      // =================================================================
       searchGoogleMaps(query) {
           const finalQuery = encodeURIComponent(query + ', ' + this.activeTrip.city);
-          // 修正為正確的 Google Maps 搜尋 URL
+          // 修正為正確的 JavaScript 模板字串語法：使用 `${}` 來插值變數
           window.open(`https://www.google.com/maps/search/?api=1&query=${finalQuery}`, '_blank'); 
       },
+      // =================================================================
 
       mapMarkers: L.layerGroup(),
       mapPolyline: null, 
