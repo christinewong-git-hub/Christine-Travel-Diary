@@ -1440,77 +1440,109 @@
       // =================================================================
       // 🔥 寫入檢查強化
       // =================================================================
+      // 模擬航班資料：當 API 查不到或失敗時使用
+      mockFlightData(type) {
+        const flight = this.activeTrip?.flights?.[type];
+        if (!flight) return;
+
+        // 你可以按自己喜歡改這裡的假資料
+        flight.from = flight.from || 'HKG';
+        flight.to = flight.to || 'NRT';
+        flight.depTime = flight.depTime || '10:00';
+        flight.arrTime = flight.arrTime || '15:00';
+
+        this.saveData?.();
+        alert(`已套用模擬航班資料：${flight.from} -> ${flight.to}`);
+      },
+
+      // 取得航班資料（新的版本）
       async fetchFlight(type) {
+        // 1. 檢查登入
         if (!this.currentUser) {
-            alert("請先登入，才能使用 API 查詢航班資料。");
-            this.showLoginModal = true;
-            return;
+          alert("請先登入，才能使用 API 查詢航班資料。");
+          this.showLoginModal = true;
+          return;
         }
 
-        const flight = this.activeTrip.flights[type];
-        if(!flight.no || !flight.date) return alert('請先輸入航班號 (如 NH924) 與日期');
-        
-        // ★★★ 程式碼變動開始：日期格式處理 (YYYY-MM-DD) ★★★
-        // Original flight.date format might be "2025年12月17日". 
-        // We need to convert it to "2025-12-17" for AviationStack API.
-        const apiDate = flight.date
-            .replace(/[年月]/g, '-')
-            .replace(/[日]/g, '')
-            .replace(/--+/g, '-'); // Prevent multiple hyphens 
-        
-        // Remove trailing hyphen if present
-        const formattedDate = apiDate.endsWith('-') ? apiDate.slice(0, -1) : apiDate;
-        // ★★★ 程式碼變動結束：日期格式處理 ★★★
+        // 2. 取得 flight 物件並檢查存在
+        const flight = this.activeTrip?.flights?.[type];
+        if (!flight) {
+          console.error('找不到對應的 flight 資料: ', type);
+          alert('內部錯誤：找不到該航班資料，請重新建立或刷新頁面。');
+          return;
+        }
 
-        // <<<<<<<<<<<< 請將此處替換為您自己的 AviationStack API Key >>>>>>>>>>>>
-        const AVIATIONSTACK_KEY = '191ed46aad658583fd07b6e6d787b8e1'; 
-        
+        // 3. 檢查航班號與日期是否有填
+        if (!flight.no || !flight.date) {
+          alert('請先輸入航班號 (如 NH924) 與日期');
+          return;
+        }
+
+        // 4. 日期格式處理：把「2025年12月17日」→「2025-12-17」
+        const rawDate = String(flight.date).trim();
+        let formattedDate = rawDate.replace(
+          /(\d{4})年(\d{1,2})月(\d{1,2})日/,
+          (m, y, mth, d) => `${y}-${mth.padStart(2,'0')}-${d.padStart(2,'0')}`
+        );
+
+        // 如果使用者本來就輸入 YYYY-MM-DD，讓它直接用原字串
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(formattedDate) && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+          formattedDate = rawDate;
+        }
+
+        // 5. API Key（先照舊：你之後可以再到 Aviationstack 後台換成真正的）
+        const AVIATIONSTACK_KEY = '191ed46aad658583fd07b6e6d787b8e1';
+
         try {
-          // Use the formattedDate in the API call
-          const url = `https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flight.no}&flight_date=${formattedDate}`;
+          // 6. 組 URL（用 console.log 幫你除錯）
+          const url = `https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${encodeURIComponent(flight.no)}&flight_date=${formattedDate}`;
+          console.log('AviationStack URL =', url);
+
           const res = await fetch(url);
+
+          // 如果是 403 / 401 這類，先提示
+          if (!res.ok) {
+            console.error('AviationStack HTTP error:', res.status, res.statusText);
+            alert(`API 回應錯誤 (${res.status})，使用模擬數據。`);
+            this.mockFlightData(type);
+            return;
+          }
+
           const data = await res.json();
-          
-          if (data.data && data.data.length > 0) {
-            const f = data.data[0]; 
-            flight.from = f.departure.iata;
-            flight.to = f.arrival.iata;
-            flight.depTime = f.departure.scheduled ? f.departure.scheduled.slice(11,16) : '--:--';
-            flight.arrTime = f.arrival.scheduled ? f.arrival.scheduled.slice(11,16) : '--:--';
-            this.saveData();
+          console.log('AviationStack data =', data);
+
+          // 7. 如果有 error 欄位，表示 key / 方案 / 參數有問題
+          if (data.error) {
+            console.error('AviationStack error:', data.error);
+            alert(`API 錯誤：${data.error.message || '請檢查 API Key 或方案設定。'} 使用模擬數據。`);
+            this.mockFlightData(type);
+            return;
+          }
+
+          // 8. 正常資料判斷
+          if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+            const f = data.data[0] || {};
+
+            const dep = f.departure || {};
+            const arr = f.arrival || {};
+
+            flight.from = dep.iata || flight.from || '';
+            flight.to = arr.iata || flight.to || '';
+            flight.depTime = dep.scheduled ? dep.scheduled.slice(11, 16) : (flight.depTime || '--:--');
+            flight.arrTime = arr.scheduled ? arr.scheduled.slice(11, 16) : (flight.arrTime || '--:--');
+
+            this.saveData?.();
             alert(`已更新航班: ${flight.from} -> ${flight.to}`);
           } else {
-            // This alert usually means valid Key but no flight data found.
-            alert('未找到航班資料，請確認 API Key、**航班號是否為 IATA 格式 (例如 NH924)** 與日期。使用模擬數據。');
-             this.mockFlightData(type);
+            alert('未找到航班資料，請確認 API Key、航班號是否為 IATA 格式 (例如 NH924) 與日期。使用模擬數據。');
+            this.mockFlightData(type);
           }
-        } catch(e) {
-          console.error(e);
-          // This alert usually means invalid Key or network failure.
+        } catch (e) {
+          console.error('fetchFlight 發生錯誤:', e);
           alert('API 請求失敗，請檢查 Key 是否正確或網路連線。使用模擬數據。');
           this.mockFlightData(type);
         }
       },
-      async fetchWeather() {
-        if(!this.activeTrip?.center) return;
-        try {
-          const {lat,lng} = this.activeTrip.center;
-          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&timezone=auto`);
-          const d = await res.json();
-          this.weatherData = d.current_weather;
-          
-          const code = d.current_weather.weathercode;
-          if (code < 3) { this.weatherTheme = 'sunny'; } 
-          else if (code >= 51 && code < 80) { this.weatherTheme = 'rainy'; } 
-          else { this.weatherTheme = 'cloudy'; } 
-          
-        } catch(e){
-          console.error("Weather fetch failed", e);
-          this.weatherData = { temperature: 20 + Math.floor(Math.random()*5), weathercode: 1 };
-          this.weatherTheme = 'sunny';
-        }
-      },
-
       exportExpensesToCSV() {
           if (!this.activeTrip || !this.activeTrip.expenses.length) {
               return alert('目前沒有消費記錄可以匯出！');
