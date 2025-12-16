@@ -1557,40 +1557,38 @@
               }]
             },
             options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: {
-                  position: 'bottom',
-                  labels: {
-                    usePointStyle: true,
-                    boxWidth: 8,
-                    padding: 15,
-                  }
-                },
-                tooltip: {
-                  callbacks: {
-                    label: (context) => {
-                      let label = context.label || '';
-                      if (label) label += ': ';
-                      if (context.parsed !== null) {
-                        const value = context.parsed;
-                        const percentage = (value * 100 / total).toFixed(1);
-                        label += `${value.toFixed(2)} HKD (${percentage}%)`;
-                      }
-                      return label;
-                    }
-                  }
-                }
-              }
-            }
-          });
-        } else {
-          this.chartInstance.data.labels = summary.labels;
-          this.chartInstance.data.datasets[0].data = summary.data;
-          this.chartInstance.data.datasets[0].backgroundColor = backgroundColors;
-          this.chartInstance.update();
+  responsive: true,
+  maintainAspectRatio: false,
+  layout: {
+    padding: 0
+  },
+  plugins: {
+    legend: {
+      position: 'bottom',
+      labels: {
+        usePointStyle: true,
+        boxWidth: 8,
+        padding: 15,
+      }
+    },
+    tooltip: {
+      callbacks: {
+        label: (context) => {
+          let label = context.label || '';
+          if (label) label += ': ';
+          if (context.parsed !== null) {
+            const value = context.parsed;
+            const total = summary.data.reduce((a, b) => a + b, 0) || 1;
+            const percentage = (value * 100 / total).toFixed(1);
+            label += `${value.toFixed(2)} HKD (${percentage}%)`;
+          }
+          return label;
         }
+      }
+    }
+  }
+}
+        
       },
       
       handleImageUpload(e) {
